@@ -1,0 +1,25 @@
+name: RunFormCoachAI
+
+options:
+  bundleIdPrefix: com.runformcoach
+  deploymentTarget:
+    iOS: "16.0"
+
+targets:
+  RunFormCoachAI:
+    type: application
+    platform: iOS
+    sources:
+      - path: ios/RunFormCoachAI
+    info:
+      path: ios/RunFormCoachAI/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.runformcoach.RunFormCoachAI
+        SWIFT_VERSION: 5.9
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        DEVELOPMENT_TEAM: ""
