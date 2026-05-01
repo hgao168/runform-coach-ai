@@ -16,6 +16,8 @@ targets:
       properties:
         UILaunchScreen: {}
         CFBundleIconName: AppIcon
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
         BACKEND_BASE_URL: $(BACKEND_BASE_URL)
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
