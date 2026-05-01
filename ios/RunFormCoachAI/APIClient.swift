@@ -3,8 +3,16 @@ import Foundation
 final class APIClient {
     static let shared = APIClient()
 
-    // For simulator use 127.0.0.1. For physical iPhone use your computer LAN IP.
-    private let baseURL = URL(string: "http://127.0.0.1:8000")!
+    // Reads BACKEND_BASE_URL from Info.plist (injected at build time via project.yml).
+    // Falls back to localhost for simulator builds.
+    private let baseURL: URL = {
+        if let urlString = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
+           !urlString.isEmpty,
+           let url = URL(string: urlString) {
+            return url
+        }
+        return URL(string: "http://127.0.0.1:8000")!
+    }()
 
     func analyzeVideo(fileURL: URL) async throws -> AnalysisResponse {
         let endpoint = baseURL.appendingPathComponent("analyze")

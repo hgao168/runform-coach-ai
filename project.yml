@@ -16,6 +16,7 @@ targets:
       properties:
         UILaunchScreen: {}
         CFBundleIconName: AppIcon
+        BACKEND_BASE_URL: $(BACKEND_BASE_URL)
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
