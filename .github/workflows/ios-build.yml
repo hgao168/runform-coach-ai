@@ -1,15 +1,13 @@
-name: iOS Build
+name: iOS Build & Archive
 
 on:
   workflow_dispatch:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
 
 jobs:
   build:
-    name: Build iOS App
+    name: Build & Export iOS IPA
     runs-on: macos-latest
 
     steps:
@@ -19,33 +17,108 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Generate Xcode project
-        run: xcodegen generate
-
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode.app
 
-      - name: Build for iOS Simulator
+      # ── Code Signing Setup ──────────────────────────────────────────────────
+
+      - name: Create temporary keychain
         run: |
-          xcodebuild build \
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" "$KEYCHAIN_PATH"
+          # Add to the search list so Xcode can find it
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+
+      - name: Import distribution certificate
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/distribution.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo "${{ secrets.IOS_CERTIFICATE_P12 }}" | base64 --decode > "$CERTIFICATE_PATH"
+          security import "$CERTIFICATE_PATH" \
+            -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" \
+            "$KEYCHAIN_PATH"
+
+      - name: Install provisioning profile
+        run: |
+          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo "${{ secrets.IOS_PROVISION_PROFILE }}" | base64 --decode > "$PP_PATH"
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          PROFILE_UUID=$(security cms -D -i "$PP_PATH" | \
+            python3 -c "import plistlib, sys; pl = plistlib.loads(sys.stdin.buffer.read()); print(pl['UUID'])")
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID".mobileprovision
+          echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+          echo "Installed provisioning profile UUID: $PROFILE_UUID"
+
+      # ── Generate & Archive ──────────────────────────────────────────────────
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Archive app
+        run: |
+          xcodebuild archive \
             -project RunFormCoachAI.xcodeproj \
             -scheme RunFormCoachAI \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
-            -derivedDataPath DerivedData \
-            CODE_SIGNING_ALLOWED=NO
+            -archivePath "$RUNNER_TEMP/RunFormCoachAI.xcarchive" \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=39CYNW3CYT \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="RunFormCoachAI-Prod"
 
-      - name: Find .app bundle
+      # ── Export IPA ──────────────────────────────────────────────────────────
+
+      - name: Create ExportOptions.plist
         run: |
-          find DerivedData -name "*.app" -not -path "*/PackageFrameworks/*" | head -5
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>39CYNW3CYT</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.runformcoach.RunFormCoachAI</key>
+              <string>RunFormCoachAI-Prod</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
 
-      - name: Zip .app for Appetize
+      - name: Export IPA
         run: |
-          APP_PATH=$(find DerivedData -name "RunFormCoachAI.app" -not -path "*/PackageFrameworks/*" | head -1)
-          zip -r RunFormCoachAI-simulator.zip "$APP_PATH"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/RunFormCoachAI.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
 
-      - name: Upload simulator app artifact
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RunFormCoachAI-simulator
-          path: RunFormCoachAI-simulator.zip
-          retention-days: 7
+          name: RunFormCoachAI-ipa
+          path: ${{ runner.temp }}/export/RunFormCoachAI.ipa
+          retention-days: 30
+
+      # ── Cleanup ─────────────────────────────────────────────────────────────
+
+      - name: Clean up keychain and provisioning profile
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
+          rm -f ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID".mobileprovision || true
