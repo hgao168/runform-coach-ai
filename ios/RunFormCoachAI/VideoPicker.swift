@@ -9,7 +9,6 @@ struct VideoPicker: UIViewControllerRepresentable {
         var configuration = PHPickerConfiguration(photoLibrary: .shared())
         configuration.filter = .videos
         configuration.selectionLimit = 1
-
         let picker = PHPickerViewController(configuration: configuration)
         picker.delegate = context.coordinator
         return picker
@@ -31,7 +30,9 @@ struct VideoPicker: UIViewControllerRepresentable {
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             picker.dismiss(animated: true)
             guard let provider = results.first?.itemProvider,
-                  provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) else { return }
+                  provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) else {
+                return
+            }
 
             provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { url, error in
                 guard let sourceURL = url, error == nil else { return }

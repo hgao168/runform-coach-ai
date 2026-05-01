@@ -3,8 +3,6 @@ import Foundation
 final class APIClient {
     static let shared = APIClient()
 
-    // Reads BACKEND_BASE_URL from Info.plist (injected at build time via project.yml).
-    // Falls back to localhost for simulator builds.
     private let baseURL: URL = {
         if let urlString = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
            !urlString.isEmpty,
@@ -24,10 +22,12 @@ final class APIClient {
 
         let videoData = try Data(contentsOf: fileURL)
         let filename = fileURL.lastPathComponent.isEmpty ? "running-video.mov" : fileURL.lastPathComponent
+        let mimeType = filename.lowercased().hasSuffix(".mp4") ? "video/mp4" : "video/quicktime"
+
         request.httpBody = makeMultipartBody(
             fieldName: "video",
             filename: filename,
-            mimeType: "video/quicktime",
+            mimeType: mimeType,
             data: videoData,
             boundary: boundary
         )
@@ -36,7 +36,6 @@ final class APIClient {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw URLError(.badServerResponse)
         }
-
         return try JSONDecoder().decode(AnalysisResponse.self, from: data)
     }
 

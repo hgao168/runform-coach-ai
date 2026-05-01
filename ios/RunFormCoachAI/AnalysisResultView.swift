@@ -4,90 +4,107 @@ struct AnalysisResultView: View {
     let result: AnalysisResponse
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            summaryCard
+        VStack(alignment: .leading, spacing: 16) {
+            scoreCard
             metricsSection
             issuesSection
         }
     }
 
-    private var summaryCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Analysis Summary")
-                .font(.headline)
-            Text(result.summary)
-                .foregroundStyle(.secondary)
-            Text("Confidence: \(Int(result.confidence * 100))%")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    private var scoreCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Form Report")
+                            .font(.title3.bold())
+                            .foregroundStyle(.white)
+                        Text(result.summary)
+                            .font(.callout)
+                            .foregroundStyle(.white.opacity(0.68))
+                    }
+                    Spacer()
+                    ZStack {
+                        Circle()
+                            .stroke(.white.opacity(0.12), lineWidth: 8)
+                            .frame(width: 76, height: 76)
+                        Circle()
+                            .trim(from: 0, to: result.confidence)
+                            .stroke(AppTheme.actionGradient, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .frame(width: 76, height: 76)
+                            .rotationEffect(.degrees(-90))
+                        Text("\(Int(result.confidence * 100))%")
+                            .font(.headline.bold())
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 
     private var metricsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Movement Metrics")
                 .font(.headline)
-
+                .foregroundStyle(.white)
             ForEach(result.metrics) { metric in
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text(metric.name)
-                            .fontWeight(.medium)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
                         Spacer()
                         Text(metric.status)
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.quaternary)
+                            .font(.caption.bold())
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(AppTheme.actionGradient)
                             .clipShape(Capsule())
                     }
                     ProgressView(value: metric.score)
+                        .tint(AppTheme.mint)
                     Text(metric.explanation)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.64))
                 }
-                .padding()
-                .background(.background)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(radius: 1)
+                .padding(15)
+                .background(.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
         }
     }
 
     private var issuesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Recommended Strength Plan")
+            Text("Strength Focus")
                 .font(.headline)
-
+                .foregroundStyle(.white)
             ForEach(result.issues) { issue in
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text(issue.title)
+                        Label(issue.title, systemImage: "target")
                             .font(.headline)
+                            .foregroundStyle(.white)
                         Spacer()
                         Text(issue.severity)
-                            .font(.caption)
+                            .font(.caption.bold())
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.quaternary)
+                            .padding(.vertical, 5)
+                            .background(.white.opacity(0.12))
+                            .foregroundStyle(.white.opacity(0.82))
                             .clipShape(Capsule())
                     }
-
                     Text(issue.explanation)
                         .font(.callout)
-                        .foregroundStyle(.secondary)
-
+                        .foregroundStyle(.white.opacity(0.68))
                     ForEach(issue.recommendedExercises) { exercise in
                         ExerciseCard(exercise: exercise)
                     }
                 }
-                .padding()
-                .background(.thinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .padding(16)
+                .background(.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
         }
     }
@@ -97,19 +114,29 @@ struct ExerciseCard: View {
     let exercise: Exercise
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(exercise.name)
-                .fontWeight(.semibold)
-            Text("\(exercise.category) • \(exercise.sets) sets • \(exercise.reps) • \(exercise.frequencyPerWeek)x/week")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(exercise.reason)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(AppTheme.actionGradient)
+                    .frame(width: 42, height: 42)
+                Image(systemName: "dumbbell.fill")
+                    .foregroundStyle(.black)
+            }
+            VStack(alignment: .leading, spacing: 5) {
+                Text(exercise.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("\(exercise.category) • \(exercise.sets) sets • \(exercise.reps) • \(exercise.frequencyPerWeek)x/week")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.62))
+                Text(exercise.reason)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.62))
+            }
         }
-        .padding()
+        .padding(13)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(.black.opacity(0.18))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }

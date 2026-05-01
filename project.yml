@@ -1,10 +1,8 @@
 name: RunFormCoachAI
-
 options:
   bundleIdPrefix: com.runformcoach
   deploymentTarget:
     iOS: "16.0"
-
 targets:
   RunFormCoachAI:
     type: application
@@ -16,6 +14,8 @@ targets:
       properties:
         UILaunchScreen: {}
         CFBundleIconName: AppIcon
+        CFBundleDisplayName: RunForm
+        CFBundleName: RunForm
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         BACKEND_BASE_URL: $(BACKEND_BASE_URL)

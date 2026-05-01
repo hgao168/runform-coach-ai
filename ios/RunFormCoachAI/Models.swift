@@ -1,13 +1,14 @@
 import Foundation
 
-struct AnalysisResponse: Codable {
+struct AnalysisResponse: Codable, Identifiable, Equatable {
+    var id: String { summary + String(confidence) + metrics.map(\.name).joined() }
     let summary: String
     let confidence: Double
     let metrics: [Metric]
     let issues: [Issue]
 }
 
-struct Metric: Codable, Identifiable {
+struct Metric: Codable, Identifiable, Equatable {
     var id: String { name }
     let name: String
     let score: Double
@@ -15,7 +16,7 @@ struct Metric: Codable, Identifiable {
     let explanation: String
 }
 
-struct Issue: Codable, Identifiable {
+struct Issue: Codable, Identifiable, Equatable {
     var id: String { title }
     let title: String
     let severity: String
@@ -30,7 +31,7 @@ struct Issue: Codable, Identifiable {
     }
 }
 
-struct Exercise: Codable, Identifiable {
+struct Exercise: Codable, Identifiable, Equatable {
     var id: String { name }
     let name: String
     let category: String
@@ -47,4 +48,44 @@ struct Exercise: Codable, Identifiable {
         case frequencyPerWeek = "frequency_per_week"
         case reason
     }
+}
+
+enum RunnerLevel: String, Codable, CaseIterable, Identifiable {
+    case beginner = "Beginner"
+    case intermediate = "Intermediate"
+    case advanced = "Advanced"
+
+    var id: String { rawValue }
+}
+
+struct TesterProfile: Codable, Equatable {
+    var nickname: String = ""
+    var level: RunnerLevel = .beginner
+    var weeklyMileageKm: Double = 15
+    var target: String = "General fitness"
+    var injuryNote: String = ""
+}
+
+enum FeedbackRating: String, Codable, CaseIterable, Identifiable {
+    case accurate = "Accurate"
+    case partlyAccurate = "Partly accurate"
+    case notAccurate = "Not accurate"
+    case confusing = "Confusing"
+
+    var id: String { rawValue }
+}
+
+struct AnalysisFeedback: Codable, Identifiable, Equatable {
+    let id: UUID
+    let rating: FeedbackRating
+    let comment: String
+    let createdAt: Date
+}
+
+struct AnalysisHistoryItem: Codable, Identifiable, Equatable {
+    let id: UUID
+    let createdAt: Date
+    let videoFilename: String
+    let result: AnalysisResponse
+    var feedback: AnalysisFeedback?
 }

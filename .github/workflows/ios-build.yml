@@ -64,29 +64,6 @@ jobs:
 
       # ── Generate & Archive ──────────────────────────────────────────────────
 
-      - name: Generate placeholder app icon
-        run: |
-          python3 - <<'PYEOF'
-          import struct, zlib
-          def png_bytes(w, h, r=0, g=122, b=255):
-              raw = bytearray()
-              for _ in range(h):
-                  raw.append(0)
-                  for _ in range(w):
-                      raw.extend([r, g, b])
-              def chunk(t, d):
-                  crc = zlib.crc32(t + d) & 0xffffffff
-                  return struct.pack('>I', len(d)) + t + d + struct.pack('>I', crc)
-              ihdr = struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)
-              return (b'\x89PNG\r\n\x1a\n' +
-                      chunk(b'IHDR', ihdr) +
-                      chunk(b'IDAT', zlib.compress(bytes(raw))) +
-                      chunk(b'IEND', b''))
-          with open('ios/RunFormCoachAI/Assets.xcassets/AppIcon.appiconset/AppIcon.png', 'wb') as f:
-              f.write(png_bytes(1024, 1024))
-          print('Generated AppIcon.png')
-          PYEOF
-
       - name: Generate Xcode project
         run: xcodegen generate
 

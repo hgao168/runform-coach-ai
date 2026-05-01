@@ -1,91 +1,42 @@
-# RunForm Coach AI — V1 Starter
+# RunForm — Phase 1 Cool iPhone UI + App Icon Build
 
-This is a first MVP codebase for a running-video analysis app.
+This package updates the Phase 1 TestFlight build with a shorter iPhone display name and a refreshed modern fitness-app UI.
 
-V1 includes:
-- iOS SwiftUI app skeleton
-- Video picker
-- Upload video to backend
-- Mock running form analysis response
-- Strength/mobility recommendation UI
-- FastAPI backend with `/analyze`
+## What changed
 
-The backend currently uses rule-based mock output. Replace `analyzer.py` with real pose analysis using Apple Vision, MediaPipe, or OpenCV later.
+- App display name changed to **RunForm** so it fits cleanly under the iPhone icon.
+- Added full iOS **AppIcon.appiconset** generated from the approved RunForm icon.
+- Redesigned Analyze tab with dark navy gradient, glass cards, mint/cyan action style and iPhone-native feel.
+- Redesigned result cards with confidence ring, movement metrics, and strength recommendations.
+- Redesigned History and Profile screens with cleaner card layout.
+- Preserved Phase 1 functionality: upload video, analyze, save local history, capture tester feedback and profile.
 
-## Project structure
-
-```text
-runform-coach-ai-v1/
-├── ios/RunFormCoachAI/
-│   ├── RunFormCoachAIApp.swift
-│   ├── ContentView.swift
-│   ├── VideoPicker.swift
-│   ├── APIClient.swift
-│   ├── Models.swift
-│   ├── AnalysisResultView.swift
-│   └── Info.plist
-├── backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── analyzer.py
-│   │   └── schemas.py
-│   ├── requirements.txt
-│   └── README.md
-└── README.md
-```
-
-
-## Development flow
-
-This repo is designed for your requested flow:
+## Files changed
 
 ```text
-Step 1 Windows: SwiftUI source + backend API + running-form logic
-Step 2 GitHub: push code
-Step 3 Mac/cloud Mac: open in Xcode, run, fix UI bugs
-Step 4 TestFlight: internal testing
+ios/RunFormCoachAI/
+├── Assets.xcassets/AppIcon.appiconset/  # new app icon set
+├── AppTheme.swift                       # new shared UI theme
+├── ContentView.swift                    # redesigned main coach UI
+├── AnalysisResultView.swift             # redesigned result + strength plan
+├── FeedbackView.swift                   # redesigned feedback card
+├── HistoryView.swift                    # redesigned history
+└── ProfileView.swift                    # redesigned profile
+
+project.yml                              # CFBundleDisplayName = RunForm
 ```
 
-See `DEV_FLOW.md` for the exact commands and handoff checklist.
+## How to apply
 
-## Run backend
+Copy these files into your GitHub repo, then regenerate/open the Xcode project as you normally do.
 
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+git checkout -b ui-refresh-runform-icon
+cp -R ios/RunFormCoachAI/* /path/to/your/repo/ios/RunFormCoachAI/
+cp project.yml /path/to/your/repo/project.yml
+git add ios/RunFormCoachAI project.yml
+git commit -m "Add RunForm app icon and modern iPhone UI refresh"
+git push origin ui-refresh-runform-icon
 ```
 
-Test:
-
-```bash
-curl http://localhost:8000/health
-```
-
-## Run iOS app
-
-1. Open Xcode.
-2. Create a new iOS App project named `RunFormCoachAI`.
-3. Replace generated Swift files with the files in `ios/RunFormCoachAI/`.
-4. In `APIClient.swift`, update `baseURL`:
-   - iOS Simulator: `http://127.0.0.1:8000`
-   - Physical iPhone: use your computer LAN IP, for example `http://192.168.1.20:8000`
-5. Run the app.
-
-## V1 product flow
-
-```text
-Pick running video
-→ Upload to backend
-→ Mock analyzer returns form issues
-→ App shows issues and strength plan
-```
-
-## Next steps
-
-1. Add Apple Vision or MediaPipe landmark extraction.
-2. Store analysis history locally with SwiftData.
-3. Add real metrics: hip drop, knee valgus, overstride, trunk lean.
-4. Add Strava integration in V2.
+Then rebuild and upload a new TestFlight build.
