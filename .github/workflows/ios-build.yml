@@ -31,9 +31,21 @@ jobs:
             -project RunFormCoachAI.xcodeproj \
             -scheme RunFormCoachAI \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty || xcodebuild build \
-              -project RunFormCoachAI.xcodeproj \
-              -scheme RunFormCoachAI \
-              -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
-              CODE_SIGNING_ALLOWED=NO
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Find .app bundle
+        run: |
+          find DerivedData -name "*.app" -not -path "*/PackageFrameworks/*" | head -5
+
+      - name: Zip .app for Appetize
+        run: |
+          APP_PATH=$(find DerivedData -name "RunFormCoachAI.app" -not -path "*/PackageFrameworks/*" | head -1)
+          zip -r RunFormCoachAI-simulator.zip "$APP_PATH"
+
+      - name: Upload simulator app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RunFormCoachAI-simulator
+          path: RunFormCoachAI-simulator.zip
+          retention-days: 7
