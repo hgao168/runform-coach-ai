@@ -119,9 +119,10 @@ jobs:
 
       - name: Upload to TestFlight
         run: |
-          # Write the API key .p8 to disk
-          API_KEY_PATH=$RUNNER_TEMP/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
-          echo "${{ secrets.APP_STORE_CONNECT_API_KEY }}" | base64 --decode > "$API_KEY_PATH"
+          # altool requires the .p8 to be in ~/.appstoreconnect/private_keys/
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY }}" | base64 --decode \
+            > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
 
           xcrun altool --upload-app \
             --type ios \
@@ -130,7 +131,7 @@ jobs:
             --apiIssuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
             --verbose
 
-          rm -f "$API_KEY_PATH"
+          rm -f ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
 
       # ── Cleanup ─────────────────────────────────────────────────────────────
 
