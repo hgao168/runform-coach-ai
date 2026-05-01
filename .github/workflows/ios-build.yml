@@ -94,7 +94,7 @@ jobs:
             <string>manual</string>
             <key>provisioningProfiles</key>
             <dict>
-              <key>com.runformcoach.RunFormCoachAI</key>
+              <key>com.movex.runformcoachai</key>
               <string>RunFormCoachAI-Prod</string>
             </dict>
           </dict>
