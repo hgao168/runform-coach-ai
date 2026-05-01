@@ -116,12 +116,16 @@ jobs:
             -archivePath "$RUNNER_TEMP/RunFormCoachAI.xcarchive" \
             -exportPath "$RUNNER_TEMP/export" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+          # Locate IPA regardless of filename and store path for subsequent steps
+          IPA_PATH=$(find "$RUNNER_TEMP/export" -name "*.ipa" | head -1)
+          echo "IPA_PATH=$IPA_PATH" >> "$GITHUB_ENV"
+          echo "Exported IPA: $IPA_PATH"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: RunFormCoachAI-ipa
-          path: ${{ runner.temp }}/export/RunFormCoachAI.ipa
+          path: ${{ runner.temp }}/export/*.ipa
           retention-days: 30
 
       # ── TestFlight Upload ────────────────────────────────────────────────────
@@ -135,7 +139,7 @@ jobs:
 
           xcrun altool --upload-app \
             --type ios \
-            --file "$RUNNER_TEMP/export/RunFormCoachAI.ipa" \
+            --file "$IPA_PATH" \
             --apiKey "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
             --apiIssuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
             --verbose
