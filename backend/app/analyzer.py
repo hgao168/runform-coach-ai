@@ -467,7 +467,9 @@ RULES:
 - If injury_flag is true, replace all hard/tempo workouts with easy runs and add recovery notes.
 - The goal drives the TYPE of workouts (e.g. long slow run for Marathon/Half, speed work for 5K/10K).
 - Non-running days should NOT appear in the workouts array.
-- If form_focus items are supplied, adapt run details and strength/mobility purpose to those issues.
+- If form_focus items are supplied, use them to adapt run cues and strength/mobility purpose to those issues.
+- Use form_issues to adjust workout purpose/details: overstride/cadence => cadence focus; hip drop/knee valgus => hip stability strength; trunk lean => posture/falling-start drills.
+- Add coach notes that explain how the latest analysis changed the plan.
 - Include strength/mobility work that supports the latest detected form issues when available.
 Return this exact JSON structure:
 {
@@ -586,8 +588,112 @@ def _apply_form_focus_to_workouts(workouts: list[PlannedWorkout], focuses: list[
         ))
     return adapted
 
-def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
-    api_key = os.environ.get("OPENAI_API_KEY")
+def _normalise_issue_text(plan_input: TrainingPlanInput) -> str:
+    """Build a single lowercase text blob from form issue titles and exercise names."""
+    issue_text = " ".join(i.title for i in (plan_input.form_issues or [])).lower()
+    exercise_text = " ".join(
+        name
+        for issue in (plan_input.form_issues or [])
+        for name in (issue.exercise_names or [])
+    ).lower()
+    return f"{issue_text} {exercise_text}"
+
+
+def _coaching_focus_notes(plan_input: TrainingPlanInput) -> list[str]:
+    text = _normalise_issue_text(plan_input)
+    notes: list[str] = []
+    if any(k in text for k in ["overstride", "cadence", "stride"]):
+        notes.append("Latest analysis focus: cadence and shorter ground contact cues were added to reduce overstride risk.")
+    if any(k in text for k in ["knee", "valgus", "tracking", "hip stability"]):
+        notes.append("Latest analysis focus: hip stability work was added to support knee tracking.")
+    if any(k in text for k in ["trunk", "lean", "posture"]):
+        notes.append("Latest analysis focus: posture and falling-start cues were added for better trunk position.")
+    if any(k in text for k in ["hip drop", "glute", "monster", "single-leg rdl"]):
+        notes.append("Latest analysis focus: glute and single-leg stability work was added to reduce hip drop risk.")
+    if plan_input.injury_flag:
+        notes.append("Injury flag active: hard efforts should be reduced or replaced by easy running and mobility.")
+    return notes
+
+
+def _exercise_names(plan_input: TrainingPlanInput, limit: int = 4) -> str:
+    names: list[str] = []
+    seen: set[str] = set()
+    for issue in plan_input.form_issues or []:
+        for name in issue.exercise_names or []:
+            if name not in seen:
+                names.append(name)
+                seen.add(name)
+            if len(names) >= limit:
+                return ", ".join(names)
+    return ", ".join(names)
+
+
+def _enhance_plan_with_form_context(plan: TrainingPlanResponse, plan_input: TrainingPlanInput) -> TrainingPlanResponse:
+    notes = list(plan.notes or [])
+    for note in _coaching_focus_notes(plan_input):
+        if note not in notes:
+            notes.append(note)
+
+    issue_text = _normalise_issue_text(plan_input)
+    exercise_summary = _exercise_names(plan_input)
+    workouts: list[PlannedWorkout] = []
+
+    for workout in plan.workouts:
+        details = workout.details or ""
+        purpose = workout.purpose or ""
+        title_lower = f"{workout.title} {workout.category} {workout.intensity}".lower()
+
+        if plan_input.injury_flag and any(k in title_lower for k in ["tempo", "interval", "speed", "quality", "hard"]):
+            workout = PlannedWorkout(
+                day=workout.day,
+                title="Easy Run + Mobility",
+                category="Easy",
+                intensity="Low",
+                details=f"{workout.distance_km or 0:g} km easy only. Keep it conversational; stop if pain increases.",
+                purpose="Protect recovery while maintaining consistency because injury / pain flag is active.",
+                distance_km=workout.distance_km,
+                duration_minutes=workout.duration_minutes,
+            )
+            workouts.append(workout)
+            continue
+
+        if "easy" in title_lower or "long" in title_lower:
+            cues: list[str] = []
+            if any(k in issue_text for k in ["overstride", "cadence", "stride"]):
+                cues.append("Run with a light cadence focus and avoid reaching forward with the foot.")
+            if any(k in issue_text for k in ["trunk", "lean", "posture"]):
+                cues.append("Keep posture tall with a slight forward lean from the ankles.")
+            if cues:
+                details = (details + " " + " ".join(cues)).strip()
+                purpose = (purpose + " Form focus: translate your latest analysis into relaxed running cues.").strip()
+
+        if any(k in title_lower for k in ["strength", "mobility", "cross", "recovery"]):
+            if exercise_summary:
+                details = (details + f" Add: {exercise_summary}.").strip()
+                purpose = (purpose + " These exercises are selected from your latest running-form analysis.").strip()
+
+        workouts.append(PlannedWorkout(
+            day=workout.day,
+            title=workout.title,
+            category=workout.category,
+            intensity=workout.intensity,
+            details=details,
+            purpose=purpose,
+            distance_km=workout.distance_km,
+            duration_minutes=workout.duration_minutes,
+        ))
+
+    return TrainingPlanResponse(
+        summary=plan.summary,
+        planned_weekly_km=plan.planned_weekly_km,
+        running_days=plan.running_days,
+        workouts=workouts,
+        notes=notes[:8],
+        connected_analysis_used=plan.connected_analysis_used,
+    )
+
+
+def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:    api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
 
@@ -637,7 +743,7 @@ def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
 
     workouts = _apply_form_focus_to_workouts(workouts, form_focuses)
 
-    return TrainingPlanResponse(
+    plan = TrainingPlanResponse(
         summary=data.get("summary", "Your personalised weekly training plan."),
         planned_weekly_km=float(data.get("planned_weekly_km", plan_input.current_weekly_km)),
         running_days=int(data.get("running_days", plan_input.available_running_days)),
@@ -645,3 +751,9 @@ def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
         notes=data.get("notes", []),
         connected_analysis_used=bool(form_focuses),
     )
+
+    # Second pass: inject form-focused cues and exercise recommendations deterministically
+    if plan_input.form_issues:
+        plan = _enhance_plan_with_form_context(plan, plan_input)
+
+    return plan

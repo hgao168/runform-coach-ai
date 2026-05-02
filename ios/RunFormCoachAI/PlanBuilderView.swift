@@ -19,7 +19,7 @@ struct PlanBuilderView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
                         introCard
-                        connectedAnalysisCard
+                        latestAnalysisCard
                         inputCard
                         generateButton
 
@@ -84,46 +84,6 @@ struct PlanBuilderView: View {
     }
 
     
-    private var connectedAnalysisCard: some View {
-        DarkCard {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionTitle(
-                    "Connected coaching",
-                    subtitle: "Latest analysis will adjust your plan",
-                    systemImage: "link.circle.fill"
-                )
-
-                if let summary = appStore.latestAnalysisSummary, !appStore.latestCoachingIssues.isEmpty {
-                    Text(summary)
-                        .font(.callout)
-                        .foregroundStyle(.white.opacity(0.72))
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(appStore.latestCoachingIssues.prefix(3)) { issue in
-                            HStack(alignment: .top, spacing: 10) {
-                                Image(systemName: "target")
-                                    .foregroundStyle(AppTheme.mint)
-                                    .padding(.top, 2)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(issue.title)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.white)
-                                    Text(issue.exerciseNames.prefix(3).joined(separator: " • "))
-                                        .font(.caption)
-                                        .foregroundStyle(.white.opacity(0.55))
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    Text("Analyze a running video first. Then RunForm will adapt your easy run cues, quality session, long run focus, and strength/mobility work from your latest form issues.")
-                        .font(.callout)
-                        .foregroundStyle(.white.opacity(0.68))
-                }
-            }
-        }
-    }
-
     private var inputCard: some View {
         DarkCard {
             VStack(alignment: .leading, spacing: 16) {
@@ -162,6 +122,65 @@ struct PlanBuilderView: View {
                     Label("Progression will be reduced; hard sessions replaced with easy runs.", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    private var latestAnalysisItem: AnalysisHistoryItem? { appStore.history.first }
+
+    private var latestFormIssues: [String] {
+        Array((latestAnalysisItem?.result.issues.map { $0.title } ?? []).prefix(5))
+    }
+
+    private var latestRecommendedExercises: [Exercise] {
+        var seen = Set<String>()
+        return (latestAnalysisItem?.result.issues.flatMap { $0.recommendedExercises } ?? [])
+            .filter { exercise in
+                guard !seen.contains(exercise.name) else { return false }
+                seen.insert(exercise.name)
+                return true
+            }
+    }
+
+    private var latestAnalysisCard: some View {
+        Group {
+            if let latest = latestAnalysisItem {
+                DarkCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionTitle(
+                            "Connected coaching",
+                            subtitle: "Using your latest form analysis to adjust the plan.",
+                            systemImage: "link.circle.fill"
+                        )
+                        if latestFormIssues.isEmpty {
+                            Text("No major form issue found in your latest analysis.")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.65))
+                        } else {
+                            ForEach(latestFormIssues, id: \.self) { issue in
+                                Label(issue, systemImage: "figure.run.circle")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.78))
+                            }
+                        }
+                        Text("Latest analysis: \(latest.createdAt, format: .dateTime.month().day().hour().minute())")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.42))
+                    }
+                }
+            } else {
+                DarkCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        SectionTitle(
+                            "Connected coaching",
+                            subtitle: "Generate an analysis first to personalise your plan.",
+                            systemImage: "link.circle"
+                        )
+                        Text("Without an analysis, RunForm will create a plan from your weekly km, goal, days, and injury flag only.")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
                 }
             }
         }
