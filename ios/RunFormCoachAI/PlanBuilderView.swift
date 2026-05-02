@@ -9,7 +9,6 @@ struct PlanBuilderView: View {
     @State private var isGenerating = false
     @State private var plan: TrainingPlanResponse?
     @State private var errorMessage: String?
-    @State private var planSaved = false
     @State private var showSavedPlans = false
     @FocusState private var kmFieldFocused: Bool
 
@@ -51,24 +50,12 @@ struct PlanBuilderView: View {
                             .foregroundStyle(AppTheme.mint)
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    if plan != nil {
-                        if planSaved {
-                            Label("Saved", systemImage: "checkmark.circle.fill")
-                                .font(.caption.bold())
-                                .foregroundStyle(AppTheme.mint)
-                        } else {
-                            Button("Save Plan") {
-                                if let p = plan {
-                                    let km = Double(currentWeeklyKmText.replacingOccurrences(of: ",", with: ".")) ?? 0
-                                    appStore.savePlan(p, target: target.rawValue, weeklyKm: km)
-                                    planSaved = true
-                                }
-                            }
-                            .foregroundStyle(AppTheme.mint)
-                            .fontWeight(.semibold)
-                        }
-                    }
+            }
+            .onAppear {
+                if plan == nil, let saved = appStore.nextWeekPlan {
+                    plan = saved.plan
+                    currentWeeklyKmText = String(format: "%g", saved.weeklyKm)
+                    if let t = TrainingTarget(rawValue: saved.target) { target = t }
                 }
             }
             .sheet(isPresented: $showSavedPlans) {
@@ -141,7 +128,6 @@ struct PlanBuilderView: View {
     private var generateButton: some View {
         Button {
             kmFieldFocused = false
-            planSaved = false
             Task { await generatePlan() }
         } label: {
             if isGenerating {
@@ -172,7 +158,9 @@ struct PlanBuilderView: View {
         )
 
         do {
-            plan = try await APIClient.shared.generateTrainingPlan(input: input)
+            let result = try await APIClient.shared.generateTrainingPlan(input: input)
+            plan = result
+            appStore.setNextWeekPlan(result, target: target.rawValue, weeklyKm: km)
         } catch {
             errorMessage = "Plan generation failed. Check your connection."
         }

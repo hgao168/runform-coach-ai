@@ -8,10 +8,12 @@ final class AppStore: ObservableObject {
 
     @Published private(set) var history: [AnalysisHistoryItem] = []
     @Published private(set) var savedPlans: [SavedPlan] = []
+    @Published private(set) var nextWeekPlan: SavedPlan?
 
     private let profileKey = "tester.profile.v1"
     private let historyKey = "analysis.history.v1"
     private let savedPlansKey = "saved.plans.v1"
+    private let nextWeekPlanKey = "next.week.plan.v1"
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
@@ -28,6 +30,7 @@ final class AppStore: ObservableObject {
 
         loadHistory()
         loadSavedPlans()
+        loadNextWeekPlan()
     }
 
     func addHistory(result: AnalysisResponse, videoURL: URL?) {
@@ -61,6 +64,26 @@ final class AppStore: ObservableObject {
             weeklyKm: weeklyKm,
             plan: plan
         )
+        savedPlans.insert(item, at: 0)
+        saveSavedPlans()
+    }
+
+    /// Auto-called after plan generation. Sets nextWeekPlan AND adds to history.
+    func setNextWeekPlan(_ plan: TrainingPlanResponse, target: String, weeklyKm: Double) {
+        let item = SavedPlan(
+            id: UUID(),
+            createdAt: Date(),
+            target: target,
+            weeklyKm: weeklyKm,
+            plan: plan
+        )
+        nextWeekPlan = item
+        saveNextWeekPlan()
+        // Also insert into saved plans history (deduplicate by replacing same target on same day)
+        savedPlans.removeAll {
+            $0.target == target &&
+            Calendar.current.isDate($0.createdAt, inSameDayAs: item.createdAt)
+        }
         savedPlans.insert(item, at: 0)
         saveSavedPlans()
     }
@@ -101,5 +124,20 @@ final class AppStore: ObservableObject {
     private func saveSavedPlans() {
         guard let data = try? encoder.encode(savedPlans) else { return }
         UserDefaults.standard.set(data, forKey: savedPlansKey)
+    }
+
+    private func loadNextWeekPlan() {
+        guard let data = UserDefaults.standard.data(forKey: nextWeekPlanKey),
+              let item = try? decoder.decode(SavedPlan.self, from: data) else {
+            nextWeekPlan = nil
+            return
+        }
+        nextWeekPlan = item
+    }
+
+    private func saveNextWeekPlan() {
+        guard let item = nextWeekPlan,
+              let data = try? encoder.encode(item) else { return }
+        UserDefaults.standard.set(data, forKey: nextWeekPlanKey)
     }
 }
