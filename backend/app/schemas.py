@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
 
 class Metric(BaseModel):
@@ -25,17 +25,27 @@ class Issue(BaseModel):
     recommended_exercises: List[Exercise]
 
 
+class VideoQuality(BaseModel):
+    score: float = Field(ge=0, le=1)
+    status: str
+    reasons: List[str] = []
+    tips: List[str] = []
+
+
 class AnalysisResponse(BaseModel):
     summary: str
     confidence: float
+    quality: Optional[VideoQuality] = None
     metrics: List[Metric]
     issues: List[Issue]
 
 
 class PoseMetricsInput(BaseModel):
-    cadence_estimate_spm: float
-    cadence_score: float
-    cadence_status: str
+    cadence_estimate_spm: float = 0
+    cadence_score: float = 0.5
+    cadence_status: str = "Not measurable"
+    cadence_quality: str = "Low"
+    cadence_step_count: int = 0
     overstride_risk_score: float
     overstride_status: str
     trunk_lean_degrees: float
@@ -44,5 +54,10 @@ class PoseMetricsInput(BaseModel):
     knee_valgus_risk_score: float
     knee_valgus_status: str
     frame_count: int
+    sampled_frame_count: int = 0
     video_duration_seconds: float
+    pose_detection_rate: float = 0
+    ankle_visibility_rate: float = 0
+    video_quality_score: float = 0.5
+    quality_reasons: List[str] = []
     notes: List[str] = []

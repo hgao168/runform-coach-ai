@@ -1,42 +1,47 @@
-# RunForm — Phase 1 Cool iPhone UI + App Icon Build
+# RunForm — Metrics Accuracy Update
 
-This package updates the Phase 1 TestFlight build with a shorter iPhone display name and a refreshed modern fitness-app UI.
+This update improves running metrics reliability and avoids misleading cadence results such as `0 spm`.
 
 ## What changed
 
-- App display name changed to **RunForm** so it fits cleanly under the iPhone icon.
-- Added full iOS **AppIcon.appiconset** generated from the approved RunForm icon.
-- Redesigned Analyze tab with dark navy gradient, glass cards, mint/cyan action style and iPhone-native feel.
-- Redesigned result cards with confidence ring, movement metrics, and strength recommendations.
-- Redesigned History and Profile screens with cleaner card layout.
-- Preserved Phase 1 functionality: upload video, analyze, save local history, capture tester feedback and profile.
+### iOS
+- Added a recording-standard guide before video upload.
+- Added on-device video quality checks using pose detection rate, ankle visibility, and duration.
+- Improved `PoseExtractor.swift` cadence logic with adaptive ankle-motion signal analysis.
+- If cadence cannot be measured reliably, the app now shows `Not measurable` instead of a fake/false `0 spm`.
+- Sends only pose metrics JSON to the backend via `/analyze-metrics`.
+- Shows a Video Quality card with reasons and re-record tips.
+- Default backend URL set to Railway: `https://runform-coach-ai-production.up.railway.app`.
 
-## Files changed
+### Backend
+- Added `VideoQuality` response model.
+- Expanded `PoseMetricsInput` with cadence quality, ankle visibility, detection rate, and quality reasons.
+- Improved `/analyze-metrics` coaching response to handle low-quality video and unmeasurable cadence.
+- Keeps `/analyze` as a legacy raw-video fallback.
 
-```text
-ios/RunFormCoachAI/
-├── Assets.xcassets/AppIcon.appiconset/  # new app icon set
-├── AppTheme.swift                       # new shared UI theme
-├── ContentView.swift                    # redesigned main coach UI
-├── AnalysisResultView.swift             # redesigned result + strength plan
-├── FeedbackView.swift                   # redesigned feedback card
-├── HistoryView.swift                    # redesigned history
-└── ProfileView.swift                    # redesigned profile
-
-project.yml                              # CFBundleDisplayName = RunForm
-```
-
-## How to apply
-
-Copy these files into your GitHub repo, then regenerate/open the Xcode project as you normally do.
+## Files to copy
 
 ```bash
-git checkout -b ui-refresh-runform-icon
-cp -R ios/RunFormCoachAI/* /path/to/your/repo/ios/RunFormCoachAI/
-cp project.yml /path/to/your/repo/project.yml
-git add ios/RunFormCoachAI project.yml
-git commit -m "Add RunForm app icon and modern iPhone UI refresh"
-git push origin ui-refresh-runform-icon
+ios/RunFormCoachAI/Models.swift
+ios/RunFormCoachAI/PoseExtractor.swift
+ios/RunFormCoachAI/APIClient.swift
+ios/RunFormCoachAI/ContentView.swift
+ios/RunFormCoachAI/AnalysisResultView.swift
+backend/app/main.py
+backend/app/schemas.py
+backend/app/analyzer.py
+backend/requirements.txt
 ```
 
-Then rebuild and upload a new TestFlight build.
+## Suggested git flow
+
+```bash
+git checkout -b improve-running-metrics-accuracy
+cp -R ios/RunFormCoachAI/* /path/to/runform-coach-ai/ios/RunFormCoachAI/
+cp -R backend/* /path/to/runform-coach-ai/backend/
+git add ios/RunFormCoachAI backend
+git commit -m "Improve video quality checks and cadence reliability"
+git push origin improve-running-metrics-accuracy
+```
+
+Then redeploy Railway and upload a new TestFlight build.

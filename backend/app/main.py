@@ -1,10 +1,10 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .analyzer import analyze_from_metrics, analyze_running_video
 from .schemas import AnalysisResponse, PoseMetricsInput
 
-app = FastAPI(title="RunForm Coach AI API", version="0.2.0")
+app = FastAPI(title="RunForm Coach AI API", version="0.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,25 +17,24 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "runform-coach-ai"}
+    return {"status": "ok", "service": "runform-coach-ai", "version": "0.3.0"}
 
 
 @app.post("/analyze-metrics", response_model=AnalysisResponse)
 async def analyze_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
-    """Phase 2: accept on-device pose metrics and return AI coaching advice."""
+    """Preferred path: iOS extracts pose metrics on-device; backend generates coaching advice."""
     try:
         return analyze_from_metrics(pose_input)
     except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Analysis error: {exc}")
+        raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
 
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze(video: UploadFile = File(...)) -> AnalysisResponse:
-    """Phase 1 fallback: upload raw video for frame-based GPT-4o Vision analysis."""
+    """Legacy fallback: upload raw video for frame-based GPT-4o Vision analysis."""
     if not video.content_type or not video.content_type.startswith("video/"):
         raise HTTPException(status_code=400, detail="Please upload a valid video file.")
-
     video_bytes = await video.read()
     return analyze_running_video(video_bytes, video.filename or "running-video.mp4")

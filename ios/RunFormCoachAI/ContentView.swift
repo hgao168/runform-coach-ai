@@ -32,6 +32,7 @@ struct ContentView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         heroCard
+                        videoGuidelinesCard
                         videoCard
                         actionButtons
                         messageSection
@@ -58,7 +59,7 @@ struct ContentView: View {
                     analysis = nil
                     latestHistoryItemID = nil
                     errorMessage = nil
-                    statusMessage = "Video selected. Ready for form analysis."
+                    statusMessage = "Video selected. We’ll first check pose quality, then generate coaching advice."
                 }
             }
         }
@@ -88,6 +89,25 @@ struct ContentView: View {
                 HStack(spacing: 8) {
                     MetricPill(text: appStore.profile.level.rawValue, systemImage: "bolt.heart")
                     MetricPill(text: "\(Int(appStore.profile.weeklyMileageKm)) km/week", systemImage: "speedometer")
+                }
+            }
+        }
+    }
+
+
+    private var videoGuidelinesCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Recording standard", systemImage: "checklist.checked")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    GuidelineRow(text: "10–20 seconds, normal running pace")
+                    GuidelineRow(text: "Side view is best; avoid front/back view for cadence")
+                    GuidelineRow(text: "Full body visible; both feet must stay in frame")
+                    GuidelineRow(text: "Stable phone at hip height; good lighting")
+                    GuidelineRow(text: "Runner fills 60–80% of the frame")
                 }
             }
         }
@@ -131,7 +151,7 @@ struct ContentView: View {
                             Text("Choose a side-view running video")
                                 .font(.headline)
                                 .foregroundStyle(.white)
-                            Text("Keep the phone stable and show full body if possible.")
+                            Text("Side view, full body, both feet visible, 10–20 seconds.")
                                 .font(.caption)
                                 .multilineTextAlignment(.center)
                                 .foregroundStyle(.white.opacity(0.62))
@@ -187,7 +207,7 @@ struct ContentView: View {
                 Label("What you’ll get", systemImage: "sparkle.magnifyingglass")
                     .font(.headline)
                     .foregroundStyle(.white)
-                Text("Form confidence, movement metrics, key issues, and targeted strength exercises saved into History for TestFlight feedback.")
+                Text("RunForm checks video quality first. If cadence cannot be measured reliably, it will ask for a better clip instead of showing a misleading 0 spm.")
                     .font(.callout)
                     .foregroundStyle(.white.opacity(0.68))
             }
@@ -198,11 +218,15 @@ struct ContentView: View {
         guard let selectedVideoURL else { return }
         isAnalyzing = true
         errorMessage = nil
-        statusMessage = "Analyzing pose on device..."
+        statusMessage = "Extracting pose metrics on device..."
 
         do {
             let poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL)
-            statusMessage = "Generating coaching advice..."
+            if poseMetrics.videoQualityScore < 0.55 {
+                statusMessage = "Video quality is low. We’ll still analyze it, but you may need to re-record."
+            } else {
+                statusMessage = "Pose quality looks usable. Generating coaching advice..."
+            }
             let result = try await APIClient.shared.analyzeMetrics(poseMetrics)
             analysis = result
             appStore.addHistory(result: result, videoURL: selectedVideoURL)
@@ -213,5 +237,21 @@ struct ContentView: View {
             statusMessage = nil
         }
         isAnalyzing = false
+    }
+}
+
+struct GuidelineRow: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(AppTheme.mint)
+                .padding(.top, 2)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.72))
+        }
     }
 }

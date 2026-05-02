@@ -1,0 +1,9 @@
+# Exclude large non-backend directories
+.venv/
+android/
+ios/
+scripts/
+.git/
+.github/
+*.md
+project.yml

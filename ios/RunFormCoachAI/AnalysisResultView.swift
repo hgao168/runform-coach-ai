@@ -6,6 +6,9 @@ struct AnalysisResultView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             scoreCard
+            if let quality = result.quality {
+                qualityCard(quality)
+            }
             metricsSection
             issuesSection
         }
@@ -29,7 +32,7 @@ struct AnalysisResultView: View {
                             .stroke(.white.opacity(0.12), lineWidth: 8)
                             .frame(width: 76, height: 76)
                         Circle()
-                            .trim(from: 0, to: result.confidence)
+                            .trim(from: 0, to: max(0, min(1, result.confidence)))
                             .stroke(AppTheme.actionGradient, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                             .frame(width: 76, height: 76)
                             .rotationEffect(.degrees(-90))
@@ -42,11 +45,66 @@ struct AnalysisResultView: View {
         }
     }
 
+    private func qualityCard(_ quality: VideoQuality) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Video Quality", systemImage: quality.score >= 0.70 ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Spacer()
+                Text(quality.status)
+                    .font(.caption.bold())
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.actionGradient)
+                    .clipShape(Capsule())
+            }
+
+            ProgressView(value: quality.score)
+                .tint(AppTheme.mint)
+
+            if !quality.reasons.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(quality.reasons, id: \.self) { reason in
+                        Label(reason, systemImage: "info.circle")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.72))
+                    }
+                }
+            }
+
+            if quality.score < 0.70 {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Re-record tips")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                    ForEach(quality.tips, id: \.self) { tip in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "arrow.clockwise.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.mint)
+                                .padding(.top, 2)
+                            Text(tip)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.68))
+                        }
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(.white.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.10), lineWidth: 1))
+    }
+
     private var metricsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Movement Metrics")
                 .font(.headline)
                 .foregroundStyle(.white)
+
             ForEach(result.metrics) { metric in
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -59,11 +117,11 @@ struct AnalysisResultView: View {
                             .foregroundStyle(.black)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 5)
-                            .background(AppTheme.actionGradient)
+                            .background(metric.status == "Not measurable" ? Color.orange.opacity(0.9) : AppTheme.actionGradient)
                             .clipShape(Capsule())
                     }
                     ProgressView(value: metric.score)
-                        .tint(AppTheme.mint)
+                        .tint(metric.status == "Not measurable" ? .orange : AppTheme.mint)
                     Text(metric.explanation)
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.64))
@@ -80,6 +138,7 @@ struct AnalysisResultView: View {
             Text("Strength Focus")
                 .font(.headline)
                 .foregroundStyle(.white)
+
             ForEach(result.issues) { issue in
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
