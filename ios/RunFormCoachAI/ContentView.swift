@@ -157,6 +157,7 @@ struct ContentView: View {
                                 .stroke(style: StrokeStyle(lineWidth: 1, dash: [7, 7]))
                                 .foregroundStyle(.white.opacity(0.16))
                         )
+                        .onTapGesture { showVideoPicker = true }
                 }
             }
         }
