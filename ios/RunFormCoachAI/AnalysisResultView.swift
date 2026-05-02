@@ -117,7 +117,7 @@ struct AnalysisResultView: View {
                             .foregroundStyle(.black)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 5)
-                            .background(metric.status == "Not measurable" ? Color.orange.opacity(0.9) : AppTheme.actionGradient)
+                            .background(metric.status == "Not measurable" ? AnyShapeStyle(Color.orange.opacity(0.9)) : AnyShapeStyle(AppTheme.actionGradient))
                             .clipShape(Capsule())
                     }
                     ProgressView(value: metric.score)
