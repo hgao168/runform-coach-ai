@@ -105,7 +105,7 @@ struct AnalysisResultView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            ForEach(result.metrics) { metric in
+            ForEach(result.metrics, id: \.id) { metric in
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text(metric.name)
@@ -117,7 +117,7 @@ struct AnalysisResultView: View {
                             .foregroundStyle(.black)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 5)
-                            .background(metric.status == "Not measurable" ? Color.orange.opacity(0.9) : AppTheme.actionGradient)
+                            .background(metric.status == "Not measurable" ? AnyShapeStyle(Color.orange.opacity(0.9)) : AnyShapeStyle(AppTheme.actionGradient))
                             .clipShape(Capsule())
                     }
                     ProgressView(value: metric.score)
@@ -139,7 +139,7 @@ struct AnalysisResultView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            ForEach(result.issues) { issue in
+            ForEach(result.issues, id: \.id) { issue in
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Label(issue.title, systemImage: "target")
@@ -157,7 +157,7 @@ struct AnalysisResultView: View {
                     Text(issue.explanation)
                         .font(.callout)
                         .foregroundStyle(.white.opacity(0.68))
-                    ForEach(issue.recommendedExercises) { exercise in
+                    ForEach(issue.recommendedExercises, id: \.id) { exercise in
                         ExerciseCard(exercise: exercise)
                     }
                 }
