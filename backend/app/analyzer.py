@@ -140,26 +140,16 @@ def analyze_running_video(video_bytes: bytes, filename: str) -> AnalysisResponse
 _METRICS_SYSTEM_PROMPT = """
 You are an expert running coach and sports biomechanics analyst.
 You are given numeric pose metrics extracted on-device from Apple Vision.
+The app uses a deterministic issue-to-exercise map. Use the provided issue list as the source of truth.
 Return ONLY valid JSON with this exact structure:
 {
   "summary": "<1-2 sentence overall assessment>",
-  "confidence": 0.0,
-  "issues": [
-    {
-      "title": "",
-      "severity": "Low|Medium|High",
-      "explanation": "",
-      "recommended_exercises": [
-        {"name": "", "category": "Strength|Run drill|Mobility", "sets": 0, "reps": "", "frequency_per_week": 0, "reason": ""}
-      ]
-    }
-  ]
+  "confidence": 0.0
 }
 Rules:
 - Never say cadence is 0. If cadence_status is "Not measurable", say cadence was not measurable from this clip.
-- Generate issues only for Moderate, Needs work, or Not measurable metrics.
-- Include one issue about video quality if video quality is Low.
-- Maximum 3 issues. Give 2 exercises per issue.
+- Do not invent extra exercises. The app will attach exercises from the deterministic recommendation map.
+- Mention the main movement priorities only.
 """
 
 
@@ -175,12 +165,13 @@ def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
     confidence = round(float(data.get("confidence", confidence)), 2)
     confidence = round(max(0.30, min(confidence, 0.95)), 2)
 
+    issues = _mapped_issues(pose_input, quality)
     return AnalysisResponse(
         summary=data.get("summary", _summary_fallback(pose_input, quality)),
         confidence=confidence,
         quality=quality,
         metrics=metrics,
-        issues=_parse_issues(data) or _fallback_issues(pose_input, quality),
+        issues=issues,
     )
 
 
@@ -215,12 +206,21 @@ def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
             + ("Keep posture tall with a slight forward lean from the ankles." if p.trunk_lean_status != "Good" else "Trunk alignment looks stable."),
         ),
         Metric(
-            name="Knee valgus / hip stability",
-            score=round(p.knee_valgus_risk_score, 2),
-            status=p.knee_valgus_status,
+            name="Hip drop",
+            score=round(p.hip_drop_risk_score, 2),
+            status=p.hip_drop_status,
             explanation=(
-                "Knee tracking was compared with hip-to-ankle alignment during stance. "
-                + ("Some inward knee drift or hip stability limitation may be present." if p.knee_valgus_status != "Good" else "Knee tracking looks controlled in this clip.")
+                "Left/right hip height was compared when landmarks were visible. "
+                + ("Possible pelvic drop suggests more single-leg hip control work." if p.hip_drop_status != "Good" else "Pelvic control looks stable in this clip.")
+            ),
+        ),
+        Metric(
+            name="Arm swing",
+            score=round(p.arm_swing_score, 2),
+            status=p.arm_swing_status,
+            explanation=(
+                "Elbow vertical oscillation relative to the shoulder was measured across frames. "
+                + ("Arm swing appears reduced or asymmetric. Forward/backward elbow drive helps balance cadence and trunk rotation." if p.arm_swing_status != "Good" else "Arm swing amplitude looks consistent and balanced.")
             ),
         ),
     ]
@@ -240,8 +240,10 @@ def _generate_issues_with_llm(p: PoseMetricsInput, metrics: list[Metric], qualit
         "overstride_risk_score": p.overstride_risk_score,
         "trunk_lean_degrees": p.trunk_lean_degrees,
         "trunk_lean_status": p.trunk_lean_status,
-        "knee_valgus_status": p.knee_valgus_status,
-        "knee_valgus_risk_score": p.knee_valgus_risk_score,
+        "hip_drop_status": p.hip_drop_status,
+        "hip_drop_risk_score": p.hip_drop_risk_score,
+        "arm_swing_status": p.arm_swing_status,
+        "arm_swing_score": p.arm_swing_score,
         "frame_count": p.frame_count,
         "sampled_frame_count": p.sampled_frame_count,
         "video_duration_seconds": p.video_duration_seconds,
@@ -315,16 +317,141 @@ def _fallback_issues(p: PoseMetricsInput, quality: VideoQuality) -> list[Issue]:
                 ],
             )
         )
-    if p.knee_valgus_status != "Good":
+    if p.arm_swing_status not in ("Good", "Not measurable"):
         issues.append(
             Issue(
-                title="Build hip stability",
+                title="Improve arm swing",
                 severity="Medium",
-                explanation="Knee tracking suggests hip control may need work during stance.",
+                explanation="Arm swing appears reduced or asymmetric. Forward/backward elbow drive helps balance cadence and trunk rotation.",
                 recommended_exercises=[
-                    Exercise(name="Side plank with top-leg raise", category="Strength", sets=3, reps="8 each side", frequency_per_week=2, reason="Targets lateral hip stability."),
-                    Exercise(name="Single-leg Romanian deadlift", category="Strength", sets=3, reps="8 each side", frequency_per_week=2, reason="Improves single-leg control."),
+                    Exercise(name="Standing arm swing drill", category="Run drill", sets=3, reps="30 sec", frequency_per_week=2, reason="Grooves forward-backward elbow drive without crossing the body midline."),
+                    Exercise(name="Arm pump march", category="Run drill", sets=3, reps="20 meters", frequency_per_week=2, reason="Links upper-body rhythm with leg tempo."),
                 ],
             )
         )
     return issues[:3]
+
+# ── Phase 3 deterministic issue-to-exercise recommendation engine ────────────
+
+def _exercise(
+    name: str,
+    category: str,
+    sets: int,
+    reps: str,
+    frequency: int,
+    reason: str,
+) -> Exercise:
+    return Exercise(
+        name=name,
+        category=category,
+        sets=sets,
+        reps=reps,
+        frequency_per_week=frequency,
+        reason=reason,
+    )
+
+
+ISSUE_EXERCISE_MAP: dict[str, dict[str, Any]] = {
+    "overstride": {
+        "title": "Reduce overstride",
+        "severity": "Medium",
+        "explanation": "Your foot may be landing too far in front of your body. This can increase braking force and make each stride less efficient.",
+        "exercises": [
+            _exercise("Cadence drill", "Run drill", 6, "30 sec @ slightly quicker rhythm", 2, "A quicker rhythm encourages shorter steps and helps the foot land closer under the hips."),
+            _exercise("A-skip", "Run drill", 3, "20 meters", 2, "A-skip teaches knee drive, posture, and landing mechanics without reaching forward."),
+            _exercise("Wall drill", "Run drill", 3, "8 reps each leg", 2, "Wall drill reinforces forward lean from the ankles and foot strike under the center of mass."),
+        ],
+    },
+    "arm_swing": {
+        "title": "Improve arm swing",
+        "severity": "Medium",
+        "explanation": "Arm swing appears reduced or asymmetric. Driving elbows forward and back helps balance leg turnover and stabilises the trunk during running.",
+        "exercises": [
+            _exercise("Standing arm swing drill", "Run drill", 3, "30 sec", 2, "Practise a relaxed, forward-backward elbow drive without crossing the body midline to groove the correct movement pattern."),
+            _exercise("Arm pump march", "Run drill", 3, "20 meters", 2, "March with exaggerated arm drive to link upper-body rhythm with leg tempo."),
+            _exercise("Shoulder mobility circles", "Mobility", 2, "10 reps each direction", 3, "Improved shoulder range of motion allows a fuller, more efficient arm swing."),
+        ],
+    },
+    "low_trunk_lean": {
+        "title": "Improve trunk lean",
+        "severity": "Medium",
+        "explanation": "Your trunk position may be too upright or inconsistent. A small forward lean from the ankles can improve momentum and reduce overstriding.",
+        "exercises": [
+            _exercise("Falling start drill", "Run drill", 4, "10 meters", 2, "Falling starts teach forward lean from the ankles without bending at the waist."),
+            _exercise("Posture drill", "Run drill", 3, "30 sec", 3, "Posture drills reinforce tall alignment, relaxed shoulders, and a stable trunk while running."),
+        ],
+    },
+    "hip_drop": {
+        "title": "Build hip stability",
+        "severity": "Medium",
+        "explanation": "Possible hip drop suggests the pelvis is not staying level during single-leg stance. This can reduce efficiency and increase knee/hip stress.",
+        "exercises": [
+            _exercise("Glute bridge", "Strength", 3, "12–15 reps", 2, "Glute bridges improve hip extension strength so you can push off without losing pelvic control."),
+            _exercise("Monster walk", "Strength", 3, "10 steps each direction", 2, "Monster walks strengthen glute medius for better side-to-side pelvic stability."),
+            _exercise("Single-leg RDL", "Strength", 3, "8 reps each side", 2, "Single-leg RDLs train hip hinge control, balance, and stance-leg stability."),
+        ],
+    },
+    "video_quality": {
+        "title": "Improve video quality",
+        "severity": "Medium",
+        "explanation": "The clip did not show enough reliable body landmarks for high-confidence analysis. Better recording quality will improve your metrics and recommendations.",
+        "exercises": [
+            _exercise("Re-record side-view run", "Run drill", 1, "10–20 sec", 1, "A full-body side view lets the app measure foot strike, cadence, trunk angle, and hip movement more reliably."),
+            _exercise("Treadmill phone setup practice", "Run drill", 1, "2 minutes", 1, "A stable hip-height camera reduces motion blur and improves landmark detection."),
+        ],
+    },
+}
+
+
+def _issue_from_key(key: str, severity: str | None = None) -> Issue:
+    spec = ISSUE_EXERCISE_MAP[key]
+    return Issue(
+        title=spec["title"],
+        severity=severity or spec["severity"],
+        explanation=spec["explanation"],
+        recommended_exercises=spec["exercises"],
+    )
+
+
+def _is_problem(status: str) -> bool:
+    return status in {"Moderate", "Needs work", "Not measurable", "Low"}
+
+
+def _mapped_issues(p: PoseMetricsInput, quality: VideoQuality) -> list[Issue]:
+    """Deterministic Phase 3 recommendation engine.
+
+    Keeps recommendation quality stable for TestFlight by mapping measured form
+    issues to a curated exercise library with explicit "why this exercise" text.
+    """
+    ranked: list[tuple[float, Issue]] = []
+
+    if quality.score < 0.70 or p.cadence_status == "Not measurable":
+        ranked.append((1.00 - quality.score + 0.15, _issue_from_key("video_quality", "High" if quality.score < 0.45 else "Medium")))
+
+    if _is_problem(p.overstride_status):
+        ranked.append((1.00 - p.overstride_risk_score, _issue_from_key("overstride", "High" if p.overstride_risk_score < 0.40 else "Medium")))
+
+    if _is_problem(p.arm_swing_status):
+        ranked.append((1.00 - p.arm_swing_score, _issue_from_key("arm_swing", "High" if p.arm_swing_score < 0.40 else "Medium")))
+
+    if _is_problem(p.trunk_lean_status):
+        ranked.append((1.00 - p.trunk_lean_score, _issue_from_key("low_trunk_lean", "High" if p.trunk_lean_score < 0.40 else "Medium")))
+
+    if _is_problem(p.hip_drop_status):
+        ranked.append((1.00 - p.hip_drop_risk_score, _issue_from_key("hip_drop", "High" if p.hip_drop_risk_score < 0.40 else "Medium")))
+
+    if not ranked:
+        return [
+            Issue(
+                title="Maintain running strength",
+                severity="Low",
+                explanation="No major movement issue was detected in this clip. Keep a light weekly strength routine to maintain durability.",
+                recommended_exercises=[
+                    _exercise("A-skip", "Run drill", 3, "20 meters", 1, "Keeps rhythm, posture, and foot placement sharp even when metrics look good."),
+                    _exercise("Glute bridge", "Strength", 3, "12 reps", 1, "Maintains hip extension strength for efficient push-off."),
+                ],
+            )
+        ]
+
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return [issue for _, issue in ranked[:3]]

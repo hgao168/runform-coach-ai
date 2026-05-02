@@ -51,8 +51,10 @@ class PoseMetricsInput(BaseModel):
     trunk_lean_degrees: float
     trunk_lean_score: float
     trunk_lean_status: str
-    knee_valgus_risk_score: float
-    knee_valgus_status: str
+    hip_drop_risk_score: float = 0.75
+    hip_drop_status: str = "Good"
+    arm_swing_score: float = 0.5
+    arm_swing_status: str = "Good"
     frame_count: int
     sampled_frame_count: int = 0
     video_duration_seconds: float

@@ -67,7 +67,9 @@ final class PoseExtractor {
                     leftHip: point(.leftHip),
                     rightHip: point(.rightHip),
                     leftShoulder: point(.leftShoulder),
-                    rightShoulder: point(.rightShoulder)
+                    rightShoulder: point(.rightShoulder),
+                    leftElbow: point(.leftElbow),
+                    rightElbow: point(.rightElbow)
                 )
             )
         }
@@ -174,20 +176,57 @@ final class PoseExtractor {
             trunkScore = 0.42; trunkStatus = "Needs work"
         }
 
-        var valgusDeviations: [Double] = []
+        // Arm swing: track elbow vertical (Y) oscillation amplitude relative to shoulder Y.
+        // In a side-view clip the elbow traces a vertical arc as the arm swings forward and back.
+        // Good arm swing shows an elbow Y range ≥ 0.07; < 0.03 suggests a reduced or cross-body swing.
+        var leftRelElbowY: [Double] = []
+        var rightRelElbowY: [Double] = []
         for pose in framePoses {
-            if let la = pose.leftAnkle, la.y <= stanceThreshold, let lk = pose.leftKnee, let lh = pose.leftHip {
-                let expectedX = (Double(lh.x) + Double(la.x)) / 2.0
-                valgusDeviations.append(abs(Double(lk.x) - expectedX))
+            if let le = pose.leftElbow, let ls = pose.leftShoulder {
+                leftRelElbowY.append(Double(le.y - ls.y))
             }
-            if let ra = pose.rightAnkle, ra.y <= stanceThreshold, let rk = pose.rightKnee, let rh = pose.rightHip {
-                let expectedX = (Double(rh.x) + Double(ra.x)) / 2.0
-                valgusDeviations.append(abs(Double(rk.x) - expectedX))
+            if let re = pose.rightElbow, let rs = pose.rightShoulder {
+                rightRelElbowY.append(Double(re.y - rs.y))
             }
         }
-        let avgValgus = valgusDeviations.isEmpty ? 0.04 : valgusDeviations.reduce(0, +) / Double(valgusDeviations.count)
-        let valgusScore = 1.0 - clamp((avgValgus - 0.03) / 0.10, 0, 1)
-        let valgusStatus = status(for: valgusScore)
+        let leftAmp = leftRelElbowY.isEmpty ? 0.0 : (leftRelElbowY.max()! - leftRelElbowY.min()!)
+        let rightAmp = rightRelElbowY.isEmpty ? 0.0 : (rightRelElbowY.max()! - rightRelElbowY.min()!)
+        let measuredAmps = [leftAmp, rightAmp].filter { $0 > 0.001 }
+        let avgAmp = measuredAmps.isEmpty ? 0.0 : measuredAmps.reduce(0, +) / Double(measuredAmps.count)
+        let elbowVisibleFrames = framePoses.filter { $0.leftElbow != nil || $0.rightElbow != nil }.count
+        let armSwingScore: Double
+        let armSwingStatus: String
+        if elbowVisibleFrames < 8 {
+            armSwingScore = 0.50
+            armSwingStatus = "Not measurable"
+            qualityReasons.append("Elbow joints were not visible in enough frames to measure arm swing.")
+        } else {
+            // Good amplitude is ≥ 0.07 (normalized Vision coordinates); < 0.02 is very stiff
+            let ampScore = clamp((avgAmp - 0.02) / 0.06, 0.0, 1.0)
+            // Penalise significant asymmetry (one arm swinging < 55 % of the other)
+            let asymmetryPenalty: Double
+            if leftAmp > 0.01 && rightAmp > 0.01 {
+                let ratio = min(leftAmp, rightAmp) / max(leftAmp, rightAmp)
+                asymmetryPenalty = ratio < 0.55 ? 0.20 : 0.0
+            } else {
+                asymmetryPenalty = 0.0
+            }
+            armSwingScore = clamp(ampScore - asymmetryPenalty, 0.0, 1.0)
+            armSwingStatus = status(for: armSwingScore)
+        }
+
+        // Hip drop: approximate pelvis level from left/right hip height when both hip landmarks are visible.
+        // This is a screen-space proxy, so it should be interpreted as a risk signal rather than a clinical diagnosis.
+        let hipDropValues = framePoses.compactMap { pose -> Double? in
+            guard let left = pose.leftHip, let right = pose.rightHip else { return nil }
+            return abs(Double(left.y - right.y))
+        }
+        let avgHipDrop = hipDropValues.isEmpty ? 0.02 : hipDropValues.reduce(0, +) / Double(hipDropValues.count)
+        let hipDropScore = 1.0 - clamp((avgHipDrop - 0.025) / 0.08, 0, 1)
+        let hipDropStatus = hipDropValues.count < 8 ? "Not measurable" : status(for: hipDropScore)
+        if hipDropStatus == "Not measurable" {
+            qualityReasons.append("Hip drop could not be measured because both hip landmarks were not visible in enough frames.")
+        }
 
         var qualityScore = 1.0
         qualityScore -= durationSeconds < 8 ? 0.20 : 0
@@ -208,8 +247,10 @@ final class PoseExtractor {
             trunkLeanDegrees: meanTrunkLean,
             trunkLeanScore: trunkScore,
             trunkLeanStatus: trunkStatus,
-            kneeValgusRiskScore: valgusScore,
-            kneeValgusStatus: valgusStatus,
+            hipDropRiskScore: hipDropScore,
+            hipDropStatus: hipDropStatus,
+            armSwingScore: armSwingScore,
+            armSwingStatus: armSwingStatus,
             frameCount: framePoses.count,
             sampledFrameCount: sampleTimes.count,
             videoDurationSeconds: durationSeconds,
@@ -231,6 +272,8 @@ final class PoseExtractor {
         let rightHip: CGPoint?
         let leftShoulder: CGPoint?
         let rightShoulder: CGPoint?
+        let leftElbow: CGPoint?
+        let rightElbow: CGPoint?
     }
 
     private struct TimedValue {
