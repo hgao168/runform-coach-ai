@@ -71,7 +71,7 @@ struct ProfileView: View {
                     .foregroundStyle(.secondary)
                 TextField("Your name", text: $draft.nickname)
                     .textFieldStyle(.roundedBorder)
-                    .onChange(of: draft.nickname) { markDirty() }
+                    .onChange(of: draft.nickname, perform: { _ in markDirty() })
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -84,7 +84,7 @@ struct ProfileView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .onChange(of: draft.level) { markDirty() }
+                .onChange(of: draft.level, perform: { _ in markDirty() })
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -99,7 +99,7 @@ struct ProfileView: View {
                 }
                 Slider(value: $draft.weeklyMileageKm, in: 0...120, step: 1)
                     .tint(AppTheme.cyan)
-                    .onChange(of: draft.weeklyMileageKm) { markDirty() }
+                    .onChange(of: draft.weeklyMileageKm, perform: { _ in markDirty() })
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -108,7 +108,7 @@ struct ProfileView: View {
                     .foregroundStyle(.secondary)
                 TextField("e.g. 10K, half marathon, general fitness", text: $draft.target)
                     .textFieldStyle(.roundedBorder)
-                    .onChange(of: draft.target) { markDirty() }
+                    .onChange(of: draft.target, perform: { _ in markDirty() })
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -118,7 +118,7 @@ struct ProfileView: View {
                 TextField("Optional — e.g. left knee, tight calves", text: $draft.injuryNote, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(2...5)
-                    .onChange(of: draft.injuryNote) { markDirty() }
+                    .onChange(of: draft.injuryNote, perform: { _ in markDirty() })
             }
         }
         .padding(20)
