@@ -196,7 +196,7 @@ struct SavedPlansView: View {
                         Text("No saved plans yet")
                             .font(.title2.bold())
                             .foregroundStyle(.white)
-                        Text("Generate a plan and tap "Save Plan" to keep it here.")
+                        Text("Generate a plan and tap \"Save Plan\" to keep it here.")
                             .font(.callout)
                             .multilineTextAlignment(.center)
                             .foregroundStyle(.white.opacity(0.62))
