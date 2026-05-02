@@ -98,6 +98,7 @@ struct PoseMetrics: Codable {
     let videoQualityScore: Double
     let qualityReasons: [String]
     let notes: [String]
+    var videoMode: String = "side"
 
     enum CodingKeys: String, CodingKey {
         case cadenceEstimateSPM = "cadence_estimate_spm"
@@ -122,6 +123,19 @@ struct PoseMetrics: Codable {
         case videoQualityScore = "video_quality_score"
         case qualityReasons = "quality_reasons"
         case notes
+        case videoMode = "video_mode"
+    }
+}
+
+enum VideoMode: String, CaseIterable, Identifiable {
+    case side = "side"
+    case rear = "rear"
+
+    var id: String { rawValue }
+    var label: String { self == .side ? "Side View" : "Rear View" }
+    var icon: String { self == .side ? "figure.run" : "figure.run.treadmill" }
+    var metrics: String {
+        self == .side ? "Cadence · Overstride · Trunk Lean" : "Hip Drop · Knee Valgus · Arm Swing"
     }
 }
 

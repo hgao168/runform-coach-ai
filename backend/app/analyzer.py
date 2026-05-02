@@ -185,10 +185,29 @@ def _signal_confidence(rate: float) -> str:
 
 
 def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
-    # Per-metric signal confidence derived from detection quality
-    cadence_conf = "Low" if (p.cadence_status == "Not measurable" or p.cadence_estimate_spm <= 0) else p.cadence_quality
-    overstride_conf = _signal_confidence(p.ankle_visibility_rate)
-    pose_conf = _signal_confidence(p.pose_detection_rate)
+    mode = p.video_mode  # "side" or "rear"
+
+    # Base signal confidences from detection quality
+    cadence_conf_raw = "Low" if (p.cadence_status == "Not measurable" or p.cadence_estimate_spm <= 0) else p.cadence_quality
+    overstride_conf_raw = _signal_confidence(p.ankle_visibility_rate)
+    pose_conf_raw = _signal_confidence(p.pose_detection_rate)
+
+    # Mode overrides: sagittal metrics need side view; frontal metrics need rear view
+    if mode == "rear":
+        cadence_conf = "Low"
+        overstride_conf = "Low"
+        trunk_conf = "Low"
+        knee_conf = pose_conf_raw
+        hip_conf = pose_conf_raw
+    else:  # side (default)
+        cadence_conf = cadence_conf_raw
+        overstride_conf = overstride_conf_raw
+        trunk_conf = pose_conf_raw
+        knee_conf = "Low"
+        hip_conf = "Low"
+
+    _side_tip = " Use side view for a more accurate reading of this metric."
+    _rear_tip = " Use rear view for a more accurate reading of this metric."
 
     if p.cadence_status == "Not measurable" or p.cadence_estimate_spm <= 0:
         cadence_explanation = (
@@ -200,6 +219,36 @@ def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
             f"Estimated cadence: {p.cadence_estimate_spm:.0f} steps/min. "
             + ("Target range is usually around 165–185 spm for many steady runs." if p.cadence_status != "Good" else "Cadence is in a solid range for this clip.")
         )
+    if mode == "rear":
+        cadence_explanation += _side_tip
+
+    overstride_explanation = (
+        "Foot landing was assessed relative to the hip center during stance. "
+        + ("Foot may be landing ahead of the body, increasing braking force." if p.overstride_status != "Good" else "Foot strike looks reasonably close to under the body.")
+    )
+    if mode == "rear":
+        overstride_explanation += _side_tip
+
+    trunk_explanation = (
+        f"Average trunk angle: {abs(p.trunk_lean_degrees):.1f}°. "
+        + ("Keep posture tall with a slight forward lean from the ankles." if p.trunk_lean_status != "Good" else "Trunk alignment looks stable.")
+    )
+    if mode == "rear":
+        trunk_explanation += _side_tip
+
+    knee_explanation = (
+        "Knee tracking was compared with hip-to-ankle alignment during stance. "
+        + ("Some inward knee drift or hip stability limitation may be present." if p.knee_valgus_status != "Good" else "Knee tracking looks controlled in this clip.")
+    )
+    if mode == "side":
+        knee_explanation += _rear_tip
+
+    hip_explanation = (
+        "Left/right hip height was compared when landmarks were visible. "
+        + ("Possible pelvic drop suggests more single-leg hip control work." if p.hip_drop_status != "Good" else "Pelvic control looks stable in this clip.")
+    )
+    if mode == "side":
+        hip_explanation += _rear_tip
 
     return [
         Metric(name="Cadence", score=round(p.cadence_score, 2), status=p.cadence_status, explanation=cadence_explanation, confidence=cadence_conf),
@@ -208,38 +257,28 @@ def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
             score=round(p.overstride_risk_score, 2),
             status=p.overstride_status,
             confidence=overstride_conf,
-            explanation=(
-                "Foot landing was assessed relative to the hip center during stance. "
-                + ("Foot may be landing ahead of the body, increasing braking force." if p.overstride_status != "Good" else "Foot strike looks reasonably close to under the body.")
-            ),
+            explanation=overstride_explanation,
         ),
         Metric(
             name="Trunk lean",
             score=round(p.trunk_lean_score, 2),
             status=p.trunk_lean_status,
-            confidence=pose_conf,
-            explanation=f"Average trunk angle: {abs(p.trunk_lean_degrees):.1f}°. "
-            + ("Keep posture tall with a slight forward lean from the ankles." if p.trunk_lean_status != "Good" else "Trunk alignment looks stable."),
+            confidence=trunk_conf,
+            explanation=trunk_explanation,
         ),
         Metric(
             name="Knee valgus / hip stability",
             score=round(p.knee_valgus_risk_score, 2),
             status=p.knee_valgus_status,
-            confidence=pose_conf,
-            explanation=(
-                "Knee tracking was compared with hip-to-ankle alignment during stance. "
-                + ("Some inward knee drift or hip stability limitation may be present." if p.knee_valgus_status != "Good" else "Knee tracking looks controlled in this clip.")
-            ),
+            confidence=knee_conf,
+            explanation=knee_explanation,
         ),
         Metric(
             name="Hip drop",
             score=round(p.hip_drop_risk_score, 2),
             status=p.hip_drop_status,
-            confidence=pose_conf,
-            explanation=(
-                "Left/right hip height was compared when landmarks were visible. "
-                + ("Possible pelvic drop suggests more single-leg hip control work." if p.hip_drop_status != "Good" else "Pelvic control looks stable in this clip.")
-            ),
+            confidence=hip_conf,
+            explanation=hip_explanation,
         ),
     ]
 
@@ -267,6 +306,7 @@ def _generate_issues_with_llm(p: PoseMetricsInput, metrics: list[Metric], qualit
         "video_duration_seconds": p.video_duration_seconds,
         "pose_detection_rate": p.pose_detection_rate,
         "ankle_visibility_rate": p.ankle_visibility_rate,
+        "video_mode": p.video_mode,
         "video_quality": quality.model_dump(),
         "metric_cards": [m.model_dump() for m in metrics],
         "notes": p.notes,
@@ -440,23 +480,39 @@ def _mapped_issues(p: PoseMetricsInput, quality: VideoQuality) -> list[Issue]:
 
     Keeps recommendation quality stable for TestFlight by mapping measured form
     issues to a curated exercise library with explicit "why this exercise" text.
+    Side view prioritises cadence/overstride/trunk; rear view prioritises hip/knee.
     """
+    mode = p.video_mode  # "side" or "rear"
     ranked: list[tuple[float, Issue]] = []
 
     if quality.score < 0.70 or p.cadence_status == "Not measurable":
         ranked.append((1.00 - quality.score + 0.15, _issue_from_key("video_quality", "High" if quality.score < 0.45 else "Medium")))
 
-    if _is_problem(p.overstride_status):
-        ranked.append((1.00 - p.overstride_risk_score, _issue_from_key("overstride", "High" if p.overstride_risk_score < 0.40 else "Medium")))
+    # Side-view-primary metrics
+    if mode != "rear":
+        if _is_problem(p.overstride_status):
+            ranked.append((1.00 - p.overstride_risk_score, _issue_from_key("overstride", "High" if p.overstride_risk_score < 0.40 else "Medium")))
+        if _is_problem(p.trunk_lean_status):
+            ranked.append((1.00 - p.trunk_lean_score, _issue_from_key("low_trunk_lean", "High" if p.trunk_lean_score < 0.40 else "Medium")))
 
-    if _is_problem(p.knee_valgus_status):
-        ranked.append((1.00 - p.knee_valgus_risk_score, _issue_from_key("knee_valgus", "High" if p.knee_valgus_risk_score < 0.40 else "Medium")))
+    # Rear-view-primary metrics
+    if mode != "side":
+        if _is_problem(p.knee_valgus_status):
+            ranked.append((1.00 - p.knee_valgus_risk_score, _issue_from_key("knee_valgus", "High" if p.knee_valgus_risk_score < 0.40 else "Medium")))
+        if _is_problem(p.hip_drop_status):
+            ranked.append((1.00 - p.hip_drop_risk_score, _issue_from_key("hip_drop", "High" if p.hip_drop_risk_score < 0.40 else "Medium")))
 
-    if _is_problem(p.trunk_lean_status):
-        ranked.append((1.00 - p.trunk_lean_score, _issue_from_key("low_trunk_lean", "High" if p.trunk_lean_score < 0.40 else "Medium")))
-
-    if _is_problem(p.hip_drop_status):
-        ranked.append((1.00 - p.hip_drop_risk_score, _issue_from_key("hip_drop", "High" if p.hip_drop_risk_score < 0.40 else "Medium")))
+    # Always include knee/hip from side and overstride from rear if they're severe
+    if mode == "side":
+        if _is_problem(p.knee_valgus_status) and p.knee_valgus_risk_score < 0.40:
+            ranked.append((1.00 - p.knee_valgus_risk_score, _issue_from_key("knee_valgus", "Medium")))
+        if _is_problem(p.hip_drop_status) and p.hip_drop_risk_score < 0.40:
+            ranked.append((1.00 - p.hip_drop_risk_score, _issue_from_key("hip_drop", "Medium")))
+    elif mode == "rear":
+        if _is_problem(p.overstride_status) and p.overstride_risk_score < 0.40:
+            ranked.append((1.00 - p.overstride_risk_score, _issue_from_key("overstride", "Medium")))
+        if _is_problem(p.trunk_lean_status) and p.trunk_lean_score < 0.40:
+            ranked.append((1.00 - p.trunk_lean_score, _issue_from_key("low_trunk_lean", "Medium")))
 
     if not ranked:
         return [

@@ -64,6 +64,7 @@ class PoseMetricsInput(BaseModel):
     video_quality_score: float = 0.5
     quality_reasons: List[str] = []
     notes: List[str] = []
+    video_mode: str = "side"
 
 
 class FormIssueContext(BaseModel):

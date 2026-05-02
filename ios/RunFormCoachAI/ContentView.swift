@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var latestHistoryItemID: UUID?
     @State private var errorMessage: String?
     @State private var statusMessage: String?
+    @State private var videoMode: VideoMode = .side
 
     var body: some View {
         TabView {
@@ -114,7 +115,47 @@ struct ContentView: View {
     private var videoCard: some View {
         DarkCard {
             VStack(alignment: .leading, spacing: 14) {
-                SectionTitle("Running clip", subtitle: "Side view works best", systemImage: "video.fill")
+                SectionTitle("Running clip", subtitle: "Select camera angle", systemImage: "video.fill")
+
+                HStack(spacing: 10) {
+                    ForEach(VideoMode.allCases) { mode in
+                        Button {
+                            if videoMode != mode {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    videoMode = mode
+                                }
+                                analysis = nil
+                                selectedVideoURL = nil
+                                statusMessage = nil
+                                errorMessage = nil
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 7) {
+                                    Image(systemName: mode.icon)
+                                        .font(.caption.weight(.bold))
+                                    Text(mode.label)
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                Text(mode.metrics)
+                                    .font(.caption2)
+                                    .lineLimit(1)
+                                    .foregroundStyle(videoMode == mode ? .black.opacity(0.65) : .white.opacity(0.45))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 10)
+                            .background(videoMode == mode ? AppTheme.mint : .white.opacity(0.07))
+                            .foregroundStyle(videoMode == mode ? .black : .white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(videoMode == mode ? Color.clear : .white.opacity(0.12), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
 
                 if let selectedVideoURL {
                     VideoPlayer(player: AVPlayer(url: selectedVideoURL))
@@ -166,11 +207,16 @@ struct ContentView: View {
     private var recordingTipsCard: some View {
         DarkCard {
             VStack(alignment: .leading, spacing: 13) {
-                SectionTitle("Capture guide", subtitle: "Better video = better metrics", systemImage: "checklist.checked")
+                SectionTitle("Capture guide", subtitle: videoMode == .side ? "Side view tips" : "Rear view tips", systemImage: "checklist.checked")
                 VStack(alignment: .leading, spacing: 10) {
                     GuidelineRow(text: "Record 10–20 seconds at normal running pace", icon: "timer")
-                    GuidelineRow(text: "Use side view; keep phone stable at hip height", icon: "iphone.gen3")
-                    GuidelineRow(text: "Full body visible; both feet must stay in frame", icon: "figure.walk.motion")
+                    if videoMode == .side {
+                        GuidelineRow(text: "Side view: phone at hip height, parallel to your direction of travel", icon: "iphone.gen3")
+                        GuidelineRow(text: "Full body visible — both feet must stay in frame", icon: "figure.walk.motion")
+                    } else {
+                        GuidelineRow(text: "Rear view: phone centered behind you at waist height", icon: "iphone.gen3")
+                        GuidelineRow(text: "Full body visible from head to heels, keep hips/knees in frame", icon: "figure.walk.motion")
+                    }
                     GuidelineRow(text: "Use bright lighting and avoid motion blur", icon: "sun.max.fill")
                 }
             }
@@ -226,7 +272,8 @@ struct ContentView: View {
         statusMessage = "Extracting pose metrics on device..."
 
         do {
-            let poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL)
+            var poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL)
+            poseMetrics.videoMode = videoMode.rawValue
             if poseMetrics.videoQualityScore < 0.55 {
                 statusMessage = "Video quality is low. RunForm will still analyze it, but a re-record may be needed."
             } else {
