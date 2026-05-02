@@ -1,6 +1,7 @@
 import Foundation
 
-struct AnalysisResponse: Codable, Equatable {
+struct AnalysisResponse: Codable, Identifiable, Equatable {
+    var id: String { summary + String(confidence) + metrics.map(\.name).joined() }
     let summary: String
     let confidence: Double
     let quality: VideoQuality?
@@ -57,75 +58,7 @@ struct Exercise: Codable, Identifiable, Equatable {
     }
 }
 
-enum TrainingTarget: String, CaseIterable, Codable, Identifiable {
-    case fiveK = "5K"
-    case tenK = "10K"
-    case halfMarathon = "Half Marathon"
-    case generalFitness = "General Fitness"
-
-    var id: String { rawValue }
-}
-
-struct TrainingPlanInput: Codable {
-    let currentWeeklyKm: Double
-    let target: String
-    let availableRunningDays: Int
-    let injuryFlag: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case currentWeeklyKm = "current_weekly_km"
-        case target
-        case availableRunningDays = "available_running_days"
-        case injuryFlag = "injury_flag"
-    }
-}
-
-struct PlannedWorkout: Codable, Identifiable {
-    var id: String { "\(day)-\(title)-\(category)" }
-    let day: String
-    let title: String
-    let category: String
-    let distanceKm: Double?
-    let durationMinutes: Int?
-    let intensity: String
-    let details: String
-    let purpose: String
-
-    enum CodingKeys: String, CodingKey {
-        case day
-        case title
-        case category
-        case distanceKm = "distance_km"
-        case durationMinutes = "duration_minutes"
-        case intensity
-        case details
-        case purpose
-    }
-}
-
-struct TrainingPlanResponse: Codable {
-    let summary: String
-    let target: String
-    let currentWeeklyKm: Double
-    let plannedWeeklyKm: Double
-    let runningDays: Int
-    let injuryAdjusted: Bool
-    let workouts: [PlannedWorkout]
-    let notes: [String]
-
-    enum CodingKeys: String, CodingKey {
-        case summary
-        case target
-        case currentWeeklyKm = "current_weekly_km"
-        case plannedWeeklyKm = "planned_weekly_km"
-        case runningDays = "running_days"
-        case injuryAdjusted = "injury_adjusted"
-        case workouts
-        case notes
-    }
-}
-
-// MARK: - Pose metrics (on-device extraction via Apple Vision)
+// MARK: - Pose metrics sent to backend
 
 struct PoseMetrics: Codable {
     let cadenceEstimateSPM: Double
@@ -138,10 +71,10 @@ struct PoseMetrics: Codable {
     let trunkLeanDegrees: Double
     let trunkLeanScore: Double
     let trunkLeanStatus: String
+    let kneeValgusRiskScore: Double
+    let kneeValgusStatus: String
     let hipDropRiskScore: Double
     let hipDropStatus: String
-    let armSwingScore: Double
-    let armSwingStatus: String
     let frameCount: Int
     let sampledFrameCount: Int
     let videoDurationSeconds: Double
@@ -162,10 +95,10 @@ struct PoseMetrics: Codable {
         case trunkLeanDegrees = "trunk_lean_degrees"
         case trunkLeanScore = "trunk_lean_score"
         case trunkLeanStatus = "trunk_lean_status"
+        case kneeValgusRiskScore = "knee_valgus_risk_score"
+        case kneeValgusStatus = "knee_valgus_status"
         case hipDropRiskScore = "hip_drop_risk_score"
         case hipDropStatus = "hip_drop_status"
-        case armSwingScore = "arm_swing_score"
-        case armSwingStatus = "arm_swing_status"
         case frameCount = "frame_count"
         case sampledFrameCount = "sampled_frame_count"
         case videoDurationSeconds = "video_duration_seconds"
@@ -176,8 +109,6 @@ struct PoseMetrics: Codable {
         case notes
     }
 }
-
-// MARK: - Tester profile & history
 
 enum RunnerLevel: String, Codable, CaseIterable, Identifiable {
     case beginner = "Beginner"
@@ -217,4 +148,70 @@ struct AnalysisHistoryItem: Codable, Identifiable, Equatable {
     let videoFilename: String
     let result: AnalysisResponse
     var feedback: AnalysisFeedback?
+}
+
+// MARK: - Training plan
+
+enum TrainingTarget: String, CaseIterable, Codable, Identifiable {
+    case fiveK = "5K"
+    case tenK = "10K"
+    case halfMarathon = "Half Marathon"
+    case generalFitness = "General Fitness"
+    var id: String { rawValue }
+}
+
+struct TrainingPlanInput: Codable {
+    let currentWeeklyKm: Double
+    let target: String
+    let availableRunningDays: Int
+    let injuryFlag: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case currentWeeklyKm = "current_weekly_km"
+        case target
+        case availableRunningDays = "available_running_days"
+        case injuryFlag = "injury_flag"
+    }
+}
+
+struct PlannedWorkout: Codable, Identifiable, Equatable {
+    var id: String { day + title }
+    let day: String
+    let title: String
+    let category: String
+    let intensity: String
+    let details: String
+    let purpose: String
+    let distanceKm: Double?
+    let durationMinutes: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case day, title, category, intensity, details, purpose
+        case distanceKm = "distance_km"
+        case durationMinutes = "duration_minutes"
+    }
+}
+
+struct TrainingPlanResponse: Codable, Equatable {
+    let summary: String
+    let plannedWeeklyKm: Double
+    let runningDays: Int
+    let workouts: [PlannedWorkout]
+    let notes: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case summary
+        case plannedWeeklyKm = "planned_weekly_km"
+        case runningDays = "running_days"
+        case workouts
+        case notes
+    }
+}
+
+struct SavedPlan: Codable, Identifiable, Equatable {
+    let id: UUID
+    let createdAt: Date
+    let target: String
+    let weeklyKm: Double
+    let plan: TrainingPlanResponse
 }

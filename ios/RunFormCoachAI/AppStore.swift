@@ -7,9 +7,11 @@ final class AppStore: ObservableObject {
     }
 
     @Published private(set) var history: [AnalysisHistoryItem] = []
+    @Published private(set) var savedPlans: [SavedPlan] = []
 
     private let profileKey = "tester.profile.v1"
     private let historyKey = "analysis.history.v1"
+    private let savedPlansKey = "saved.plans.v1"
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
@@ -25,6 +27,7 @@ final class AppStore: ObservableObject {
         }
 
         loadHistory()
+        loadSavedPlans()
     }
 
     func addHistory(result: AnalysisResponse, videoURL: URL?) {
@@ -50,6 +53,23 @@ final class AppStore: ObservableObject {
         saveHistory()
     }
 
+    func savePlan(_ plan: TrainingPlanResponse, target: String, weeklyKm: Double) {
+        let item = SavedPlan(
+            id: UUID(),
+            createdAt: Date(),
+            target: target,
+            weeklyKm: weeklyKm,
+            plan: plan
+        )
+        savedPlans.insert(item, at: 0)
+        saveSavedPlans()
+    }
+
+    func deleteSavedPlan(id: UUID) {
+        savedPlans.removeAll { $0.id == id }
+        saveSavedPlans()
+    }
+
     private func saveProfile() {
         guard let data = try? encoder.encode(profile) else { return }
         UserDefaults.standard.set(data, forKey: profileKey)
@@ -67,5 +87,19 @@ final class AppStore: ObservableObject {
     private func saveHistory() {
         guard let data = try? encoder.encode(history) else { return }
         UserDefaults.standard.set(data, forKey: historyKey)
+    }
+
+    private func loadSavedPlans() {
+        guard let data = UserDefaults.standard.data(forKey: savedPlansKey),
+              let plans = try? decoder.decode([SavedPlan].self, from: data) else {
+            savedPlans = []
+            return
+        }
+        savedPlans = plans.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func saveSavedPlans() {
+        guard let data = try? encoder.encode(savedPlans) else { return }
+        UserDefaults.standard.set(data, forKey: savedPlansKey)
     }
 }

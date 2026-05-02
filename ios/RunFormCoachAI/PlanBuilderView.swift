@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PlanBuilderView: View {
+    @EnvironmentObject private var appStore: AppStore
     @State private var currentWeeklyKmText = "20"
     @State private var target: TrainingTarget = .generalFitness
     @State private var availableRunningDays = 3
@@ -8,83 +9,116 @@ struct PlanBuilderView: View {
     @State private var isGenerating = false
     @State private var plan: TrainingPlanResponse?
     @State private var errorMessage: String?
+    @State private var planSaved = false
+    @State private var showSavedPlans = false
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    introCard
-                    inputCard
-                    generateButton
+            ZStack {
+                AppBackground()
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        introCard
+                        inputCard
+                        generateButton
 
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .foregroundStyle(.red)
-                            .font(.callout)
-                    }
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .foregroundStyle(.red)
+                                .font(.callout)
+                                .padding(.horizontal, 4)
+                        }
 
-                    if let plan {
-                        TrainingPlanResultView(plan: plan)
+                        if let plan {
+                            saveBar(plan: plan)
+                            TrainingPlanResultView(plan: plan)
+                        }
                     }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 10)
+                    .padding(.bottom, 28)
                 }
-                .padding()
             }
-            .navigationTitle("Next Week Plan")
+            .navigationTitle("Training Plan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                Button {
+                    showSavedPlans = true
+                } label: {
+                    Label("Saved", systemImage: "bookmark.fill")
+                        .foregroundStyle(AppTheme.mint)
+                }
+            }
+            .sheet(isPresented: $showSavedPlans) {
+                SavedPlansView()
+            }
         }
     }
 
     private var introCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Personalized running week")
-                .font(.title2.bold())
-            Text("Enter your current weekly volume, goal, available days, and injury status. RunForm will generate easy, quality, long, and strength/mobility sessions.")
-                .foregroundStyle(.secondary)
+        GlassCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 14) {
+                    IconBubble(systemImage: "calendar.badge.plus", gradient: AppTheme.purpleGradient, size: 52)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Next Week Plan")
+                            .font(.title2.bold())
+                            .foregroundStyle(.white)
+                        Text("Set your goal, volume, and days. Get a smart weekly plan.")
+                            .font(.callout)
+                            .foregroundStyle(.white.opacity(0.68))
+                    }
+                }
+            }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
     private var inputCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Inputs")
-                .font(.headline)
+        DarkCard {
+            VStack(alignment: .leading, spacing: 16) {
+                SectionTitle("Your inputs", subtitle: nil, systemImage: "slider.horizontal.3")
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Current weekly km")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextField("e.g. 20", text: $currentWeeklyKmText)
-                    .keyboardType(.decimalPad)
-                    .textFieldStyle(.roundedBorder)
-            }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Current weekly km")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.6))
+                    TextField("e.g. 20", text: $currentWeeklyKmText)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.roundedBorder)
+                }
 
-            Picker("Target", selection: $target) {
-                ForEach(TrainingTarget.allCases) { item in
-                    Text(item.rawValue).tag(item)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Goal")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.6))
+                    Picker("Target", selection: $target) {
+                        ForEach(TrainingTarget.allCases) { item in
+                            Text(item.rawValue).tag(item)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(AppTheme.mint)
+                }
+
+                Stepper("Running days: \(availableRunningDays)", value: $availableRunningDays, in: 1...7)
+                    .foregroundStyle(.white)
+
+                Toggle("Injury / pain flag", isOn: $injuryFlag)
+                    .tint(AppTheme.mint)
+
+                if injuryFlag {
+                    Label("Progression will be reduced; hard sessions replaced with easy runs.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                 }
             }
-            .pickerStyle(.menu)
-
-            Stepper("Available running days: \(availableRunningDays)", value: $availableRunningDays, in: 1...7)
-
-            Toggle("Injury or pain flag", isOn: $injuryFlag)
-
-            if injuryFlag {
-                Text("RunForm will reduce progression and replace harder work with easy running or mobility.")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-            }
         }
-        .padding()
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(radius: 1)
     }
 
     private var generateButton: some View {
         Button {
+            planSaved = false
             Task { await generatePlan() }
         } label: {
             if isGenerating {
@@ -94,8 +128,30 @@ struct PlanBuilderView: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(GradientButtonStyle())
         .disabled(isGenerating)
+    }
+
+    private func saveBar(plan: TrainingPlanResponse) -> some View {
+        HStack {
+            Spacer()
+            if planSaved {
+                Label("Plan saved", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(AppTheme.mint)
+            } else {
+                Button {
+                    let km = Double(currentWeeklyKmText.replacingOccurrences(of: ",", with: ".")) ?? 0
+                    appStore.savePlan(plan, target: target.rawValue, weeklyKm: km)
+                    planSaved = true
+                } label: {
+                    Label("Save Plan", systemImage: "bookmark")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(AppTheme.mint)
+                }
+            }
+        }
+        .padding(.horizontal, 4)
     }
 
     private func generatePlan() async {
@@ -117,12 +173,95 @@ struct PlanBuilderView: View {
         do {
             plan = try await APIClient.shared.generateTrainingPlan(input: input)
         } catch {
-            errorMessage = "Plan generation failed. Check backend URL and Railway deployment."
+            errorMessage = "Plan generation failed. Check your connection."
         }
 
         isGenerating = false
     }
 }
+
+// MARK: - Saved Plans sheet
+
+struct SavedPlansView: View {
+    @EnvironmentObject private var appStore: AppStore
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                if appStore.savedPlans.isEmpty {
+                    VStack(spacing: 16) {
+                        IconBubble(systemImage: "bookmark", gradient: AppTheme.purpleGradient, size: 72)
+                        Text("No saved plans yet")
+                            .font(.title2.bold())
+                            .foregroundStyle(.white)
+                        Text("Generate a plan and tap "Save Plan" to keep it here.")
+                            .font(.callout)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.white.opacity(0.62))
+                            .padding(.horizontal, 34)
+                    }
+                } else {
+                    List {
+                        ForEach(appStore.savedPlans) { saved in
+                            NavigationLink {
+                                SavedPlanDetailView(saved: saved)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(saved.target)
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+                                    Text("\(saved.plan.plannedWeeklyKm, specifier: "%.1f") km · \(saved.plan.runningDays) days")
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.55))
+                                    Text(saved.createdAt, format: .dateTime.month().day().hour().minute())
+                                        .font(.caption2)
+                                        .foregroundStyle(.white.opacity(0.4))
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                        .onDelete { offsets in
+                            offsets.map { appStore.savedPlans[$0].id }.forEach { appStore.deleteSavedPlan(id: $0) }
+                        }
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                }
+            }
+            .navigationTitle("Saved Plans")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                Button("Done") { dismiss() }
+                    .foregroundStyle(AppTheme.mint)
+            }
+        }
+    }
+}
+
+struct SavedPlanDetailView: View {
+    let saved: SavedPlan
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 14) {
+                    TrainingPlanResultView(plan: saved.plan)
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 28)
+            }
+        }
+        .navigationTitle(saved.target)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+}
+
+// MARK: - Plan result views
 
 struct TrainingPlanResultView: View {
     let plan: TrainingPlanResponse
@@ -136,50 +275,49 @@ struct TrainingPlanResultView: View {
     }
 
     private var summaryCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Plan Summary")
-                .font(.headline)
-            Text(plan.summary)
-                .foregroundStyle(.secondary)
-            HStack {
-                Label("\(plan.plannedWeeklyKm, specifier: "%.1f") km", systemImage: "figure.run")
-                Spacer()
-                Label("\(plan.runningDays) days", systemImage: "calendar")
+        GlassCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Plan Summary")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text(plan.summary)
+                    .foregroundStyle(.white.opacity(0.75))
+                HStack {
+                    Label("\(plan.plannedWeeklyKm, specifier: "%.1f") km", systemImage: "figure.run")
+                    Spacer()
+                    Label("\(plan.runningDays) days", systemImage: "calendar")
+                }
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.6))
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
     private var workoutList: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Workouts")
                 .font(.headline)
-            ForEach(plan.workouts) { workout in
+                .foregroundStyle(.white)
+                .padding(.horizontal, 4)
+            ForEach(plan.workouts, id: \.id) { workout in
                 WorkoutCard(workout: workout)
             }
         }
     }
 
     private var notesCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Coach Notes")
-                .font(.headline)
-            ForEach(plan.notes, id: \.self) { note in
-                Label(note, systemImage: "checkmark.circle")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        DarkCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Coach Notes")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                ForEach(plan.notes, id: \.self) { note in
+                    Label(note, systemImage: "checkmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                }
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .shadow(radius: 1)
     }
 }
 
@@ -187,43 +325,47 @@ struct WorkoutCard: View {
     let workout: PlannedWorkout
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(workout.day)
-                    .font(.headline)
-                    .frame(width: 44, alignment: .leading)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(workout.title)
-                        .font(.headline)
-                    Text(workout.category)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.quaternary)
-                        .clipShape(Capsule())
+        DarkCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(workout.day)
+                        .font(.caption.bold())
+                        .foregroundStyle(AppTheme.mint)
+                        .frame(width: 38, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(workout.title)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text(workout.category)
+                            .font(.caption)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.white.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                    Spacer()
+                    if let distanceKm = workout.distanceKm {
+                        Text("\(distanceKm, specifier: "%.1f") km")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                    } else if let durationMinutes = workout.durationMinutes {
+                        Text("\(durationMinutes) min")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                    }
                 }
-                Spacer()
-                if let distanceKm = workout.distanceKm {
-                    Text("\(distanceKm, specifier: "%.1f") km")
-                        .font(.headline)
-                } else if let durationMinutes = workout.durationMinutes {
-                    Text("\(durationMinutes) min")
-                        .font(.headline)
-                }
-            }
 
-            Text(workout.intensity)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(workout.details)
-                .font(.callout)
-            Text("Why: \(workout.purpose)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(workout.intensity)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.55))
+                Text(workout.details)
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.85))
+                Text("Why: \(workout.purpose)")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.55))
+            }
         }
-        .padding()
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .shadow(radius: 1)
     }
 }
