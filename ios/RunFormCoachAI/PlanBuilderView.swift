@@ -30,7 +30,6 @@ struct PlanBuilderView: View {
                         }
 
                         if let plan {
-                            saveBar(plan: plan)
                             TrainingPlanResultView(plan: plan)
                         }
                     }
@@ -43,11 +42,32 @@ struct PlanBuilderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                Button {
-                    showSavedPlans = true
-                } label: {
-                    Label("Saved", systemImage: "bookmark.fill")
-                        .foregroundStyle(AppTheme.mint)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showSavedPlans = true
+                    } label: {
+                        Image(systemName: "bookmark.fill")
+                            .foregroundStyle(AppTheme.mint)
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if plan != nil {
+                        if planSaved {
+                            Label("Saved", systemImage: "checkmark.circle.fill")
+                                .font(.caption.bold())
+                                .foregroundStyle(AppTheme.mint)
+                        } else {
+                            Button("Save Plan") {
+                                if let p = plan {
+                                    let km = Double(currentWeeklyKmText.replacingOccurrences(of: ",", with: ".")) ?? 0
+                                    appStore.savePlan(p, target: target.rawValue, weeklyKm: km)
+                                    planSaved = true
+                                }
+                            }
+                            .foregroundStyle(AppTheme.mint)
+                            .fontWeight(.semibold)
+                        }
+                    }
                 }
             }
             .sheet(isPresented: $showSavedPlans) {
@@ -130,28 +150,6 @@ struct PlanBuilderView: View {
         }
         .buttonStyle(GradientButtonStyle())
         .disabled(isGenerating)
-    }
-
-    private func saveBar(plan: TrainingPlanResponse) -> some View {
-        HStack {
-            Spacer()
-            if planSaved {
-                Label("Plan saved", systemImage: "checkmark.circle.fill")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(AppTheme.mint)
-            } else {
-                Button {
-                    let km = Double(currentWeeklyKmText.replacingOccurrences(of: ",", with: ".")) ?? 0
-                    appStore.savePlan(plan, target: target.rawValue, weeklyKm: km)
-                    planSaved = true
-                } label: {
-                    Label("Save Plan", systemImage: "bookmark")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(AppTheme.mint)
-                }
-            }
-        }
-        .padding(.horizontal, 4)
     }
 
     private func generatePlan() async {

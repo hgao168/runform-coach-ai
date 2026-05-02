@@ -27,6 +27,8 @@ struct ContentView: View {
         }
         .tint(AppTheme.mint)
         .preferredColorScheme(.dark)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarColorScheme(.dark, for: .tabBar)
     }
 
     private var analyzeTab: some View {
