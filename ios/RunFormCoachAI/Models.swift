@@ -23,6 +23,20 @@ struct Metric: Codable, Identifiable, Equatable {
     let score: Double
     let status: String
     let explanation: String
+    let confidence: String
+
+    enum CodingKeys: String, CodingKey {
+        case name, score, status, explanation, confidence
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name        = try c.decode(String.self, forKey: .name)
+        score       = try c.decode(Double.self, forKey: .score)
+        status      = try c.decode(String.self, forKey: .status)
+        explanation = try c.decode(String.self, forKey: .explanation)
+        confidence  = try c.decodeIfPresent(String.self, forKey: .confidence) ?? "Medium"
+    }
 }
 
 struct Issue: Codable, Identifiable, Equatable {

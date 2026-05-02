@@ -134,6 +134,14 @@ struct MetricResultCard: View {
         metric.status == "Not measurable" ? AppTheme.orange : AppTheme.mint
     }
 
+    private var confidenceColor: Color {
+        switch metric.confidence {
+        case "High":   return AppTheme.mint
+        case "Low":    return AppTheme.orange
+        default:       return AppTheme.cyan
+        }
+    }
+
     var body: some View {
         DarkCard {
             VStack(alignment: .leading, spacing: 10) {
@@ -151,6 +159,15 @@ struct MetricResultCard: View {
                 ProgressView(value: metric.score)
                     .tint(badgeColor)
                     .scaleEffect(x: 1, y: 1.08, anchor: .center)
+
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(confidenceColor)
+                        .frame(width: 6, height: 6)
+                    Text("Confidence: \(metric.confidence)")
+                        .font(.caption2.bold())
+                        .foregroundStyle(confidenceColor)
+                }
 
                 Text(metric.explanation)
                     .font(.caption)

@@ -7,6 +7,7 @@ class Metric(BaseModel):
     score: float
     status: str
     explanation: str
+    confidence: str = "Medium"
 
 
 class Exercise(BaseModel):

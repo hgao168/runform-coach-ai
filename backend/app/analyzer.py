@@ -175,7 +175,21 @@ def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
     )
 
 
+def _signal_confidence(rate: float) -> str:
+    """Convert a detection/visibility rate (0–1) to a human-readable confidence tier."""
+    if rate >= 0.75:
+        return "High"
+    if rate >= 0.50:
+        return "Medium"
+    return "Low"
+
+
 def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
+    # Per-metric signal confidence derived from detection quality
+    cadence_conf = "Low" if (p.cadence_status == "Not measurable" or p.cadence_estimate_spm <= 0) else p.cadence_quality
+    overstride_conf = _signal_confidence(p.ankle_visibility_rate)
+    pose_conf = _signal_confidence(p.pose_detection_rate)
+
     if p.cadence_status == "Not measurable" or p.cadence_estimate_spm <= 0:
         cadence_explanation = (
             "Cadence was not measurable from this clip because the foot/ankle signal was too weak. "
@@ -188,11 +202,12 @@ def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
         )
 
     return [
-        Metric(name="Cadence", score=round(p.cadence_score, 2), status=p.cadence_status, explanation=cadence_explanation),
+        Metric(name="Cadence", score=round(p.cadence_score, 2), status=p.cadence_status, explanation=cadence_explanation, confidence=cadence_conf),
         Metric(
             name="Overstride risk",
             score=round(p.overstride_risk_score, 2),
             status=p.overstride_status,
+            confidence=overstride_conf,
             explanation=(
                 "Foot landing was assessed relative to the hip center during stance. "
                 + ("Foot may be landing ahead of the body, increasing braking force." if p.overstride_status != "Good" else "Foot strike looks reasonably close to under the body.")
@@ -202,6 +217,7 @@ def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
             name="Trunk lean",
             score=round(p.trunk_lean_score, 2),
             status=p.trunk_lean_status,
+            confidence=pose_conf,
             explanation=f"Average trunk angle: {abs(p.trunk_lean_degrees):.1f}°. "
             + ("Keep posture tall with a slight forward lean from the ankles." if p.trunk_lean_status != "Good" else "Trunk alignment looks stable."),
         ),
@@ -209,6 +225,7 @@ def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
             name="Knee valgus / hip stability",
             score=round(p.knee_valgus_risk_score, 2),
             status=p.knee_valgus_status,
+            confidence=pose_conf,
             explanation=(
                 "Knee tracking was compared with hip-to-ankle alignment during stance. "
                 + ("Some inward knee drift or hip stability limitation may be present." if p.knee_valgus_status != "Good" else "Knee tracking looks controlled in this clip.")
@@ -218,6 +235,7 @@ def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
             name="Hip drop",
             score=round(p.hip_drop_risk_score, 2),
             status=p.hip_drop_status,
+            confidence=pose_conf,
             explanation=(
                 "Left/right hip height was compared when landmarks were visible. "
                 + ("Possible pelvic drop suggests more single-leg hip control work." if p.hip_drop_status != "Good" else "Pelvic control looks stable in this clip.")
