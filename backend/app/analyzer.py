@@ -7,7 +7,7 @@ from pathlib import Path
 import cv2
 from openai import OpenAI
 
-from .schemas import AnalysisResponse, Exercise, Issue, Metric
+from .schemas import AnalysisResponse, Exercise, Issue, Metric, PoseMetricsInput
 
 _SYSTEM_PROMPT = """You are an expert running coach and sports biomechanics analyst.
 Analyze the provided video frames of a person running and give a detailed biomechanical assessment.
@@ -137,6 +137,147 @@ def analyze_running_video(video_bytes: bytes, filename: str) -> AnalysisResponse
     return AnalysisResponse(
         summary=data["summary"],
         confidence=float(data["confidence"]),
+        metrics=metrics,
+        issues=issues,
+    )
+
+
+# ── Phase 2: metrics-based analysis ──────────────────────────────────────────
+
+_METRICS_SYSTEM_PROMPT = """You are an expert running coach and sports biomechanics analyst.
+You are given precise biomechanical metrics extracted from on-device Apple Vision pose detection.
+Use these measurements to generate targeted coaching advice.
+
+Return ONLY valid JSON with this exact structure:
+{
+  "summary": "<1-2 sentence overall assessment referencing the specific numbers>",
+  "confidence": <float 0.0-1.0 reflecting your confidence given the data quality>,
+  "issues": [
+    {
+      "title": "<issue title>",
+      "severity": "<Low|Medium|High>",
+      "explanation": "<specific explanation referencing the metric values>",
+      "recommended_exercises": [
+        {
+          "name": "<exercise name>",
+          "category": "<Strength|Mobility|Run drill|Stability>",
+          "sets": <integer>,
+          "reps": "<e.g. '8-10 each side' or '30 seconds'>",
+          "frequency_per_week": <integer>,
+          "reason": "<why this exercise directly addresses the measured issue>"
+        }
+      ]
+    }
+  ]
+}
+
+Rules:
+- Only generate issues for metrics with status "Needs work" or "Moderate". Skip "Good" metrics.
+- If all metrics are Good, return 1 maintenance issue with light exercises.
+- Provide 2 recommended exercises per issue.
+- Be specific: reference cadence numbers, lean degrees, etc. in explanations.
+- Maximum 3 issues."""
+
+
+def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
+    """Accept on-device pose metrics and use GPT-4o to generate coaching advice."""
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
+
+    # Build the 4 fixed metric objects directly from measured data
+    cadence_explanation = (
+        f"Estimated cadence: {pose_input.cadence_estimate_spm:.0f} steps/min "
+        f"(target 160–180 spm). "
+        + ("Consider metronome drills to increase tempo." if pose_input.cadence_status != "Good"
+           else "Cadence is in the optimal range.")
+    )
+    trunk_explanation = (
+        f"Average trunk angle: {abs(pose_input.trunk_lean_degrees):.1f}° "
+        f"{'forward' if pose_input.trunk_lean_degrees > 0 else 'lateral'} lean. "
+        + ("Minor deviations can increase energy cost and injury risk." if pose_input.trunk_lean_status != "Good"
+           else "Trunk alignment looks solid.")
+    )
+
+    metrics = [
+        Metric(
+            name="Cadence",
+            score=round(pose_input.cadence_score, 2),
+            status=pose_input.cadence_status,
+            explanation=cadence_explanation,
+        ),
+        Metric(
+            name="Overstride risk",
+            score=round(pose_input.overstride_risk_score, 2),
+            status=pose_input.overstride_status,
+            explanation=(
+                "Foot landing position relative to hip center of mass. "
+                + ("Foot may be landing ahead of the body — increases braking force."
+                   if pose_input.overstride_status != "Good"
+                   else "Foot strike looks well-positioned under the body.")
+            ),
+        ),
+        Metric(
+            name="Trunk lean",
+            score=round(pose_input.trunk_lean_score, 2),
+            status=pose_input.trunk_lean_status,
+            explanation=trunk_explanation,
+        ),
+        Metric(
+            name="Knee valgus / hip stability",
+            score=round(pose_input.knee_valgus_risk_score, 2),
+            status=pose_input.knee_valgus_status,
+            explanation=(
+                "Knee tracking relative to the hip-ankle alignment during stance. "
+                + ("Inward knee collapse detected — suggests hip abductor weakness."
+                   if pose_input.knee_valgus_status != "Good"
+                   else "Knee alignment during stance looks stable.")
+            ),
+        ),
+    ]
+
+    # Build the metrics summary for GPT-4o
+    notes_str = " Notes: " + "; ".join(pose_input.notes) if pose_input.notes else ""
+    user_message = f"""Running form metrics from on-device Apple Vision pose detection:
+
+- Cadence: {pose_input.cadence_estimate_spm:.0f} steps/min | score {pose_input.cadence_score:.2f} | {pose_input.cadence_status}
+- Overstride risk: score {pose_input.overstride_risk_score:.2f} | {pose_input.overstride_status}
+- Trunk lean: {pose_input.trunk_lean_degrees:.1f}° | score {pose_input.trunk_lean_score:.2f} | {pose_input.trunk_lean_status}
+- Knee valgus / hip stability: score {pose_input.knee_valgus_risk_score:.2f} | {pose_input.knee_valgus_status}
+- Frames analyzed: {pose_input.frame_count} over {pose_input.video_duration_seconds:.1f}s{notes_str}
+
+Generate targeted coaching issues and exercise recommendations based on these measurements."""
+
+    client = OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": _METRICS_SYSTEM_PROMPT},
+            {"role": "user",   "content": user_message},
+        ],
+        max_tokens=1500,
+        temperature=0.2,
+        response_format={"type": "json_object"},
+    )
+
+    data = json.loads(response.choices[0].message.content)
+
+    issues = [
+        Issue(
+            title=iss["title"],
+            severity=iss["severity"],
+            explanation=iss["explanation"],
+            recommended_exercises=[Exercise(**e) for e in iss.get("recommended_exercises", [])],
+        )
+        for iss in data["issues"]
+    ]
+
+    avg_score = sum(m.score for m in metrics) / len(metrics)
+    confidence = round(min(0.95, float(data.get("confidence", avg_score))), 2)
+
+    return AnalysisResponse(
+        summary=data["summary"],
+        confidence=confidence,
         metrics=metrics,
         issues=issues,
     )

@@ -198,16 +198,18 @@ struct ContentView: View {
         guard let selectedVideoURL else { return }
         isAnalyzing = true
         errorMessage = nil
-        statusMessage = "Uploading video and running analysis..."
+        statusMessage = "Analyzing pose on device..."
 
         do {
-            let result = try await APIClient.shared.analyzeVideo(fileURL: selectedVideoURL)
+            let poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL)
+            statusMessage = "Generating coaching advice..."
+            let result = try await APIClient.shared.analyzeMetrics(poseMetrics)
             analysis = result
             appStore.addHistory(result: result, videoURL: selectedVideoURL)
             latestHistoryItemID = appStore.history.first?.id
             statusMessage = "Analysis saved. Please add feedback after review."
         } catch {
-            errorMessage = "Analysis failed. Check backend URL/network and make sure the backend is running."
+            errorMessage = "Analysis failed: \(error.localizedDescription)"
             statusMessage = nil
         }
         isAnalyzing = false

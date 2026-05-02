@@ -50,6 +50,40 @@ struct Exercise: Codable, Identifiable, Equatable {
     }
 }
 
+// MARK: - Pose metrics sent to backend (Phase 2)
+
+struct PoseMetrics: Codable {
+    let cadenceEstimateSPM:  Double
+    let cadenceScore:        Double
+    let cadenceStatus:       String
+    let overstrideRiskScore: Double
+    let overstrideStatus:    String
+    let trunkLeanDegrees:    Double
+    let trunkLeanScore:      Double
+    let trunkLeanStatus:     String
+    let kneeValgusRiskScore: Double
+    let kneeValgusStatus:    String
+    let frameCount:          Int
+    let videoDurationSeconds: Double
+    let notes:               [String]
+
+    enum CodingKeys: String, CodingKey {
+        case cadenceEstimateSPM   = "cadence_estimate_spm"
+        case cadenceScore         = "cadence_score"
+        case cadenceStatus        = "cadence_status"
+        case overstrideRiskScore  = "overstride_risk_score"
+        case overstrideStatus     = "overstride_status"
+        case trunkLeanDegrees     = "trunk_lean_degrees"
+        case trunkLeanScore       = "trunk_lean_score"
+        case trunkLeanStatus      = "trunk_lean_status"
+        case kneeValgusRiskScore  = "knee_valgus_risk_score"
+        case kneeValgusStatus     = "knee_valgus_status"
+        case frameCount           = "frame_count"
+        case videoDurationSeconds = "video_duration_seconds"
+        case notes
+    }
+}
+
 enum RunnerLevel: String, Codable, CaseIterable, Identifiable {
     case beginner = "Beginner"
     case intermediate = "Intermediate"

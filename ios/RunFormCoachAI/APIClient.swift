@@ -12,6 +12,20 @@ final class APIClient {
         return URL(string: "http://127.0.0.1:8000")!
     }()
 
+    func analyzeMetrics(_ metrics: PoseMetrics) async throws -> AnalysisResponse {
+        let endpoint = baseURL.appendingPathComponent("analyze-metrics")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(metrics)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(AnalysisResponse.self, from: data)
+    }
+
     func analyzeVideo(fileURL: URL) async throws -> AnalysisResponse {
         let endpoint = baseURL.appendingPathComponent("analyze")
         var request = URLRequest(url: endpoint)
