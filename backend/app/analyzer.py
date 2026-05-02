@@ -694,7 +694,8 @@ def _enhance_plan_with_form_context(plan: TrainingPlanResponse, plan_input: Trai
     )
 
 
-def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:    api_key = os.environ.get("OPENAI_API_KEY")
+def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
+    api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
 
