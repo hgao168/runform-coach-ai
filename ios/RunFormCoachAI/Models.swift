@@ -156,6 +156,7 @@ enum TrainingTarget: String, CaseIterable, Codable, Identifiable {
     case fiveK = "5K"
     case tenK = "10K"
     case halfMarathon = "Half Marathon"
+    case marathon = "Marathon"
     case generalFitness = "General Fitness"
     var id: String { rawValue }
 }

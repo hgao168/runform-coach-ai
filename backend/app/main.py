@@ -1,10 +1,10 @@
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from .analyzer import analyze_from_metrics, analyze_running_video
-from .schemas import AnalysisResponse, PoseMetricsInput
+from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
+from .schemas import AnalysisResponse, PoseMetricsInput, TrainingPlanInput, TrainingPlanResponse
 
-app = FastAPI(title="RunForm Coach AI API", version="0.3.0")
+app = FastAPI(title="RunForm Coach AI API", version="0.4.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,7 +17,18 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "runform-coach-ai", "version": "0.3.0"}
+    return {"status": "ok", "service": "runform-coach-ai", "version": "0.4.0"}
+
+
+@app.post("/training-plan", response_model=TrainingPlanResponse)
+async def training_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
+    """Generate a personalised one-week training plan. planned_weekly_km mirrors current_weekly_km."""
+    try:
+        return generate_plan(plan_input)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Plan generation error: {exc}") from exc
 
 
 @app.post("/analyze-metrics", response_model=AnalysisResponse)

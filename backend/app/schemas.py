@@ -63,3 +63,29 @@ class PoseMetricsInput(BaseModel):
     video_quality_score: float = 0.5
     quality_reasons: List[str] = []
     notes: List[str] = []
+
+
+class TrainingPlanInput(BaseModel):
+    current_weekly_km: float
+    target: str
+    available_running_days: int = 3
+    injury_flag: bool = False
+
+
+class PlannedWorkout(BaseModel):
+    day: str
+    title: str
+    category: str
+    intensity: str
+    details: str
+    purpose: str
+    distance_km: Optional[float] = None
+    duration_minutes: Optional[int] = None
+
+
+class TrainingPlanResponse(BaseModel):
+    summary: str
+    planned_weekly_km: float
+    running_days: int
+    workouts: List[PlannedWorkout]
+    notes: List[str] = []

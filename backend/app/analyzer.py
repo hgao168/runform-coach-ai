@@ -8,7 +8,7 @@ from typing import Any
 import cv2
 from openai import OpenAI
 
-from .schemas import AnalysisResponse, Exercise, Issue, Metric, PoseMetricsInput, VideoQuality
+from .schemas import AnalysisResponse, Exercise, Issue, Metric, PoseMetricsInput, TrainingPlanInput, TrainingPlanResponse, PlannedWorkout, VideoQuality
 
 
 VIDEO_TIPS = [
@@ -455,3 +455,82 @@ def _mapped_issues(p: PoseMetricsInput, quality: VideoQuality) -> list[Issue]:
 
     ranked.sort(key=lambda item: item[0], reverse=True)
     return [issue for _, issue in ranked[:3]]
+
+
+# ── Training plan generation ──────────────────────────────────────────────────
+
+_PLAN_SYSTEM_PROMPT = """You are an expert running coach.
+Generate a one-week training plan as valid JSON only.
+RULES:
+- planned_weekly_km MUST equal exactly the value of current_weekly_km supplied by the user.
+- Distribute total km across exactly available_running_days sessions.
+- If injury_flag is true, replace all hard/tempo workouts with easy runs and add recovery notes.
+- The goal drives the TYPE of workouts (e.g. long slow run for Marathon/Half, speed work for 5K/10K).
+- Non-running days should NOT appear in the workouts array.
+Return this exact JSON structure:
+{
+  "summary": "<1-2 sentence overview>",
+  "planned_weekly_km": <number — must match current_weekly_km>,
+  "running_days": <int — must match available_running_days>,
+  "workouts": [
+    {
+      "day": "Monday",
+      "title": "Easy Run",
+      "category": "Easy",
+      "intensity": "Low",
+      "details": "<pace, effort, terrain>",
+      "purpose": "<why this session>",
+      "distance_km": 8.0,
+      "duration_minutes": 50
+    }
+  ],
+  "notes": ["<recovery tip>", "<nutrition tip>"]
+}"""
+
+
+def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
+
+    user_message = json.dumps({
+        "current_weekly_km": plan_input.current_weekly_km,
+        "target": plan_input.target,
+        "available_running_days": plan_input.available_running_days,
+        "injury_flag": plan_input.injury_flag,
+    })
+
+    client = OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model=os.environ.get("OPENAI_COACH_MODEL", "gpt-4o"),
+        messages=[
+            {"role": "system", "content": _PLAN_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        max_tokens=1200,
+        temperature=0.3,
+        response_format={"type": "json_object"},
+    )
+    data = _safe_json_loads(response.choices[0].message.content or "{}")
+
+    workouts = [
+        PlannedWorkout(
+            day=w.get("day", ""),
+            title=w.get("title", ""),
+            category=w.get("category", ""),
+            intensity=w.get("intensity", ""),
+            details=w.get("details", ""),
+            purpose=w.get("purpose", ""),
+            distance_km=w.get("distance_km"),
+            duration_minutes=w.get("duration_minutes"),
+        )
+        for w in data.get("workouts", [])
+    ]
+
+    return TrainingPlanResponse(
+        summary=data.get("summary", "Your personalised weekly training plan."),
+        planned_weekly_km=float(data.get("planned_weekly_km", plan_input.current_weekly_km)),
+        running_days=int(data.get("running_days", plan_input.available_running_days)),
+        workouts=workouts,
+        notes=data.get("notes", []),
+    )

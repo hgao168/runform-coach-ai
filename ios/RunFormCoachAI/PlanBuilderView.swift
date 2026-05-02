@@ -11,6 +11,7 @@ struct PlanBuilderView: View {
     @State private var errorMessage: String?
     @State private var planSaved = false
     @State private var showSavedPlans = false
+    @FocusState private var kmFieldFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -106,6 +107,7 @@ struct PlanBuilderView: View {
                     TextField("e.g. 20", text: $currentWeeklyKmText)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.roundedBorder)
+                        .focused($kmFieldFocused)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -138,6 +140,7 @@ struct PlanBuilderView: View {
 
     private var generateButton: some View {
         Button {
+            kmFieldFocused = false
             planSaved = false
             Task { await generatePlan() }
         } label: {
