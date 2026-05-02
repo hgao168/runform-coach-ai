@@ -46,7 +46,7 @@ struct GradientButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
-            .foregroundStyle(disabled ? .secondary : .black)
+            .foregroundStyle(disabled ? Color.secondary : Color.black)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
             .background(disabled ? AnyShapeStyle(.quaternary) : AnyShapeStyle(AppTheme.actionGradient))
