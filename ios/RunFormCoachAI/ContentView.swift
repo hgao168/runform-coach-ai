@@ -9,6 +9,9 @@ struct ContentView: View {
 
             PlanBuilderView()
                 .tabItem { Label("Plan", systemImage: "calendar.badge.plus") }
+
+            ProfileView()
+                .tabItem { Label("Profile", systemImage: "person.crop.circle") }
         }
     }
 }
