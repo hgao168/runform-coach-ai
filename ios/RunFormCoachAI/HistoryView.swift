@@ -7,11 +7,11 @@ struct HistoryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+                AppBackground()
                 if appStore.history.isEmpty {
                     EmptyHistoryView()
                 } else {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 14) {
                             ForEach(appStore.history) { item in
                                 NavigationLink {
@@ -22,14 +22,16 @@ struct HistoryView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding()
+                        .padding(18)
                     }
                 }
             }
             .navigationTitle("History")
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 if !appStore.history.isEmpty {
                     Button("Clear") { showClearConfirmation = true }
+                        .foregroundStyle(AppTheme.mint)
                 }
             }
             .confirmationDialog("Clear all local history?", isPresented: $showClearConfirmation) {
@@ -41,16 +43,18 @@ struct HistoryView: View {
 
 struct EmptyHistoryView: View {
     var body: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "chart.line.uptrend.xyaxis.circle")
-                .font(.system(size: 54))
-                .foregroundStyle(AppTheme.cyan)
-            Text("No analysis yet")
-                .font(.title2.bold())
-            Text("Analyze your first running video. Results and tester feedback will appear here.")
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 32)
+        VStack(spacing: 16) {
+            IconBubble(systemImage: "clock.arrow.circlepath", gradient: AppTheme.purpleGradient, size: 76)
+            VStack(spacing: 6) {
+                Text("No analysis yet")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                Text("Analyze your first running video. Results and tester feedback will appear here.")
+                    .font(.callout)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.62))
+                    .padding(.horizontal, 34)
+            }
         }
     }
 }
@@ -59,34 +63,55 @@ struct HistoryRow: View {
     let item: AnalysisHistoryItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(item.createdAt, format: .dateTime.month().day().hour().minute())
-                        .font(.headline)
-                    Text(item.videoFilename)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        DarkCard {
+            VStack(alignment: .leading, spacing: 13) {
+                HStack(alignment: .center) {
+                    IconBubble(systemImage: "figure.run", gradient: AppTheme.actionGradient, size: 44)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(item.createdAt, format: .dateTime.month().day().hour().minute())
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text(item.videoFilename)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                    Spacer()
+                    ConfidenceRingSmall(value: item.result.confidence)
                 }
-                Spacer()
-                Text("\(Int(item.result.confidence * 100))%")
-                    .font(.title3.bold())
-                    .foregroundStyle(AppTheme.deepBlue)
-            }
-            Text(item.result.summary)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-            if let feedback = item.feedback {
-                Label(feedback.rating.rawValue, systemImage: "bubble.left.and.bubble.right.fill")
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
+
+                Text(item.result.summary)
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.66))
+                    .lineLimit(2)
+
+                HStack(spacing: 8) {
+                    MetricPill(text: "\(item.result.metrics.count) metrics", systemImage: "waveform.path.ecg")
+                    if let feedback = item.feedback {
+                        MetricPill(text: feedback.rating.rawValue, systemImage: "bubble.left.and.bubble.right.fill")
+                    }
+                }
             }
         }
-        .padding(18)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 6)
+    }
+}
+
+struct ConfidenceRingSmall: View {
+    let value: Double
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(.white.opacity(0.12), lineWidth: 5)
+                .frame(width: 52, height: 52)
+            Circle()
+                .trim(from: 0, to: max(0, min(1, value)))
+                .stroke(AppTheme.actionGradient, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .frame(width: 52, height: 52)
+                .rotationEffect(.degrees(-90))
+            Text("\(Int(value * 100))")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+        }
     }
 }
 
@@ -98,39 +123,41 @@ struct HistoryDetailView: View {
 
     var body: some View {
         ZStack {
-            AppTheme.heroGradient.ignoresSafeArea()
-            ScrollView {
+            AppBackground()
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
                     GlassCard {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(currentItem.createdAt, format: .dateTime.year().month().day().hour().minute())
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                            Text(currentItem.videoFilename)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.65))
+                        HStack(spacing: 14) {
+                            IconBubble(systemImage: "doc.text.magnifyingglass", gradient: AppTheme.purpleGradient, size: 48)
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(currentItem.createdAt, format: .dateTime.year().month().day().hour().minute())
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                Text(currentItem.videoFilename)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.62))
+                            }
                         }
                     }
                     AnalysisResultView(result: currentItem.result)
                     FeedbackView(historyItemID: currentItem.id)
                     if let feedback = currentItem.feedback {
                         GlassCard {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Saved Feedback")
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
+                            VStack(alignment: .leading, spacing: 9) {
+                                SectionTitle("Saved Feedback", subtitle: "Tester signal", systemImage: "bubble.left.and.bubble.right.fill")
                                 Text(feedback.rating.rawValue)
-                                    .fontWeight(.semibold)
+                                    .font(.headline)
                                     .foregroundStyle(AppTheme.mint)
                                 if !feedback.comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                     Text(feedback.comment)
+                                        .font(.callout)
                                         .foregroundStyle(.white.opacity(0.66))
                                 }
                             }
                         }
                     }
                 }
-                .padding()
+                .padding(18)
             }
         }
         .navigationTitle("Result")

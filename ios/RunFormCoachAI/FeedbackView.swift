@@ -10,21 +10,15 @@ struct FeedbackView: View {
 
     var body: some View {
         GlassCard {
-            VStack(alignment: .leading, spacing: 13) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Label("Tester Feedback", systemImage: "bubble.left.and.exclamationmark.bubble.right.fill")
-                        .font(.headline)
-                        .foregroundStyle(.white)
+                    SectionTitle("Tester Feedback", subtitle: "Help improve coaching quality", systemImage: "bubble.left.and.exclamationmark.bubble.right.fill")
                     Spacer()
                     if saved {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(AppTheme.mint)
                     }
                 }
-
-                Text("Rate whether this result feels correct so Phase 2 pose analysis can improve.")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.65))
 
                 Picker("Rating", selection: $rating) {
                     ForEach(FeedbackRating.allCases) { rating in
@@ -33,17 +27,20 @@ struct FeedbackView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(AppTheme.mint)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(.white.opacity(0.09))
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .padding(.horizontal, 13)
+                .padding(.vertical, 11)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.black.opacity(0.20))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.09), lineWidth: 1))
 
                 TextField("Optional comment: what was wrong or useful?", text: $comment, axis: .vertical)
                     .lineLimit(2...4)
-                    .padding(12)
-                    .background(.white.opacity(0.09))
+                    .padding(13)
+                    .background(.black.opacity(0.20))
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.09), lineWidth: 1))
 
                 Button {
                     let feedback = AnalysisFeedback(id: UUID(), rating: rating, comment: comment, createdAt: Date())

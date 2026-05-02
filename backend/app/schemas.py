@@ -1,4 +1,4 @@
-from typing import List, Optional, Literal
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -51,10 +51,10 @@ class PoseMetricsInput(BaseModel):
     trunk_lean_degrees: float
     trunk_lean_score: float
     trunk_lean_status: str
+    knee_valgus_risk_score: float
+    knee_valgus_status: str
     hip_drop_risk_score: float = 0.75
     hip_drop_status: str = "Good"
-    arm_swing_score: float = 0.5
-    arm_swing_status: str = "Good"
     frame_count: int
     sampled_frame_count: int = 0
     video_duration_seconds: float
@@ -63,35 +63,3 @@ class PoseMetricsInput(BaseModel):
     video_quality_score: float = 0.5
     quality_reasons: List[str] = []
     notes: List[str] = []
-
-
-TrainingTarget = Literal["5K", "10K", "Half Marathon", "General Fitness"]
-
-
-class TrainingPlanInput(BaseModel):
-    current_weekly_km: float = Field(ge=0, le=250)
-    target: TrainingTarget = "General Fitness"
-    available_running_days: int = Field(ge=1, le=7)
-    injury_flag: bool = False
-
-
-class PlannedWorkout(BaseModel):
-    day: str
-    title: str
-    category: str
-    distance_km: Optional[float] = None
-    duration_minutes: Optional[int] = None
-    intensity: str
-    details: str
-    purpose: str
-
-
-class TrainingPlanResponse(BaseModel):
-    summary: str
-    target: TrainingTarget
-    current_weekly_km: float
-    planned_weekly_km: float
-    running_days: int
-    injury_adjusted: bool
-    workouts: List[PlannedWorkout]
-    notes: List[str]

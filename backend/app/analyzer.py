@@ -206,21 +206,21 @@ def _build_metric_cards(p: PoseMetricsInput) -> list[Metric]:
             + ("Keep posture tall with a slight forward lean from the ankles." if p.trunk_lean_status != "Good" else "Trunk alignment looks stable."),
         ),
         Metric(
+            name="Knee valgus / hip stability",
+            score=round(p.knee_valgus_risk_score, 2),
+            status=p.knee_valgus_status,
+            explanation=(
+                "Knee tracking was compared with hip-to-ankle alignment during stance. "
+                + ("Some inward knee drift or hip stability limitation may be present." if p.knee_valgus_status != "Good" else "Knee tracking looks controlled in this clip.")
+            ),
+        ),
+        Metric(
             name="Hip drop",
             score=round(p.hip_drop_risk_score, 2),
             status=p.hip_drop_status,
             explanation=(
                 "Left/right hip height was compared when landmarks were visible. "
                 + ("Possible pelvic drop suggests more single-leg hip control work." if p.hip_drop_status != "Good" else "Pelvic control looks stable in this clip.")
-            ),
-        ),
-        Metric(
-            name="Arm swing",
-            score=round(p.arm_swing_score, 2),
-            status=p.arm_swing_status,
-            explanation=(
-                "Elbow vertical oscillation relative to the shoulder was measured across frames. "
-                + ("Arm swing appears reduced or asymmetric. Forward/backward elbow drive helps balance cadence and trunk rotation." if p.arm_swing_status != "Good" else "Arm swing amplitude looks consistent and balanced.")
             ),
         ),
     ]
@@ -240,10 +240,10 @@ def _generate_issues_with_llm(p: PoseMetricsInput, metrics: list[Metric], qualit
         "overstride_risk_score": p.overstride_risk_score,
         "trunk_lean_degrees": p.trunk_lean_degrees,
         "trunk_lean_status": p.trunk_lean_status,
+        "knee_valgus_status": p.knee_valgus_status,
+        "knee_valgus_risk_score": p.knee_valgus_risk_score,
         "hip_drop_status": p.hip_drop_status,
         "hip_drop_risk_score": p.hip_drop_risk_score,
-        "arm_swing_status": p.arm_swing_status,
-        "arm_swing_score": p.arm_swing_score,
         "frame_count": p.frame_count,
         "sampled_frame_count": p.sampled_frame_count,
         "video_duration_seconds": p.video_duration_seconds,
@@ -317,15 +317,15 @@ def _fallback_issues(p: PoseMetricsInput, quality: VideoQuality) -> list[Issue]:
                 ],
             )
         )
-    if p.arm_swing_status not in ("Good", "Not measurable"):
+    if p.knee_valgus_status != "Good":
         issues.append(
             Issue(
-                title="Improve arm swing",
+                title="Build hip stability",
                 severity="Medium",
-                explanation="Arm swing appears reduced or asymmetric. Forward/backward elbow drive helps balance cadence and trunk rotation.",
+                explanation="Knee tracking suggests hip control may need work during stance.",
                 recommended_exercises=[
-                    Exercise(name="Standing arm swing drill", category="Run drill", sets=3, reps="30 sec", frequency_per_week=2, reason="Grooves forward-backward elbow drive without crossing the body midline."),
-                    Exercise(name="Arm pump march", category="Run drill", sets=3, reps="20 meters", frequency_per_week=2, reason="Links upper-body rhythm with leg tempo."),
+                    Exercise(name="Side plank with top-leg raise", category="Strength", sets=3, reps="8 each side", frequency_per_week=2, reason="Targets lateral hip stability."),
+                    Exercise(name="Single-leg Romanian deadlift", category="Strength", sets=3, reps="8 each side", frequency_per_week=2, reason="Improves single-leg control."),
                 ],
             )
         )
@@ -362,14 +362,14 @@ ISSUE_EXERCISE_MAP: dict[str, dict[str, Any]] = {
             _exercise("Wall drill", "Run drill", 3, "8 reps each leg", 2, "Wall drill reinforces forward lean from the ankles and foot strike under the center of mass."),
         ],
     },
-    "arm_swing": {
-        "title": "Improve arm swing",
+    "knee_valgus": {
+        "title": "Improve knee tracking",
         "severity": "Medium",
-        "explanation": "Arm swing appears reduced or asymmetric. Driving elbows forward and back helps balance leg turnover and stabilises the trunk during running.",
+        "explanation": "Your knee may be drifting inward during stance. This often points to hip control and single-leg stability limitations.",
         "exercises": [
-            _exercise("Standing arm swing drill", "Run drill", 3, "30 sec", 2, "Practise a relaxed, forward-backward elbow drive without crossing the body midline to groove the correct movement pattern."),
-            _exercise("Arm pump march", "Run drill", 3, "20 meters", 2, "March with exaggerated arm drive to link upper-body rhythm with leg tempo."),
-            _exercise("Shoulder mobility circles", "Mobility", 2, "10 reps each direction", 3, "Improved shoulder range of motion allows a fuller, more efficient arm swing."),
+            _exercise("Side plank", "Strength", 3, "20–30 sec each side", 2, "Side planks build lateral core and hip stability so the pelvis and knee stay better aligned."),
+            _exercise("Clamshell", "Strength", 3, "12 reps each side", 2, "Clamshells target glute medius, which helps control inward knee collapse."),
+            _exercise("Single-leg squat", "Strength", 3, "6–8 reps each side", 2, "Single-leg squats train knee-over-foot control under running-like single-leg load."),
         ],
     },
     "low_trunk_lean": {
@@ -431,8 +431,8 @@ def _mapped_issues(p: PoseMetricsInput, quality: VideoQuality) -> list[Issue]:
     if _is_problem(p.overstride_status):
         ranked.append((1.00 - p.overstride_risk_score, _issue_from_key("overstride", "High" if p.overstride_risk_score < 0.40 else "Medium")))
 
-    if _is_problem(p.arm_swing_status):
-        ranked.append((1.00 - p.arm_swing_score, _issue_from_key("arm_swing", "High" if p.arm_swing_score < 0.40 else "Medium")))
+    if _is_problem(p.knee_valgus_status):
+        ranked.append((1.00 - p.knee_valgus_risk_score, _issue_from_key("knee_valgus", "High" if p.knee_valgus_risk_score < 0.40 else "Medium")))
 
     if _is_problem(p.trunk_lean_status):
         ranked.append((1.00 - p.trunk_lean_score, _issue_from_key("low_trunk_lean", "High" if p.trunk_lean_score < 0.40 else "Medium")))
