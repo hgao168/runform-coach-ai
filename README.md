@@ -1,47 +1,33 @@
-# RunForm — Metrics Accuracy Update
+# RunForm Phase 4 — Training Plan Inputs
 
-This update improves running metrics reliability and avoids misleading cadence results such as `0 spm`.
+Drop-in update for `https://github.com/hgao168/runform-coach-ai`.
 
-## What changed
+## Adds
 
-### iOS
-- Added a recording-standard guide before video upload.
-- Added on-device video quality checks using pose detection rate, ankle visibility, and duration.
-- Improved `PoseExtractor.swift` cadence logic with adaptive ankle-motion signal analysis.
-- If cadence cannot be measured reliably, the app now shows `Not measurable` instead of a fake/false `0 spm`.
-- Sends only pose metrics JSON to the backend via `/analyze-metrics`.
-- Shows a Video Quality card with reasons and re-record tips.
-- Default backend URL set to Railway: `https://runform-coach-ai-production.up.railway.app`.
+- Backend endpoint: `POST /training-plan`
+- Training plan input model:
+  - current weekly km
+  - target: 5K / 10K / Half Marathon / General Fitness
+  - available running days
+  - injury flag
+- SwiftUI `PlanBuilderView`
+- TabView with Analyze + Plan
+- Output workouts:
+  - easy run
+  - quality run when injury flag is off and enough days are available
+  - long run
+  - strength / mobility days
 
-### Backend
-- Added `VideoQuality` response model.
-- Expanded `PoseMetricsInput` with cadence quality, ankle visibility, detection rate, and quality reasons.
-- Improved `/analyze-metrics` coaching response to handle low-quality video and unmeasurable cadence.
-- Keeps `/analyze` as a legacy raw-video fallback.
-
-## Files to copy
-
-```bash
-ios/RunFormCoachAI/Models.swift
-ios/RunFormCoachAI/PoseExtractor.swift
-ios/RunFormCoachAI/APIClient.swift
-ios/RunFormCoachAI/ContentView.swift
-ios/RunFormCoachAI/AnalysisResultView.swift
-backend/app/main.py
-backend/app/schemas.py
-backend/app/analyzer.py
-backend/requirements.txt
-```
-
-## Suggested git flow
+## Copy files
 
 ```bash
-git checkout -b improve-running-metrics-accuracy
-cp -R ios/RunFormCoachAI/* /path/to/runform-coach-ai/ios/RunFormCoachAI/
-cp -R backend/* /path/to/runform-coach-ai/backend/
-git add ios/RunFormCoachAI backend
-git commit -m "Improve video quality checks and cadence reliability"
-git push origin improve-running-metrics-accuracy
+cp backend/app/schemas.py /path/to/runform-coach-ai/backend/app/schemas.py
+cp backend/app/planner.py /path/to/runform-coach-ai/backend/app/planner.py
+cp backend/app/main.py /path/to/runform-coach-ai/backend/app/main.py
+cp ios/RunFormCoachAI/Models.swift /path/to/runform-coach-ai/ios/RunFormCoachAI/Models.swift
+cp ios/RunFormCoachAI/APIClient.swift /path/to/runform-coach-ai/ios/RunFormCoachAI/APIClient.swift
+cp ios/RunFormCoachAI/ContentView.swift /path/to/runform-coach-ai/ios/RunFormCoachAI/ContentView.swift
+cp ios/RunFormCoachAI/PlanBuilderView.swift /path/to/runform-coach-ai/ios/RunFormCoachAI/PlanBuilderView.swift
 ```
 
-Then redeploy Railway and upload a new TestFlight build.
+Then commit, redeploy Railway, regenerate Xcode project if you use XcodeGen, and upload a new TestFlight build.

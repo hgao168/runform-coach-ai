@@ -1,7 +1,6 @@
 import Foundation
 
-struct AnalysisResponse: Codable, Identifiable, Equatable {
-    var id: String { summary + String(confidence) + metrics.map(\.name).joined() }
+struct AnalysisResponse: Codable, Equatable {
     let summary: String
     let confidence: Double
     let quality: VideoQuality?
@@ -58,7 +57,75 @@ struct Exercise: Codable, Identifiable, Equatable {
     }
 }
 
-// MARK: - Pose metrics sent to backend
+enum TrainingTarget: String, CaseIterable, Codable, Identifiable {
+    case fiveK = "5K"
+    case tenK = "10K"
+    case halfMarathon = "Half Marathon"
+    case generalFitness = "General Fitness"
+
+    var id: String { rawValue }
+}
+
+struct TrainingPlanInput: Codable {
+    let currentWeeklyKm: Double
+    let target: String
+    let availableRunningDays: Int
+    let injuryFlag: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case currentWeeklyKm = "current_weekly_km"
+        case target
+        case availableRunningDays = "available_running_days"
+        case injuryFlag = "injury_flag"
+    }
+}
+
+struct PlannedWorkout: Codable, Identifiable {
+    var id: String { "\(day)-\(title)-\(category)" }
+    let day: String
+    let title: String
+    let category: String
+    let distanceKm: Double?
+    let durationMinutes: Int?
+    let intensity: String
+    let details: String
+    let purpose: String
+
+    enum CodingKeys: String, CodingKey {
+        case day
+        case title
+        case category
+        case distanceKm = "distance_km"
+        case durationMinutes = "duration_minutes"
+        case intensity
+        case details
+        case purpose
+    }
+}
+
+struct TrainingPlanResponse: Codable {
+    let summary: String
+    let target: String
+    let currentWeeklyKm: Double
+    let plannedWeeklyKm: Double
+    let runningDays: Int
+    let injuryAdjusted: Bool
+    let workouts: [PlannedWorkout]
+    let notes: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case summary
+        case target
+        case currentWeeklyKm = "current_weekly_km"
+        case plannedWeeklyKm = "planned_weekly_km"
+        case runningDays = "running_days"
+        case injuryAdjusted = "injury_adjusted"
+        case workouts
+        case notes
+    }
+}
+
+// MARK: - Pose metrics (on-device extraction via Apple Vision)
 
 struct PoseMetrics: Codable {
     let cadenceEstimateSPM: Double
@@ -109,6 +176,8 @@ struct PoseMetrics: Codable {
         case notes
     }
 }
+
+// MARK: - Tester profile & history
 
 enum RunnerLevel: String, Codable, CaseIterable, Identifiable {
     case beginner = "Beginner"

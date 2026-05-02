@@ -105,7 +105,7 @@ struct AnalysisResultView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            ForEach(result.metrics, id: \.id) { metric in
+            ForEach(result.metrics) { metric in
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text(metric.name)
@@ -117,7 +117,7 @@ struct AnalysisResultView: View {
                             .foregroundStyle(.black)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 5)
-                            .background(metric.status == "Not measurable" ? AnyShapeStyle(Color.orange.opacity(0.9)) : AnyShapeStyle(AppTheme.actionGradient))
+                            .background(metric.status == "Not measurable" ? Color.orange.opacity(0.9) : AppTheme.actionGradient)
                             .clipShape(Capsule())
                     }
                     ProgressView(value: metric.score)
@@ -135,11 +135,11 @@ struct AnalysisResultView: View {
 
     private var issuesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Strength Focus")
+            Text("Corrective Plan")
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            ForEach(result.issues, id: \.id) { issue in
+            ForEach(result.issues) { issue in
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Label(issue.title, systemImage: "target")
@@ -157,7 +157,7 @@ struct AnalysisResultView: View {
                     Text(issue.explanation)
                         .font(.callout)
                         .foregroundStyle(.white.opacity(0.68))
-                    ForEach(issue.recommendedExercises, id: \.id) { exercise in
+                    ForEach(issue.recommendedExercises) { exercise in
                         ExerciseCard(exercise: exercise)
                     }
                 }
@@ -188,9 +188,15 @@ struct ExerciseCard: View {
                 Text("\(exercise.category) • \(exercise.sets) sets • \(exercise.reps) • \(exercise.frequencyPerWeek)x/week")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.62))
-                Text(exercise.reason)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.62))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Why this exercise")
+                        .font(.caption2.bold())
+                        .foregroundStyle(AppTheme.mint)
+                    Text(exercise.reason)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.68))
+                }
+                .padding(.top, 2)
             }
         }
         .padding(13)
