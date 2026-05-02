@@ -31,7 +31,10 @@ struct PlanBuilderView: View {
                         }
 
                         if let plan {
-                            TrainingPlanResultView(plan: plan)
+                            TrainingPlanResultView(
+                                plan: plan,
+                                planID: appStore.nextWeekPlan?.id
+                            )
                         }
                     }
                     .padding(.horizontal, 18)
@@ -208,23 +211,50 @@ struct PlanBuilderView: View {
             return
         }
 
+        // Adapt volume/injury flag from last week's logged workout outcomes
+        var adaptedKm = km
+        var autoInjuryFlag = injuryFlag
+        var previousWeekSummary: String? = nil
+
+        if let logs = appStore.nextWeekPlan?.workoutLogs, !logs.isEmpty {
+            let values = Array(logs.values)
+            let painCount    = values.filter { $0 == .pain }.count
+            let tooHardCount = values.filter { $0 == .tooHard }.count
+            let skippedCount = values.filter { $0 == .skipped }.count
+            let doneCount    = values.filter { $0 == .done }.count
+
+            if painCount > 0    { autoInjuryFlag = true }
+            if tooHardCount >= 2 { adaptedKm = (km * 0.90).rounded() }
+
+            var parts: [String] = []
+            if doneCount    > 0 { parts.append("\(doneCount) completed") }
+            if skippedCount > 0 { parts.append("\(skippedCount) skipped") }
+            if tooHardCount > 0 { parts.append("\(tooHardCount) too hard") }
+            if painCount    > 0 { parts.append("\(painCount) caused pain") }
+            var summary = "Last week: \(parts.joined(separator: ", "))."
+            if tooHardCount >= 2 { summary += " Volume reduced 10% to \(Int(adaptedKm)) km." }
+            if painCount    >  0 { summary += " Injury flag set automatically." }
+            previousWeekSummary = summary
+        }
+
         isGenerating = true
         errorMessage = nil
 
         let input = TrainingPlanInput(
-            currentWeeklyKm: km,
+            currentWeeklyKm: adaptedKm,
             target: target.rawValue,
             availableRunningDays: availableRunningDays,
-            injuryFlag: injuryFlag,
+            injuryFlag: autoInjuryFlag,
             formIssues: appStore.latestCoachingIssues,
             recentAnalysisSummary: appStore.latestAnalysisSummary,
-            recentAnalysisConfidence: appStore.latestAnalysisConfidence
+            recentAnalysisConfidence: appStore.latestAnalysisConfidence,
+            previousWeekSummary: previousWeekSummary
         )
 
         do {
             let result = try await APIClient.shared.generateTrainingPlan(input: input)
             plan = result
-            appStore.setNextWeekPlan(result, target: target.rawValue, weeklyKm: km)
+            appStore.setNextWeekPlan(result, target: target.rawValue, weeklyKm: adaptedKm)
         } catch {
             errorMessage = "Plan generation failed. Check your connection."
         }
@@ -302,7 +332,7 @@ struct SavedPlanDetailView: View {
             AppBackground()
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
-                    TrainingPlanResultView(plan: saved.plan)
+                    TrainingPlanResultView(plan: saved.plan, planID: saved.id)
                 }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 28)
@@ -318,6 +348,7 @@ struct SavedPlanDetailView: View {
 
 struct TrainingPlanResultView: View {
     let plan: TrainingPlanResponse
+    var planID: UUID? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -358,7 +389,7 @@ struct TrainingPlanResultView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 4)
             ForEach(plan.workouts, id: \.id) { workout in
-                WorkoutCard(workout: workout)
+                WorkoutCard(workout: workout, planID: planID)
             }
         }
     }
@@ -380,7 +411,14 @@ struct TrainingPlanResultView: View {
 }
 
 struct WorkoutCard: View {
+    @EnvironmentObject private var appStore: AppStore
     let workout: PlannedWorkout
+    let planID: UUID?
+
+    private var currentStatus: WorkoutStatus? {
+        guard let planID else { return nil }
+        return appStore.workoutStatus(planID: planID, workoutID: workout.id)
+    }
 
     var body: some View {
         DarkCard {
@@ -428,7 +466,52 @@ struct WorkoutCard: View {
                 Text("Why: \(workout.purpose)")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.55))
+
+                if let planID {
+                    WorkoutStatusRow(
+                        workoutID: workout.id,
+                        planID: planID,
+                        currentStatus: currentStatus
+                    )
+                }
             }
         }
+    }
+}
+
+struct WorkoutStatusRow: View {
+    @EnvironmentObject private var appStore: AppStore
+    let workoutID: String
+    let planID: UUID
+    let currentStatus: WorkoutStatus?
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(WorkoutStatus.allCases) { status in
+                Button {
+                    // Tap again to deselect
+                    let next: WorkoutStatus? = currentStatus == status ? nil : status
+                    if let next {
+                        appStore.logWorkout(planID: planID, workoutID: workoutID, status: next)
+                    } else {
+                        appStore.clearWorkoutLog(planID: planID, workoutID: workoutID)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: status.icon)
+                        Text(status.rawValue)
+                    }
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(currentStatus == status ? .black : .white.opacity(0.65))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(currentStatus == status ? status.color : Color.white.opacity(0.10))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .animation(.easeInOut(duration: 0.15), value: currentStatus)
+            }
+        }
+        .padding(.top, 4)
     }
 }

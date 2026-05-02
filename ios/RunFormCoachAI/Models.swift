@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct AnalysisResponse: Codable, Identifiable, Equatable {
     var id: String { summary + String(confidence) + metrics.map(\.name).joined() }
@@ -185,6 +186,7 @@ struct TrainingPlanInput: Codable {
     let formIssues: [FormIssueContext]
     let recentAnalysisSummary: String?
     let recentAnalysisConfidence: Double?
+    let previousWeekSummary: String?
 
     init(
         currentWeeklyKm: Double,
@@ -193,7 +195,8 @@ struct TrainingPlanInput: Codable {
         injuryFlag: Bool,
         formIssues: [FormIssueContext] = [],
         recentAnalysisSummary: String? = nil,
-        recentAnalysisConfidence: Double? = nil
+        recentAnalysisConfidence: Double? = nil,
+        previousWeekSummary: String? = nil
     ) {
         self.currentWeeklyKm = currentWeeklyKm
         self.target = target
@@ -202,6 +205,7 @@ struct TrainingPlanInput: Codable {
         self.formIssues = formIssues
         self.recentAnalysisSummary = recentAnalysisSummary
         self.recentAnalysisConfidence = recentAnalysisConfidence
+        self.previousWeekSummary = previousWeekSummary
     }
 
     enum CodingKeys: String, CodingKey {
@@ -212,6 +216,7 @@ struct TrainingPlanInput: Codable {
         case formIssues = "form_issues"
         case recentAnalysisSummary = "recent_analysis_summary"
         case recentAnalysisConfidence = "recent_analysis_confidence"
+        case previousWeekSummary = "previous_week_summary"
     }
 }
 
@@ -253,10 +258,37 @@ struct TrainingPlanResponse: Codable, Equatable {
     }
 }
 
+enum WorkoutStatus: String, Codable, CaseIterable, Identifiable {
+    case done     = "Done"
+    case skipped  = "Skipped"
+    case tooHard  = "Too Hard"
+    case pain     = "Pain"
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .done:    return "checkmark.circle.fill"
+        case .skipped: return "minus.circle"
+        case .tooHard: return "exclamationmark.circle"
+        case .pain:    return "xmark.circle"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .done:    return Color(red: 0.25, green: 0.96, blue: 0.76)  // mint
+        case .skipped: return Color(red: 1.0, green: 0.62, blue: 0.22)   // orange
+        case .tooHard: return Color(red: 1.0, green: 0.85, blue: 0.20)   // yellow
+        case .pain:    return Color(red: 1.0, green: 0.30, blue: 0.30)   // red
+        }
+    }
+}
+
 struct SavedPlan: Codable, Identifiable, Equatable {
     let id: UUID
     let createdAt: Date
     let target: String
     let weeklyKm: Double
     let plan: TrainingPlanResponse
+    var workoutLogs: [String: WorkoutStatus] = [:]
 }

@@ -114,6 +114,37 @@ final class AppStore: ObservableObject {
         saveSavedPlans()
     }
 
+    // MARK: - Workout logging
+
+    func logWorkout(planID: UUID, workoutID: String, status: WorkoutStatus) {
+        if nextWeekPlan?.id == planID {
+            nextWeekPlan?.workoutLogs[workoutID] = status
+            saveNextWeekPlan()
+        }
+        if let idx = savedPlans.firstIndex(where: { $0.id == planID }) {
+            savedPlans[idx].workoutLogs[workoutID] = status
+            saveSavedPlans()
+        }
+    }
+
+    func workoutStatus(planID: UUID, workoutID: String) -> WorkoutStatus? {
+        if nextWeekPlan?.id == planID {
+            return nextWeekPlan?.workoutLogs[workoutID]
+        }
+        return savedPlans.first(where: { $0.id == planID })?.workoutLogs[workoutID]
+    }
+
+    func clearWorkoutLog(planID: UUID, workoutID: String) {
+        if nextWeekPlan?.id == planID {
+            nextWeekPlan?.workoutLogs.removeValue(forKey: workoutID)
+            saveNextWeekPlan()
+        }
+        if let idx = savedPlans.firstIndex(where: { $0.id == planID }) {
+            savedPlans[idx].workoutLogs.removeValue(forKey: workoutID)
+            saveSavedPlans()
+        }
+    }
+
     private func saveProfile() {
         guard let data = try? encoder.encode(profile) else { return }
         UserDefaults.standard.set(data, forKey: profileKey)

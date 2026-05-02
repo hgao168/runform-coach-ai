@@ -79,6 +79,7 @@ class TrainingPlanInput(BaseModel):
     form_issues: List[FormIssueContext] = []
     recent_analysis_summary: Optional[str] = None
     recent_analysis_confidence: Optional[float] = None
+    previous_week_summary: Optional[str] = None
 
 
 class PlannedWorkout(BaseModel):

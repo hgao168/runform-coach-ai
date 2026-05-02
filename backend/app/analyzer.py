@@ -466,6 +466,7 @@ RULES:
 - Distribute total km across exactly available_running_days sessions.
 - If injury_flag is true, replace all hard/tempo workouts with easy runs and add recovery notes.
 - The goal drives the TYPE of workouts (e.g. long slow run for Marathon/Half, speed work for 5K/10K).
+- If previous_week_summary is supplied, use it to adapt this week: reduce intensity/volume if workouts were too hard; add recovery if pain was reported; maintain or slightly increase if all were completed.
 - Non-running days should NOT appear in the workouts array.
 - If form_focus items are supplied, use them to adapt run cues and strength/mobility purpose to those issues.
 - Use form_issues to adjust workout purpose/details: overstride/cadence => cadence focus; hip drop/knee valgus => hip stability strength; trunk lean => posture/falling-start drills.
@@ -711,6 +712,8 @@ def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:    api
         user_message_dict["recent_analysis_summary"] = plan_input.recent_analysis_summary
     if plan_input.recent_analysis_confidence is not None:
         user_message_dict["recent_analysis_confidence"] = plan_input.recent_analysis_confidence
+    if plan_input.previous_week_summary:
+        user_message_dict["previous_week_summary"] = plan_input.previous_week_summary
 
     user_message = json.dumps(user_message_dict)
 
