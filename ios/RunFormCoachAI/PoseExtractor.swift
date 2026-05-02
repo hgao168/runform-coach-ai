@@ -93,8 +93,8 @@ final class PoseExtractor {
 
         // ── Metric 1: Cadence ─────────────────────────────────────────────────
         // Count local peaks in ankle Y trajectory (each peak = one foot swing-through = one step)
-        let leftAnkleY  = framePoses.compactMap { $0.leftAnkle?.y  }
-        let rightAnkleY = framePoses.compactMap { $0.rightAnkle?.y }
+        let leftAnkleY  = framePoses.compactMap { $0.leftAnkle.map  { Double($0.y) } }
+        let rightAnkleY = framePoses.compactMap { $0.rightAnkle.map { Double($0.y) } }
         let leftSteps   = countPeaks(in: leftAnkleY)
         let rightSteps  = countPeaks(in: rightAnkleY)
         let totalSteps  = leftSteps + rightSteps
@@ -116,7 +116,7 @@ final class PoseExtractor {
         // At stance frames (ankle Y near ground = low Y in Vision space),
         // measure horizontal distance from ankle to hip midpoint.
         var overstrideValues: [Double] = []
-        let stanceThreshold = 0.28  // normalized Y; below = foot near ground
+        let stanceThreshold: CGFloat = 0.28  // normalized Y; below = foot near ground
 
         for pose in framePoses {
             guard let hipMidX = avgX(pose.leftHip, pose.rightHip) else { continue }
