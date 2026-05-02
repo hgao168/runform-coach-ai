@@ -467,6 +467,8 @@ RULES:
 - If injury_flag is true, replace all hard/tempo workouts with easy runs and add recovery notes.
 - The goal drives the TYPE of workouts (e.g. long slow run for Marathon/Half, speed work for 5K/10K).
 - Non-running days should NOT appear in the workouts array.
+- If form_focus items are supplied, adapt run details and strength/mobility purpose to those issues.
+- Include strength/mobility work that supports the latest detected form issues when available.
 Return this exact JSON structure:
 {
   "summary": "<1-2 sentence overview>",
@@ -488,17 +490,123 @@ Return this exact JSON structure:
 }"""
 
 
+
+
+def _form_focus_from_issues(plan_input: TrainingPlanInput) -> list[dict[str, str]]:
+    """Translate latest Analyze issues into plan coaching focuses.
+    This keeps plan adaptation deterministic even if the LLM returns generic workouts.
+    """
+    focuses: list[dict[str, str]] = []
+    for issue in getattr(plan_input, "form_issues", []) or []:
+        title = issue.title.lower()
+        exercises = ", ".join(issue.exercise_names[:3]) if issue.exercise_names else "targeted drills"
+        if "overstride" in title:
+            focuses.append({
+                "issue": issue.title,
+                "cue": "shorter stride + quicker rhythm",
+                "plan_note": "Add cadence-focused cues to easy/long runs and include A-skip or wall drill before quality work.",
+                "strength": exercises,
+            })
+        elif "cadence" in title or "video quality" in title:
+            focuses.append({
+                "issue": issue.title,
+                "cue": "measurable cadence + full-foot visibility",
+                "plan_note": "Use short relaxed strides and re-check form with a cleaner side-view clip.",
+                "strength": exercises,
+            })
+        elif "trunk" in title or "lean" in title:
+            focuses.append({
+                "issue": issue.title,
+                "cue": "tall posture + slight lean from ankles",
+                "plan_note": "Add posture cues during easy runs and falling-start drill before faster running.",
+                "strength": exercises,
+            })
+        elif "hip" in title or "stability" in title or "drop" in title:
+            focuses.append({
+                "issue": issue.title,
+                "cue": "level pelvis + stable single-leg stance",
+                "plan_note": "Add glute/hip stability work on strength days and keep long run easy.",
+                "strength": exercises,
+            })
+        elif "knee" in title or "valgus" in title:
+            focuses.append({
+                "issue": issue.title,
+                "cue": "knee tracks over toes",
+                "plan_note": "Use hip-control strength work and avoid aggressive intensity if knee discomfort appears.",
+                "strength": exercises,
+            })
+        elif "arm" in title:
+            focuses.append({
+                "issue": issue.title,
+                "cue": "relaxed forward-backward elbow drive",
+                "plan_note": "Add arm swing cues to strides and easy runs to stabilize rhythm.",
+                "strength": exercises,
+            })
+    # keep the plan simple; 1-3 focus items are enough for runners
+    return focuses[:3]
+
+
+def _apply_form_focus_to_workouts(workouts: list[PlannedWorkout], focuses: list[dict[str, str]]) -> list[PlannedWorkout]:
+    if not focuses:
+        return workouts
+    primary = focuses[0]
+    adapted: list[PlannedWorkout] = []
+    for workout in workouts:
+        focus = primary["cue"]
+        details = workout.details
+        purpose = workout.purpose
+        category = workout.category.lower()
+        title = workout.title.lower()
+
+        if "easy" in category or "easy" in title:
+            details = f"{details} Form cue: {primary['cue']}. Keep this relaxed, not faster."
+            purpose = f"{purpose} Also reinforces {primary['issue'].lower()} improvements without adding fatigue."
+        elif "quality" in category or "tempo" in title or "interval" in title or "speed" in title:
+            details = f"{details} Before the main set, add 5 minutes of drills: {primary['strength']}."
+            purpose = f"{purpose} Quality work is paired with form drills so faster running does not reinforce old mechanics."
+        elif "long" in category or "long" in title:
+            details = f"{details} Keep the form focus simple: {primary['cue']} in the first and last 10 minutes."
+            purpose = f"{purpose} Long-run form reminders help maintain mechanics under fatigue."
+        elif "strength" in category or "mobility" in category:
+            all_strength = "; ".join(f["strength"] for f in focuses if f.get("strength"))
+            details = f"{details} Prioritise: {all_strength}."
+            purpose = "Targets the movement limiters detected in your latest RunForm analysis."
+            focus = ", ".join(f["issue"] for f in focuses)
+
+        adapted.append(PlannedWorkout(
+            day=workout.day,
+            title=workout.title,
+            category=workout.category,
+            intensity=workout.intensity,
+            details=details,
+            purpose=purpose,
+            distance_km=workout.distance_km,
+            duration_minutes=workout.duration_minutes,
+            coaching_focus=focus,
+        ))
+    return adapted
+
 def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
 
-    user_message = json.dumps({
+    form_focuses = _form_focus_from_issues(plan_input)
+
+    user_message_dict: dict[str, Any] = {
         "current_weekly_km": plan_input.current_weekly_km,
         "target": plan_input.target,
         "available_running_days": plan_input.available_running_days,
         "injury_flag": plan_input.injury_flag,
-    })
+    }
+    if form_focuses:
+        user_message_dict["form_focus"] = form_focuses
+    if plan_input.recent_analysis_summary:
+        user_message_dict["recent_analysis_summary"] = plan_input.recent_analysis_summary
+    if plan_input.recent_analysis_confidence is not None:
+        user_message_dict["recent_analysis_confidence"] = plan_input.recent_analysis_confidence
+
+    user_message = json.dumps(user_message_dict)
 
     client = OpenAI(api_key=api_key)
     response = client.chat.completions.create(
@@ -527,10 +635,13 @@ def generate_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
         for w in data.get("workouts", [])
     ]
 
+    workouts = _apply_form_focus_to_workouts(workouts, form_focuses)
+
     return TrainingPlanResponse(
         summary=data.get("summary", "Your personalised weekly training plan."),
         planned_weekly_km=float(data.get("planned_weekly_km", plan_input.current_weekly_km)),
         running_days=int(data.get("running_days", plan_input.available_running_days)),
         workouts=workouts,
         notes=data.get("notes", []),
+        connected_analysis_used=bool(form_focuses),
     )

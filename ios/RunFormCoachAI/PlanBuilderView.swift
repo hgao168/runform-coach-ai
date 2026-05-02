@@ -19,6 +19,7 @@ struct PlanBuilderView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
                         introCard
+                        connectedAnalysisCard
                         inputCard
                         generateButton
 
@@ -77,6 +78,47 @@ struct PlanBuilderView: View {
                             .font(.callout)
                             .foregroundStyle(.white.opacity(0.68))
                     }
+                }
+            }
+        }
+    }
+
+    
+    private var connectedAnalysisCard: some View {
+        DarkCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionTitle(
+                    "Connected coaching",
+                    subtitle: "Latest analysis will adjust your plan",
+                    systemImage: "link.circle.fill"
+                )
+
+                if let summary = appStore.latestAnalysisSummary, !appStore.latestCoachingIssues.isEmpty {
+                    Text(summary)
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.72))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(appStore.latestCoachingIssues.prefix(3)) { issue in
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "target")
+                                    .foregroundStyle(AppTheme.mint)
+                                    .padding(.top, 2)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(issue.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                    Text(issue.exerciseNames.prefix(3).joined(separator: " • "))
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.55))
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Text("Analyze a running video first. Then RunForm will adapt your easy run cues, quality session, long run focus, and strength/mobility work from your latest form issues.")
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.68))
                 }
             }
         }
@@ -154,7 +196,10 @@ struct PlanBuilderView: View {
             currentWeeklyKm: km,
             target: target.rawValue,
             availableRunningDays: availableRunningDays,
-            injuryFlag: injuryFlag
+            injuryFlag: injuryFlag,
+            formIssues: appStore.latestCoachingIssues,
+            recentAnalysisSummary: appStore.latestAnalysisSummary,
+            recentAnalysisConfidence: appStore.latestAnalysisConfidence
         )
 
         do {
@@ -278,6 +323,11 @@ struct TrainingPlanResultView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.6))
+                if plan.connectedAnalysisUsed {
+                    Label("Adapted from your latest RunForm analysis", systemImage: "link.circle.fill")
+                        .font(.caption.bold())
+                        .foregroundStyle(AppTheme.mint)
+                }
             }
         }
     }
@@ -351,6 +401,11 @@ struct WorkoutCard: View {
                 Text(workout.details)
                     .font(.callout)
                     .foregroundStyle(.white.opacity(0.85))
+                if let focus = workout.coachingFocus {
+                    Label(focus, systemImage: "figure.run.circle")
+                        .font(.caption.bold())
+                        .foregroundStyle(AppTheme.mint)
+                }
                 Text("Why: \(workout.purpose)")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.55))

@@ -10,6 +10,27 @@ final class AppStore: ObservableObject {
     @Published private(set) var savedPlans: [SavedPlan] = []
     @Published private(set) var nextWeekPlan: SavedPlan?
 
+    
+    var latestCoachingIssues: [FormIssueContext] {
+        guard let latest = history.first else { return [] }
+        return latest.result.issues.map { issue in
+            FormIssueContext(
+                title: issue.title,
+                severity: issue.severity,
+                explanation: issue.explanation,
+                exerciseNames: issue.recommendedExercises.map(\.name)
+            )
+        }
+    }
+
+    var latestAnalysisSummary: String? {
+        history.first?.result.summary
+    }
+
+    var latestAnalysisConfidence: Double? {
+        history.first?.result.confidence
+    }
+
     private let profileKey = "tester.profile.v1"
     private let historyKey = "analysis.history.v1"
     private let savedPlansKey = "saved.plans.v1"

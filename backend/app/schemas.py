@@ -65,11 +65,20 @@ class PoseMetricsInput(BaseModel):
     notes: List[str] = []
 
 
+class FormIssueContext(BaseModel):
+    title: str
+    severity: str = "Medium"
+    explanation: str = ""
+    exercise_names: List[str] = []
+
 class TrainingPlanInput(BaseModel):
     current_weekly_km: float
     target: str
     available_running_days: int = 3
     injury_flag: bool = False
+    form_issues: List[FormIssueContext] = []
+    recent_analysis_summary: Optional[str] = None
+    recent_analysis_confidence: Optional[float] = None
 
 
 class PlannedWorkout(BaseModel):
@@ -81,6 +90,7 @@ class PlannedWorkout(BaseModel):
     purpose: str
     distance_km: Optional[float] = None
     duration_minutes: Optional[int] = None
+    coaching_focus: Optional[str] = None
 
 
 class TrainingPlanResponse(BaseModel):
@@ -89,3 +99,4 @@ class TrainingPlanResponse(BaseModel):
     running_days: int
     workouts: List[PlannedWorkout]
     notes: List[str] = []
+    connected_analysis_used: bool = False

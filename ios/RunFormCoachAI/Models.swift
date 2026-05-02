@@ -161,17 +161,57 @@ enum TrainingTarget: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
 }
 
+
+struct FormIssueContext: Codable, Identifiable, Equatable {
+    var id: String { title + severity }
+    let title: String
+    let severity: String
+    let explanation: String
+    let exerciseNames: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case severity
+        case explanation
+        case exerciseNames = "exercise_names"
+    }
+}
+
 struct TrainingPlanInput: Codable {
     let currentWeeklyKm: Double
     let target: String
     let availableRunningDays: Int
     let injuryFlag: Bool
+    let formIssues: [FormIssueContext]
+    let recentAnalysisSummary: String?
+    let recentAnalysisConfidence: Double?
+
+    init(
+        currentWeeklyKm: Double,
+        target: String,
+        availableRunningDays: Int,
+        injuryFlag: Bool,
+        formIssues: [FormIssueContext] = [],
+        recentAnalysisSummary: String? = nil,
+        recentAnalysisConfidence: Double? = nil
+    ) {
+        self.currentWeeklyKm = currentWeeklyKm
+        self.target = target
+        self.availableRunningDays = availableRunningDays
+        self.injuryFlag = injuryFlag
+        self.formIssues = formIssues
+        self.recentAnalysisSummary = recentAnalysisSummary
+        self.recentAnalysisConfidence = recentAnalysisConfidence
+    }
 
     enum CodingKeys: String, CodingKey {
         case currentWeeklyKm = "current_weekly_km"
         case target
         case availableRunningDays = "available_running_days"
         case injuryFlag = "injury_flag"
+        case formIssues = "form_issues"
+        case recentAnalysisSummary = "recent_analysis_summary"
+        case recentAnalysisConfidence = "recent_analysis_confidence"
     }
 }
 
@@ -185,11 +225,13 @@ struct PlannedWorkout: Codable, Identifiable, Equatable {
     let purpose: String
     let distanceKm: Double?
     let durationMinutes: Int?
+    let coachingFocus: String?
 
     enum CodingKeys: String, CodingKey {
         case day, title, category, intensity, details, purpose
         case distanceKm = "distance_km"
         case durationMinutes = "duration_minutes"
+        case coachingFocus = "coaching_focus"
     }
 }
 
@@ -199,6 +241,7 @@ struct TrainingPlanResponse: Codable, Equatable {
     let runningDays: Int
     let workouts: [PlannedWorkout]
     let notes: [String]
+    let connectedAnalysisUsed: Bool
 
     enum CodingKeys: String, CodingKey {
         case summary
@@ -206,6 +249,7 @@ struct TrainingPlanResponse: Codable, Equatable {
         case runningDays = "running_days"
         case workouts
         case notes
+        case connectedAnalysisUsed = "connected_analysis_used"
     }
 }
 
