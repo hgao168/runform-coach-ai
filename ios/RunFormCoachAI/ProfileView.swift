@@ -5,7 +5,7 @@ struct ProfileView: View {
     @State private var nickname = ""
     @State private var level: RunnerLevel = .beginner
     @State private var weeklyMileageKm: Double = 15
-    @State private var target = TrainingTarget.generalFitness.rawValue
+    @State private var target: TrainingTarget = .generalFitness
     @State private var injuryNote = ""
     @State private var savedMessage: String?
     @FocusState private var fieldFocused: Bool
@@ -112,7 +112,7 @@ struct ProfileView: View {
                         .foregroundStyle(.white.opacity(0.62))
                     Picker("Goal", selection: $target) {
                         ForEach(TrainingTarget.allCases) { item in
-                            Text(item.rawValue).tag(item.rawValue)
+                            Text(item.rawValue).tag(item)
                         }
                     }
                     .pickerStyle(.menu)
@@ -165,10 +165,10 @@ struct ProfileView: View {
         nickname = profile.nickname
         level = profile.level
         weeklyMileageKm = profile.weeklyMileageKm
-        if TrainingTarget.allCases.contains(where: { $0.rawValue == profile.target }) {
-            target = profile.target
+        if let targetValue = TrainingTarget(rawValue: profile.target) {
+            target = targetValue
         } else {
-            target = TrainingTarget.generalFitness.rawValue
+            target = .generalFitness
         }
         injuryNote = profile.injuryNote
     }
@@ -180,7 +180,7 @@ struct ProfileView: View {
             nickname: nickname,
             level: level,
             weeklyMileageKm: weeklyMileageKm,
-            target: target,
+            target: target.rawValue,
             injuryNote: injuryNote
         )
         savedMessage = "Profile saved"

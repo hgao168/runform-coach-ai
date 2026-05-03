@@ -72,7 +72,7 @@ struct PlanBuilderView: View {
                     setWeeklyKmText(appStore.profile.weeklyMileageKm)
                 }
             }
-            .onChange(of: appStore.profile.weeklyMileageKm) { _, mileage in
+            .onChange(of: appStore.profile.weeklyMileageKm) { mileage in
                 if !weeklyKmEditedByUser {
                     setWeeklyKmText(mileage)
                 }
@@ -136,7 +136,7 @@ struct PlanBuilderView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.roundedBorder)
                         .focused($kmFieldFocused)
-                        .onChange(of: currentWeeklyKmText) { _, _ in
+                        .onChange(of: currentWeeklyKmText) { _ in
                             if !suppressWeeklyKmTracking {
                                 weeklyKmEditedByUser = true
                             }
