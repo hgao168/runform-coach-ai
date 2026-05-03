@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct AnalysisResponse: Codable, Identifiable, Equatable {
     var id: String { summary + String(confidence) + metrics.map(\.name).joined() }
@@ -154,4 +155,161 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
         case .rear: return "hip stability, knee tracking"
         }
     }
+}
+
+enum TrainingTarget: String, CaseIterable, Codable, Identifiable {
+    case fiveK = "5K"
+    case tenK = "10K"
+    case halfMarathon = "Half Marathon"
+    case marathon = "Marathon"
+    case generalFitness = "General Fitness"
+
+    var id: String { rawValue }
+}
+
+struct FormIssueContext: Codable, Identifiable, Equatable {
+    var id: String { title + severity }
+    let title: String
+    let severity: String
+    let explanation: String
+    let exerciseNames: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case severity
+        case explanation
+        case exerciseNames = "exercise_names"
+    }
+}
+
+struct TrainingPlanInput: Codable {
+    let currentWeeklyKm: Double
+    let target: String
+    let availableRunningDays: Int
+    let injuryFlag: Bool
+    let formIssues: [FormIssueContext]
+    let recentAnalysisSummary: String?
+    let recentAnalysisConfidence: Double?
+    let previousWeekSummary: String?
+
+    init(
+        currentWeeklyKm: Double,
+        target: String,
+        availableRunningDays: Int,
+        injuryFlag: Bool,
+        formIssues: [FormIssueContext] = [],
+        recentAnalysisSummary: String? = nil,
+        recentAnalysisConfidence: Double? = nil,
+        previousWeekSummary: String? = nil
+    ) {
+        self.currentWeeklyKm = currentWeeklyKm
+        self.target = target
+        self.availableRunningDays = availableRunningDays
+        self.injuryFlag = injuryFlag
+        self.formIssues = formIssues
+        self.recentAnalysisSummary = recentAnalysisSummary
+        self.recentAnalysisConfidence = recentAnalysisConfidence
+        self.previousWeekSummary = previousWeekSummary
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case currentWeeklyKm = "current_weekly_km"
+        case target
+        case availableRunningDays = "available_running_days"
+        case injuryFlag = "injury_flag"
+        case formIssues = "form_issues"
+        case recentAnalysisSummary = "recent_analysis_summary"
+        case recentAnalysisConfidence = "recent_analysis_confidence"
+        case previousWeekSummary = "previous_week_summary"
+    }
+}
+
+struct PlannedWorkout: Codable, Identifiable, Equatable {
+    var id: String { day + title }
+    let day: String
+    let title: String
+    let category: String
+    let intensity: String
+    let details: String
+    let purpose: String
+    let distanceKm: Double?
+    let durationMinutes: Int?
+    let coachingFocus: String?
+
+    enum CodingKeys: String, CodingKey {
+        case day, title, category, intensity, details, purpose
+        case distanceKm = "distance_km"
+        case durationMinutes = "duration_minutes"
+        case coachingFocus = "coaching_focus"
+    }
+}
+
+struct TrainingPlanResponse: Codable, Equatable {
+    let summary: String
+    let plannedWeeklyKm: Double
+    let runningDays: Int
+    let workouts: [PlannedWorkout]
+    let notes: [String]
+    let connectedAnalysisUsed: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case summary
+        case plannedWeeklyKm = "planned_weekly_km"
+        case runningDays = "running_days"
+        case workouts
+        case notes
+        case connectedAnalysisUsed = "connected_analysis_used"
+    }
+}
+
+enum WorkoutStatus: String, Codable, CaseIterable, Identifiable {
+    case done = "Done"
+    case skipped = "Skipped"
+    case tooHard = "Too Hard"
+    case pain = "Pain"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .done: return "checkmark.circle.fill"
+        case .skipped: return "minus.circle"
+        case .tooHard: return "exclamationmark.circle"
+        case .pain: return "xmark.circle"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .done: return Color(red: 0.25, green: 0.96, blue: 0.76)
+        case .skipped: return Color(red: 1.0, green: 0.62, blue: 0.22)
+        case .tooHard: return Color(red: 1.0, green: 0.85, blue: 0.20)
+        case .pain: return Color(red: 1.0, green: 0.30, blue: 0.30)
+        }
+    }
+}
+
+struct SavedPlan: Codable, Identifiable, Equatable {
+    let id: UUID
+    let createdAt: Date
+    let target: String
+    let weeklyKm: Double
+    let plan: TrainingPlanResponse
+    var workoutLogs: [String: WorkoutStatus] = [:]
+}
+
+struct ManualWeekDayPlan: Codable, Identifiable, Equatable {
+    var id: Date { date }
+    let date: Date
+    let dayName: String
+    var planText: String
+}
+
+struct ManualNextWeekPlan: Codable, Identifiable, Equatable {
+    let id: UUID
+    let weekStartMonday: Date
+    let weekEndSunday: Date
+    let createdAt: Date
+    var updatedAt: Date
+    var days: [ManualWeekDayPlan]
 }
