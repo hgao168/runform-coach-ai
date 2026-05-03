@@ -258,7 +258,7 @@ struct ContentView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 SectionTitle("What you’ll get", subtitle: "Clear, runner-friendly coaching", systemImage: "sparkle.magnifyingglass")
-                FeatureRow(title: "Movement metrics", subtitle: "Cadence, overstride, trunk lean, hip drop, arm swing", icon: "chart.xyaxis.line")
+                FeatureRow(title: "Movement metrics", subtitle: "Cadence, overstride, trunk lean, arm movement, arm swing", icon: "chart.xyaxis.line")
                 FeatureRow(title: "Strength focus", subtitle: "Issue-based exercises with why each one helps", icon: "figure.strengthtraining.traditional")
                 FeatureRow(title: "Quality check", subtitle: "If metrics are unreliable, RunForm asks for a better clip", icon: "shield.checkered")
             }

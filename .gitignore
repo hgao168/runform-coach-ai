@@ -19,3 +19,6 @@ xcuserdata/
 # Secrets
 *.pem
 *.key
+
+# Android local cache
+android/.gradle-home/

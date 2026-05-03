@@ -10,6 +10,7 @@ struct PlanBuilderView: View {
     @State private var plan: TrainingPlanResponse?
     @State private var errorMessage: String?
     @State private var showSavedPlans = false
+    @State private var showManualPlanEditor = false
     @FocusState private var kmFieldFocused: Bool
 
     var body: some View {
@@ -19,6 +20,9 @@ struct PlanBuilderView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
                         introCard
+                        if appStore.manualNextWeekPlan != nil {
+                            manualWeekPreviewCard
+                        }
                         latestAnalysisCard
                         inputCard
                         generateButton
@@ -41,6 +45,7 @@ struct PlanBuilderView: View {
                     .padding(.top, 10)
                     .padding(.bottom, 28)
                 }
+                .scrollDismissesKeyboard(.immediately)
             }
             .navigationTitle("Training Plan")
             .navigationBarTitleDisplayMode(.inline)
@@ -65,6 +70,9 @@ struct PlanBuilderView: View {
             .sheet(isPresented: $showSavedPlans) {
                 SavedPlansView()
             }
+            .sheet(isPresented: $showManualPlanEditor) {
+                ManualNextWeekPlanEditorView()
+            }
         }
     }
 
@@ -81,6 +89,24 @@ struct PlanBuilderView: View {
                             .font(.callout)
                             .foregroundStyle(.white.opacity(0.68))
                     }
+                }
+
+                Button {
+                    dismissKeyboard()
+                    showManualPlanEditor = true
+                } label: {
+                    HStack {
+                        Label("Edit next week (Mon-Sun)", systemImage: "square.and.pencil")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                }
+                .buttonStyle(SecondaryButtonStyle())
+
+                if let manual = appStore.manualNextWeekPlan {
+                    Text("Saved week: \(manual.weekStartMonday, format: .dateTime.month().day()) - \(manual.weekEndSunday, format: .dateTime.month().day())")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.58))
                 }
             }
         }
@@ -131,6 +157,38 @@ struct PlanBuilderView: View {
     }
 
     private var latestAnalysisItem: AnalysisHistoryItem? { appStore.history.first }
+
+    private var manualWeekPreviewCard: some View {
+        let days = (appStore.manualNextWeekPlan?.days ?? []).sorted { $0.date < $1.date }
+        return DarkCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SectionTitle(
+                    "Manual Week Preview",
+                    subtitle: "Monday to Sunday",
+                    systemImage: "calendar"
+                )
+
+                ForEach(days.prefix(7), id: \.id) { day in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(day.dayName.prefix(3).uppercased())
+                            .font(.caption2.bold())
+                            .foregroundStyle(AppTheme.mint)
+                            .frame(width: 34, alignment: .leading)
+
+                        Text(day.date, format: .dateTime.month().day())
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.58))
+                            .frame(width: 52, alignment: .leading)
+
+                        Text(day.planText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "-" : day.planText)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.76))
+                            .lineLimit(1)
+                    }
+                }
+            }
+        }
+    }
 
     private var latestFormIssues: [String] {
         Array((latestAnalysisItem?.result.issues.map { $0.title } ?? []).prefix(5))
@@ -192,6 +250,7 @@ struct PlanBuilderView: View {
     private var generateButton: some View {
         Button {
             kmFieldFocused = false
+            dismissKeyboard()
             Task { await generatePlan() }
         } label: {
             if isGenerating {
@@ -206,6 +265,9 @@ struct PlanBuilderView: View {
     }
 
     private func generatePlan() async {
+        kmFieldFocused = false
+        dismissKeyboard()
+
         guard let km = Double(currentWeeklyKmText.replacingOccurrences(of: ",", with: ".")) else {
             errorMessage = "Please enter a valid weekly km number."
             return
@@ -239,6 +301,7 @@ struct PlanBuilderView: View {
 
         isGenerating = true
         errorMessage = nil
+        defer { isGenerating = false }
 
         let input = TrainingPlanInput(
             currentWeeklyKm: adaptedKm,
@@ -258,8 +321,99 @@ struct PlanBuilderView: View {
         } catch {
             errorMessage = "Plan generation failed. Check your connection."
         }
+    }
 
-        isGenerating = false
+    private func dismissKeyboard() {
+        #if canImport(UIKit)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
+    }
+}
+
+struct ManualNextWeekPlanEditorView: View {
+    @EnvironmentObject private var appStore: AppStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var days: [ManualWeekDayPlan] = []
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        GlassCard {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Next Week Plan")
+                                    .font(.title3.bold())
+                                    .foregroundStyle(.white)
+                                if let monday = days.first?.date, let sunday = days.last?.date {
+                                    Text("Week range: \(monday, format: .dateTime.month().day()) - \(sunday, format: .dateTime.month().day())")
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.68))
+                                }
+                                Text("Fill all 7 days manually. Week starts Monday and ends Sunday.")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.62))
+                            }
+                        }
+
+                        ForEach(days.indices, id: \.self) { index in
+                            DarkCard {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text(days[index].dayName)
+                                            .font(.headline)
+                                            .foregroundStyle(.white)
+                                        Spacer()
+                                        Text(days[index].date, format: .dateTime.month().day())
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.mint)
+                                    }
+
+                                    TextField("Enter plan for \(days[index].dayName)", text: binding(for: index), axis: .vertical)
+                                        .textFieldStyle(.roundedBorder)
+                                        .lineLimit(2...4)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 12)
+                    .padding(.bottom, 24)
+                }
+                .scrollDismissesKeyboard(.immediately)
+            }
+            .navigationTitle("Manual Week Plan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        appStore.saveManualNextWeekPlan(days: days)
+                        dismiss()
+                    }
+                    .foregroundStyle(AppTheme.mint)
+                }
+            }
+            .onAppear {
+                if let saved = appStore.manualNextWeekPlan {
+                    days = saved.days.sorted { $0.date < $1.date }
+                } else {
+                    days = appStore.buildDefaultManualNextWeekPlan().days
+                }
+            }
+        }
+    }
+
+    private func binding(for index: Int) -> Binding<String> {
+        Binding(
+            get: { days[index].planText },
+            set: { days[index].planText = $0 }
+        )
     }
 }
 

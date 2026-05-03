@@ -9,6 +9,7 @@ final class AppStore: ObservableObject {
     @Published private(set) var history: [AnalysisHistoryItem] = []
     @Published private(set) var savedPlans: [SavedPlan] = []
     @Published private(set) var nextWeekPlan: SavedPlan?
+    @Published private(set) var manualNextWeekPlan: ManualNextWeekPlan?
 
     
     var latestCoachingIssues: [FormIssueContext] {
@@ -35,6 +36,7 @@ final class AppStore: ObservableObject {
     private let historyKey = "analysis.history.v1"
     private let savedPlansKey = "saved.plans.v1"
     private let nextWeekPlanKey = "next.week.plan.v1"
+    private let manualNextWeekPlanKey = "manual.next.week.plan.v1"
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
@@ -52,6 +54,53 @@ final class AppStore: ObservableObject {
         loadHistory()
         loadSavedPlans()
         loadNextWeekPlan()
+        loadManualNextWeekPlan()
+    }
+
+    func buildDefaultManualNextWeekPlan(referenceDate: Date = Date()) -> ManualNextWeekPlan {
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: referenceDate)
+        let weekday = calendar.component(.weekday, from: startOfToday)
+        let untilMonday = (9 - weekday) % 7
+        let daysToAdd = untilMonday == 0 ? 7 : untilMonday
+        let monday = calendar.date(byAdding: .day, value: daysToAdd, to: startOfToday) ?? startOfToday
+
+        let dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        let days = dayNames.enumerated().map { index, dayName in
+            ManualWeekDayPlan(
+                date: calendar.date(byAdding: .day, value: index, to: monday) ?? monday,
+                dayName: dayName,
+                planText: ""
+            )
+        }
+
+        let sunday = calendar.date(byAdding: .day, value: 6, to: monday) ?? monday
+        return ManualNextWeekPlan(
+            id: UUID(),
+            weekStartMonday: monday,
+            weekEndSunday: sunday,
+            createdAt: Date(),
+            updatedAt: Date(),
+            days: days
+        )
+    }
+
+    func saveManualNextWeekPlan(days: [ManualWeekDayPlan]) {
+        guard let monday = days.first?.date, let sunday = days.last?.date else { return }
+
+        let now = Date()
+        let currentID = manualNextWeekPlan?.id ?? UUID()
+        let createdAt = manualNextWeekPlan?.createdAt ?? now
+
+        manualNextWeekPlan = ManualNextWeekPlan(
+            id: currentID,
+            weekStartMonday: monday,
+            weekEndSunday: sunday,
+            createdAt: createdAt,
+            updatedAt: now,
+            days: days
+        )
+        saveManualNextWeekPlanToStorage()
     }
 
     func addHistory(result: AnalysisResponse, videoURL: URL?) {
@@ -191,5 +240,20 @@ final class AppStore: ObservableObject {
         guard let item = nextWeekPlan,
               let data = try? encoder.encode(item) else { return }
         UserDefaults.standard.set(data, forKey: nextWeekPlanKey)
+    }
+
+    private func loadManualNextWeekPlan() {
+        guard let data = UserDefaults.standard.data(forKey: manualNextWeekPlanKey),
+              let item = try? decoder.decode(ManualNextWeekPlan.self, from: data) else {
+            manualNextWeekPlan = nil
+            return
+        }
+        manualNextWeekPlan = item
+    }
+
+    private func saveManualNextWeekPlanToStorage() {
+        guard let item = manualNextWeekPlan,
+              let data = try? encoder.encode(item) else { return }
+        UserDefaults.standard.set(data, forKey: manualNextWeekPlanKey)
     }
 }

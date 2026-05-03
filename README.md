@@ -1,33 +1,29 @@
-# RunForm Phase 4 — Training Plan Inputs
+# RunForm Phase 5A Fix — True Analyze → Plan Connection
 
-Drop-in update for `https://github.com/hgao168/runform-coach-ai`.
-
-## Adds
-
-- Backend endpoint: `POST /training-plan`
-- Training plan input model:
-  - current weekly km
-  - target: 5K / 10K / Half Marathon / General Fitness
-  - available running days
-  - injury flag
-- SwiftUI `PlanBuilderView`
-- TabView with Analyze + Plan
-- Output workouts:
-  - easy run
-  - quality run when injury flag is off and enough days are available
-  - long run
-  - strength / mobility days
-
-## Copy files
+Apply this from the root of your latest GitHub repo:
 
 ```bash
-cp backend/app/schemas.py /path/to/runform-coach-ai/backend/app/schemas.py
-cp backend/app/planner.py /path/to/runform-coach-ai/backend/app/planner.py
-cp backend/app/main.py /path/to/runform-coach-ai/backend/app/main.py
-cp ios/RunFormCoachAI/Models.swift /path/to/runform-coach-ai/ios/RunFormCoachAI/Models.swift
-cp ios/RunFormCoachAI/APIClient.swift /path/to/runform-coach-ai/ios/RunFormCoachAI/APIClient.swift
-cp ios/RunFormCoachAI/ContentView.swift /path/to/runform-coach-ai/ios/RunFormCoachAI/ContentView.swift
-cp ios/RunFormCoachAI/PlanBuilderView.swift /path/to/runform-coach-ai/ios/RunFormCoachAI/PlanBuilderView.swift
+python apply_phase5a_true_connected_plan.py
 ```
 
-Then commit, redeploy Railway, regenerate Xcode project if you use XcodeGen, and upload a new TestFlight build.
+What it changes:
+
+- iOS `TrainingPlanInput` now sends:
+  - `form_issues`
+  - `recommended_exercises`
+- iOS `PlanBuilderView` reads the latest analysis from `appStore.history.first`.
+- The Plan page shows a small “Connected coaching” card.
+- Backend `TrainingPlanInput` accepts `form_issues` and `recommended_exercises`.
+- Backend `/training-plan` passes those into the LLM and deterministically enhances workout details, purpose, and notes.
+- Injury flag replaces hard workouts with easy running + mobility.
+
+After applying:
+
+```bash
+git diff
+git add ios/RunFormCoachAI backend/app
+git commit -m "Connect latest form analysis to training plan"
+git push
+```
+
+Then redeploy Railway and rebuild iOS/TestFlight.

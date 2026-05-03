@@ -148,7 +148,7 @@ struct MetricResultCard: View {
                 HStack(alignment: .center) {
                     HStack(spacing: 10) {
                         IconBubble(systemImage: iconName, gradient: AppTheme.purpleGradient, size: 36)
-                        Text(metric.name)
+                        Text(metric.displayName)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
                     }
@@ -178,7 +178,7 @@ struct MetricResultCard: View {
     }
 
     private var iconName: String {
-        let lower = metric.name.lowercased()
+        let lower = metric.displayName.lowercased()
         if lower.contains("cadence") { return "metronome.fill" }
         if lower.contains("stride") { return "figure.run" }
         if lower.contains("trunk") { return "figure.core.training" }

@@ -39,6 +39,16 @@ struct Metric: Codable, Identifiable, Equatable {
     }
 }
 
+extension Metric {
+    var displayName: String {
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if normalized == "hip drop" {
+            return "Arm Movement"
+        }
+        return name
+    }
+}
+
 struct Issue: Codable, Identifiable, Equatable {
     var id: String { title }
     let title: String
@@ -135,7 +145,7 @@ enum VideoMode: String, CaseIterable, Identifiable {
     var label: String { self == .side ? "Side View" : "Rear View" }
     var icon: String { self == .side ? "figure.run" : "figure.run.treadmill" }
     var metrics: String {
-        self == .side ? "Cadence · Overstride · Trunk Lean" : "Hip Drop · Knee Valgus · Arm Swing"
+        self == .side ? "Cadence · Overstride · Trunk Lean" : "Arm Movement · Knee Valgus · Arm Swing"
     }
 }
 
@@ -319,4 +329,20 @@ struct SavedPlan: Codable, Identifiable, Equatable {
     let weeklyKm: Double
     let plan: TrainingPlanResponse
     var workoutLogs: [String: WorkoutStatus] = [:]
+}
+
+struct ManualWeekDayPlan: Codable, Identifiable, Equatable {
+    var id: Date { date }
+    let date: Date
+    let dayName: String
+    var planText: String
+}
+
+struct ManualNextWeekPlan: Codable, Identifiable, Equatable {
+    let id: UUID
+    let weekStartMonday: Date
+    let weekEndSunday: Date
+    let createdAt: Date
+    var updatedAt: Date
+    var days: [ManualWeekDayPlan]
 }
