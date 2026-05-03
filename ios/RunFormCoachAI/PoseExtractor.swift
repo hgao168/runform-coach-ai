@@ -123,22 +123,47 @@ final class PoseExtractor {
         let videoQualityScore = clamp(0.45 * detectionRate + 0.35 * avgCompleteness + 0.20 * avgConfidence, 0.05, 0.98)
         if videoQualityScore < 0.65 { notes.append("Video quality score \(Int(videoQualityScore * 100))%; biomechanical metrics should be treated as approximate.") }
 
-        let leftAnkleY = smooth(usablePoses.compactMap { $0.leftAnkle?.y })
-        let rightAnkleY = smooth(usablePoses.compactMap { $0.rightAnkle?.y })
-        var totalSteps = countPeaks(in: leftAnkleY) + countPeaks(in: rightAnkleY)
-        if totalSteps < 2 {
-            let ankleMidY = smooth(usablePoses.compactMap { pose in
-                average(pose.leftAnkle?.y, pose.rightAnkle?.y)
-            })
-            totalSteps = max(totalSteps, countPeaks(in: ankleMidY, minProminence: 0.018))
+        // --- Cadence: multi-signal fusion with adaptive peak detection ---
+        // Signal 1: per-ankle Y peaks (foot swings up = Y rises in Vision coords)
+        let leftAnkleYs  = smoothWide(usablePoses.compactMap { $0.leftAnkle?.y })
+        let rightAnkleYs = smoothWide(usablePoses.compactMap { $0.rightAnkle?.y })
+        var candidateSteps = countPeaksRobust(in: leftAnkleYs) + countPeaksRobust(in: rightAnkleYs)
+
+        if candidateSteps < 4 {
+            // Signal 2: hip midpoint Y vertical bounce (one peak per step)
+            let hipMidY  = smoothWide(usablePoses.compactMap { avgY($0.leftHip, $0.rightHip) })
+            let hipPeaks = countPeaksRobust(in: hipMidY)
+            if hipPeaks > candidateSteps { candidateSteps = hipPeaks }
         }
-        let cadenceSPM = durationSeconds > 0 ? Double(totalSteps) / durationSeconds * 60.0 : 0
+
+        if candidateSteps < 4 {
+            // Signal 3: zero-crossings on detrended combined ankle signal
+            let rawAnkle = usablePoses.compactMap { average($0.leftAnkle?.y, $0.rightAnkle?.y) }
+            let zcSteps  = zeroCrossingSteps(in: smoothWide(rawAnkle))
+            if zcSteps > candidateSteps { candidateSteps = zcSteps }
+        }
+
+        if candidateSteps < 4 {
+            // Signal 4: knee midpoint Y (last resort)
+            let kneeY    = smoothWide(usablePoses.compactMap { avgY($0.leftKnee, $0.rightKnee) })
+            let kneePeaks = countPeaksRobust(in: kneeY)
+            if kneePeaks > candidateSteps { candidateSteps = kneePeaks }
+        }
+
+        let cadenceSPM = durationSeconds > 0 ? Double(candidateSteps) / durationSeconds * 60.0 : 0
+        if cadenceSPM < 50 {
+            qualityNotes.append("Cadence could not be measured. Make sure feet are visible and the clip is 8+ seconds of steady running.")
+        }
         let (cadenceScore, cadenceStatus): (Double, String)
-        switch cadenceSPM {
-        case ..<140: (cadenceScore, cadenceStatus) = (max(0.25, cadenceSPM / 180.0), "Needs work")
-        case 140..<160: (cadenceScore, cadenceStatus) = (0.55, "Moderate")
-        case 160...185: (cadenceScore, cadenceStatus) = (0.90, "Good")
-        default: (cadenceScore, cadenceStatus) = (0.70, "Moderate")
+        if cadenceSPM < 50 {
+            (cadenceScore, cadenceStatus) = (0.0, "Not measurable")
+        } else {
+            switch cadenceSPM {
+            case ..<140: (cadenceScore, cadenceStatus) = (max(0.20, cadenceSPM / 180.0), "Needs work")
+            case 140..<160: (cadenceScore, cadenceStatus) = (0.55, "Moderate")
+            case 160...185: (cadenceScore, cadenceStatus) = (0.90, "Good")
+            default: (cadenceScore, cadenceStatus) = (0.70, "Moderate")
+            }
         }
 
         let stanceThreshold = percentile(usablePoses.flatMap { [$0.leftAnkle?.y, $0.rightAnkle?.y].compactMap { $0 } }, p: 0.35) ?? 0.28
@@ -224,6 +249,48 @@ final class PoseExtractor {
             let slice = values[lo...hi]
             return slice.reduce(0,+) / Double(slice.count)
         }
+    }
+
+    /// Wider moving-average smoothing (default 5-point) used for cadence signals.
+    private func smoothWide(_ values: [Double], window: Int = 5) -> [Double] {
+        guard values.count >= 3 else { return values }
+        let half = window / 2
+        return values.indices.map { i in
+            let lo = max(0, i - half), hi = min(values.count - 1, i + half)
+            let slice = values[lo...hi]
+            return slice.reduce(0, +) / Double(slice.count)
+        }
+    }
+
+    /// Peak detection with relative prominence: adapts to actual signal amplitude.
+    private func countPeaksRobust(in values: [Double]) -> Int {
+        guard values.count > 4 else { return 0 }
+        let vMin = values.min() ?? 0
+        let vMax = values.max() ?? 0
+        let range = vMax - vMin
+        guard range > 0.005 else { return 0 }
+        // Require peak to stand at least 10% of signal range above surrounding valley
+        let prominence = max(0.010, range * 0.10)
+        var count = 0
+        for i in 1..<(values.count - 1) {
+            guard values[i] > values[i-1] && values[i] > values[i+1] else { continue }
+            // Compare against min in ±3-sample neighbourhood for broader context
+            let lo = max(0, i - 3), hi = min(values.count - 1, i + 3)
+            let localMin = values[lo...hi].min() ?? 0
+            if values[i] - localMin >= prominence { count += 1 }
+        }
+        return count
+    }
+
+    /// Count upward zero-crossings of the mean-centred signal (robust when peaks are hard to find).
+    private func zeroCrossingSteps(in values: [Double]) -> Int {
+        guard values.count > 4 else { return 0 }
+        let mean = values.reduce(0, +) / Double(values.count)
+        var crossings = 0
+        for i in 1..<values.count where values[i-1] < mean && values[i] >= mean {
+            crossings += 1
+        }
+        return crossings
     }
 
     private func countPeaks(in values: [Double], minProminence: Double = 0.025) -> Int {
