@@ -2,6 +2,13 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var appStore: AppStore
+    @State private var nickname = ""
+    @State private var level: RunnerLevel = .beginner
+    @State private var weeklyMileageKm: Double = 15
+    @State private var target = TrainingTarget.generalFitness.rawValue
+    @State private var injuryNote = ""
+    @State private var savedMessage: String?
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -15,9 +22,25 @@ struct ProfileView: View {
                     }
                     .padding(18)
                 }
+                .scrollDismissesKeyboard(.immediately)
             }
             .navigationTitle("Profile")
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .keyboard) {
+                    Spacer()
+                }
+                ToolbarItem(placement: .keyboard) {
+                    Button("Done") {
+                        fieldFocused = false
+                        dismissKeyboard()
+                    }
+                    .foregroundStyle(AppTheme.mint)
+                }
+            }
+            .onAppear {
+                loadDraftFromStore()
+            }
         }
     }
 
@@ -26,10 +49,10 @@ struct ProfileView: View {
             HStack(spacing: 15) {
                 IconBubble(systemImage: "person.crop.circle.fill", gradient: AppTheme.actionGradient, size: 62)
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(appStore.profile.nickname.isEmpty ? "Test Runner" : appStore.profile.nickname)
+                    Text(nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Test Runner" : nickname)
                         .font(.title2.bold())
                         .foregroundStyle(.white)
-                    Text("\(appStore.profile.level.rawValue) • \(Int(appStore.profile.weeklyMileageKm)) km/week")
+                    Text("\(level.rawValue) • \(Int(weeklyMileageKm)) km/week")
                         .font(.callout)
                         .foregroundStyle(.white.opacity(0.62))
                 }
@@ -47,8 +70,9 @@ struct ProfileView: View {
                     Text("Nickname")
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.62))
-                    TextField("Nickname", text: $appStore.profile.nickname)
+                    TextField("Nickname", text: $nickname)
                         .textInputAutocapitalization(.words)
+                        .focused($fieldFocused)
                         .padding(13)
                         .background(.black.opacity(0.20))
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -59,12 +83,13 @@ struct ProfileView: View {
                     Text("Running level")
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.62))
-                    Picker("Running level", selection: $appStore.profile.level) {
+                    Picker("Running level", selection: $level) {
                         ForEach(RunnerLevel.allCases) { level in
                             Text(level.rawValue).tag(level)
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.menu)
+                    .tint(AppTheme.mint)
                 }
 
                 VStack(alignment: .leading, spacing: 9) {
@@ -73,11 +98,11 @@ struct ProfileView: View {
                             .font(.caption.bold())
                             .foregroundStyle(.white.opacity(0.72))
                         Spacer()
-                        Text("\(Int(appStore.profile.weeklyMileageKm)) km")
+                        Text("\(Int(weeklyMileageKm)) km")
                             .font(.headline.bold())
                             .foregroundStyle(AppTheme.mint)
                     }
-                    Slider(value: $appStore.profile.weeklyMileageKm, in: 0...120, step: 1)
+                    Slider(value: $weeklyMileageKm, in: 0...120, step: 1)
                         .tint(AppTheme.mint)
                 }
 
@@ -85,23 +110,40 @@ struct ProfileView: View {
                     Text("Goal")
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.62))
-                    TextField("5K, 10K, half marathon, fitness", text: $appStore.profile.target)
-                        .padding(13)
-                        .background(.black.opacity(0.20))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .foregroundStyle(.white)
+                    Picker("Goal", selection: $target) {
+                        ForEach(TrainingTarget.allCases) { item in
+                            Text(item.rawValue).tag(item.rawValue)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(AppTheme.mint)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Injury note")
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.62))
-                    TextField("Optional", text: $appStore.profile.injuryNote, axis: .vertical)
+                    TextField("Optional", text: $injuryNote, axis: .vertical)
                         .lineLimit(3...6)
+                        .focused($fieldFocused)
                         .padding(13)
                         .background(.black.opacity(0.20))
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .foregroundStyle(.white)
+                }
+
+                Button {
+                    saveProfile()
+                } label: {
+                    Label("Save Profile", systemImage: "checkmark.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(GradientButtonStyle())
+
+                if let savedMessage {
+                    Text(savedMessage)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mint)
                 }
             }
         }
@@ -116,5 +158,37 @@ struct ProfileView: View {
                     .foregroundStyle(.white.opacity(0.66))
             }
         }
+    }
+
+    private func loadDraftFromStore() {
+        let profile = appStore.profile
+        nickname = profile.nickname
+        level = profile.level
+        weeklyMileageKm = profile.weeklyMileageKm
+        if TrainingTarget.allCases.contains(where: { $0.rawValue == profile.target }) {
+            target = profile.target
+        } else {
+            target = TrainingTarget.generalFitness.rawValue
+        }
+        injuryNote = profile.injuryNote
+    }
+
+    private func saveProfile() {
+        fieldFocused = false
+        dismissKeyboard()
+        appStore.profile = TesterProfile(
+            nickname: nickname,
+            level: level,
+            weeklyMileageKm: weeklyMileageKm,
+            target: target,
+            injuryNote: injuryNote
+        )
+        savedMessage = "Profile saved"
+    }
+
+    private func dismissKeyboard() {
+        #if canImport(UIKit)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
     }
 }

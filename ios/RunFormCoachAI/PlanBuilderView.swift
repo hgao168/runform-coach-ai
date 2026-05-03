@@ -3,6 +3,8 @@ import SwiftUI
 struct PlanBuilderView: View {
     @EnvironmentObject private var appStore: AppStore
     @State private var currentWeeklyKmText = "20"
+    @State private var weeklyKmEditedByUser = false
+    @State private var suppressWeeklyKmTracking = false
     @State private var target: TrainingTarget = .generalFitness
     @State private var availableRunningDays = 3
     @State private var injuryFlag = false
@@ -63,8 +65,16 @@ struct PlanBuilderView: View {
             .onAppear {
                 if plan == nil, let saved = appStore.nextWeekPlan {
                     plan = saved.plan
-                    currentWeeklyKmText = String(format: "%g", saved.weeklyKm)
+                    setWeeklyKmText(saved.weeklyKm)
+                    weeklyKmEditedByUser = false
                     if let t = TrainingTarget(rawValue: saved.target) { target = t }
+                } else if !weeklyKmEditedByUser {
+                    setWeeklyKmText(appStore.profile.weeklyMileageKm)
+                }
+            }
+            .onChange(of: appStore.profile.weeklyMileageKm) { _, mileage in
+                if !weeklyKmEditedByUser {
+                    setWeeklyKmText(mileage)
                 }
             }
             .sheet(isPresented: $showSavedPlans) {
@@ -126,6 +136,11 @@ struct PlanBuilderView: View {
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.roundedBorder)
                         .focused($kmFieldFocused)
+                        .onChange(of: currentWeeklyKmText) { _, _ in
+                            if !suppressWeeklyKmTracking {
+                                weeklyKmEditedByUser = true
+                            }
+                        }
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -327,6 +342,12 @@ struct PlanBuilderView: View {
         #if canImport(UIKit)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         #endif
+    }
+
+    private func setWeeklyKmText(_ value: Double) {
+        suppressWeeklyKmTracking = true
+        currentWeeklyKmText = String(format: "%g", value)
+        suppressWeeklyKmTracking = false
     }
 }
 
