@@ -95,7 +95,10 @@ def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
 
-    cadence_explanation = f"Estimated cadence: {pose_input.cadence_estimate_spm:.0f} steps/min (target 160–180 spm). " + ("Consider smaller, quicker steps." if pose_input.cadence_status != "Good" else "Cadence is in the optimal range.")
+    if pose_input.cadence_status == "Not measurable":
+        cadence_explanation = "Cadence could not be measured from this clip. Ensure feet are visible and the video is 8+ seconds of steady running."
+    else:
+        cadence_explanation = f"Estimated cadence: {pose_input.cadence_estimate_spm:.0f} steps/min (target 160–180 spm). " + ("Consider smaller, quicker steps." if pose_input.cadence_status != "Good" else "Cadence is in the optimal range.")
     trunk_explanation = f"Average trunk angle: {abs(pose_input.trunk_lean_degrees):.1f}°. " + ("Check whether the runner is leaning from the hips instead of the ankles." if pose_input.trunk_lean_status != "Good" else "Trunk alignment looks solid.")
     quality_pct = int(pose_input.video_quality_score * 100)
 
