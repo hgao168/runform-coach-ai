@@ -1,14 +1,11 @@
+from pydantic import BaseModel
 from typing import List, Optional
-from pydantic import BaseModel, Field
-
 
 class Metric(BaseModel):
     name: str
     score: float
     status: str
     explanation: str
-    confidence: str = "Medium"
-
 
 class Exercise(BaseModel):
     name: str
@@ -18,35 +15,24 @@ class Exercise(BaseModel):
     frequency_per_week: int
     reason: str
 
-
 class Issue(BaseModel):
     title: str
     severity: str
     explanation: str
     recommended_exercises: List[Exercise]
 
-
-class VideoQuality(BaseModel):
-    score: float = Field(ge=0, le=1)
-    status: str
-    reasons: List[str] = []
-    tips: List[str] = []
-
-
 class AnalysisResponse(BaseModel):
     summary: str
     confidence: float
-    quality: Optional[VideoQuality] = None
     metrics: List[Metric]
     issues: List[Issue]
-
+    video_quality_score: Optional[float] = None
+    quality_notes: List[str] = []
 
 class PoseMetricsInput(BaseModel):
-    cadence_estimate_spm: float = 0
-    cadence_score: float = 0.5
-    cadence_status: str = "Not measurable"
-    cadence_quality: str = "Low"
-    cadence_step_count: int = 0
+    cadence_estimate_spm: float
+    cadence_score: float
+    cadence_status: str
     overstride_risk_score: float
     overstride_status: str
     trunk_lean_degrees: float
@@ -54,16 +40,12 @@ class PoseMetricsInput(BaseModel):
     trunk_lean_status: str
     knee_valgus_risk_score: float
     knee_valgus_status: str
-    hip_drop_risk_score: float = 0.75
-    hip_drop_status: str = "Good"
     frame_count: int
-    sampled_frame_count: int = 0
     video_duration_seconds: float
-    pose_detection_rate: float = 0
-    ankle_visibility_rate: float = 0
-    video_quality_score: float = 0.5
-    quality_reasons: List[str] = []
     notes: List[str] = []
+    video_quality_score: float = 0.7
+    pose_detection_rate: float = 0.0
+    quality_notes: List[str] = []
     video_mode: str = "side"
 
 
@@ -72,6 +54,7 @@ class FormIssueContext(BaseModel):
     severity: str = "Medium"
     explanation: str = ""
     exercise_names: List[str] = []
+
 
 class TrainingPlanInput(BaseModel):
     current_weekly_km: float
@@ -98,8 +81,11 @@ class PlannedWorkout(BaseModel):
 
 class TrainingPlanResponse(BaseModel):
     summary: str
+    target: str
+    current_weekly_km: float
     planned_weekly_km: float
     running_days: int
+    injury_adjusted: bool = False
     workouts: List[PlannedWorkout]
     notes: List[str] = []
     connected_analysis_used: bool = False

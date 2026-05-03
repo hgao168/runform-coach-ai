@@ -5,6 +5,7 @@ struct ContentView: View {
     @EnvironmentObject private var appStore: AppStore
     @State private var selectedVideoURL: URL?
     @State private var showVideoPicker = false
+    @State private var showLiveRecorder = false
     @State private var isAnalyzing = false
     @State private var analysis: AnalysisResponse?
     @State private var latestHistoryItemID: UUID?
@@ -69,6 +70,15 @@ struct ContentView: View {
                     latestHistoryItemID = nil
                     errorMessage = nil
                     statusMessage = "Video selected. RunForm will check pose quality before coaching."
+                }
+            }
+            .sheet(isPresented: $showLiveRecorder) {
+                LiveGuidanceRecorderView(videoMode: videoMode) { url in
+                    selectedVideoURL = url
+                    analysis = nil
+                    latestHistoryItemID = nil
+                    errorMessage = nil
+                    statusMessage = "Recording captured with live guidance. Ready to analyze."
                 }
             }
         }
@@ -224,11 +234,18 @@ struct ContentView: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 12) {
-            Button { showVideoPicker = true } label: {
-                Label("Pick Video", systemImage: "plus")
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Button { showLiveRecorder = true } label: {
+                    Label("Record Live", systemImage: "record.circle")
+                }
+                .buttonStyle(SecondaryButtonStyle())
+
+                Button { showVideoPicker = true } label: {
+                    Label("Pick Video", systemImage: "plus")
+                }
+                .buttonStyle(SecondaryButtonStyle())
             }
-            .buttonStyle(SecondaryButtonStyle())
 
             Button { Task { await analyzeSelectedVideo() } } label: {
                 if isAnalyzing {
@@ -272,10 +289,19 @@ struct ContentView: View {
         statusMessage = "Extracting pose metrics on device..."
 
         do {
-            var poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL)
+            var poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL, expectedVideoMode: videoMode.rawValue)
             poseMetrics.videoMode = videoMode.rawValue
+            if poseMetrics.videoQualityScore < 0.40 {
+                let topIssue = poseMetrics.qualityNotes.first ?? "Video quality is too low for reliable form analysis."
+                errorMessage = "Please re-record: \(topIssue)"
+                statusMessage = nil
+                isAnalyzing = false
+                return
+            }
+
             if poseMetrics.videoQualityScore < 0.55 {
-                statusMessage = "Video quality is low. RunForm will still analyze it, but a re-record may be needed."
+                let topGuidance = poseMetrics.qualityNotes.prefix(2).joined(separator: " ")
+                statusMessage = "Video quality is low. \(topGuidance)"
             } else {
                 statusMessage = "Pose quality looks usable. Generating coaching advice..."
             }

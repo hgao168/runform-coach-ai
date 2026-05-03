@@ -1,20 +1,19 @@
 import Foundation
-import SwiftUI
 
 struct AnalysisResponse: Codable, Identifiable, Equatable {
     var id: String { summary + String(confidence) + metrics.map(\.name).joined() }
     let summary: String
     let confidence: Double
-    let quality: VideoQuality?
     let metrics: [Metric]
     let issues: [Issue]
-}
+    let videoQualityScore: Double?
+    let qualityNotes: [String]?
 
-struct VideoQuality: Codable, Equatable {
-    let score: Double
-    let status: String
-    let reasons: [String]
-    let tips: [String]
+    enum CodingKeys: String, CodingKey {
+        case summary, confidence, metrics, issues
+        case videoQualityScore = "video_quality_score"
+        case qualityNotes = "quality_notes"
+    }
 }
 
 struct Metric: Codable, Identifiable, Equatable {
@@ -23,30 +22,6 @@ struct Metric: Codable, Identifiable, Equatable {
     let score: Double
     let status: String
     let explanation: String
-    let confidence: String
-
-    enum CodingKeys: String, CodingKey {
-        case name, score, status, explanation, confidence
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        name        = try c.decode(String.self, forKey: .name)
-        score       = try c.decode(Double.self, forKey: .score)
-        status      = try c.decode(String.self, forKey: .status)
-        explanation = try c.decode(String.self, forKey: .explanation)
-        confidence  = try c.decodeIfPresent(String.self, forKey: .confidence) ?? "Medium"
-    }
-}
-
-extension Metric {
-    var displayName: String {
-        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if normalized == "hip drop" {
-            return "Arm Movement"
-        }
-        return name
-    }
 }
 
 struct Issue: Codable, Identifiable, Equatable {
@@ -55,11 +30,8 @@ struct Issue: Codable, Identifiable, Equatable {
     let severity: String
     let explanation: String
     let recommendedExercises: [Exercise]
-
     enum CodingKeys: String, CodingKey {
-        case title
-        case severity
-        case explanation
+        case title, severity, explanation
         case recommendedExercises = "recommended_exercises"
     }
 }
@@ -72,25 +44,16 @@ struct Exercise: Codable, Identifiable, Equatable {
     let reps: String
     let frequencyPerWeek: Int
     let reason: String
-
     enum CodingKeys: String, CodingKey {
-        case name
-        case category
-        case sets
-        case reps
+        case name, category, sets, reps, reason
         case frequencyPerWeek = "frequency_per_week"
-        case reason
     }
 }
-
-// MARK: - Pose metrics sent to backend
 
 struct PoseMetrics: Codable {
     let cadenceEstimateSPM: Double
     let cadenceScore: Double
     let cadenceStatus: String
-    let cadenceQuality: String
-    let cadenceStepCount: Int
     let overstrideRiskScore: Double
     let overstrideStatus: String
     let trunkLeanDegrees: Double
@@ -98,24 +61,18 @@ struct PoseMetrics: Codable {
     let trunkLeanStatus: String
     let kneeValgusRiskScore: Double
     let kneeValgusStatus: String
-    let hipDropRiskScore: Double
-    let hipDropStatus: String
     let frameCount: Int
-    let sampledFrameCount: Int
     let videoDurationSeconds: Double
-    let poseDetectionRate: Double
-    let ankleVisibilityRate: Double
-    let videoQualityScore: Double
-    let qualityReasons: [String]
     let notes: [String]
+    let videoQualityScore: Double
+    let poseDetectionRate: Double
+    let qualityNotes: [String]
     var videoMode: String = "side"
 
     enum CodingKeys: String, CodingKey {
         case cadenceEstimateSPM = "cadence_estimate_spm"
         case cadenceScore = "cadence_score"
         case cadenceStatus = "cadence_status"
-        case cadenceQuality = "cadence_quality"
-        case cadenceStepCount = "cadence_step_count"
         case overstrideRiskScore = "overstride_risk_score"
         case overstrideStatus = "overstride_status"
         case trunkLeanDegrees = "trunk_lean_degrees"
@@ -123,29 +80,13 @@ struct PoseMetrics: Codable {
         case trunkLeanStatus = "trunk_lean_status"
         case kneeValgusRiskScore = "knee_valgus_risk_score"
         case kneeValgusStatus = "knee_valgus_status"
-        case hipDropRiskScore = "hip_drop_risk_score"
-        case hipDropStatus = "hip_drop_status"
         case frameCount = "frame_count"
-        case sampledFrameCount = "sampled_frame_count"
         case videoDurationSeconds = "video_duration_seconds"
-        case poseDetectionRate = "pose_detection_rate"
-        case ankleVisibilityRate = "ankle_visibility_rate"
-        case videoQualityScore = "video_quality_score"
-        case qualityReasons = "quality_reasons"
         case notes
+        case videoQualityScore = "video_quality_score"
+        case poseDetectionRate = "pose_detection_rate"
+        case qualityNotes = "quality_notes"
         case videoMode = "video_mode"
-    }
-}
-
-enum VideoMode: String, CaseIterable, Identifiable {
-    case side = "side"
-    case rear = "rear"
-
-    var id: String { rawValue }
-    var label: String { self == .side ? "Side View" : "Rear View" }
-    var icon: String { self == .side ? "figure.run" : "figure.run.treadmill" }
-    var metrics: String {
-        self == .side ? "Cadence · Overstride · Trunk Lean" : "Arm Movement · Knee Valgus · Arm Swing"
     }
 }
 
@@ -153,7 +94,6 @@ enum RunnerLevel: String, Codable, CaseIterable, Identifiable {
     case beginner = "Beginner"
     case intermediate = "Intermediate"
     case advanced = "Advanced"
-
     var id: String { rawValue }
 }
 
@@ -170,7 +110,6 @@ enum FeedbackRating: String, Codable, CaseIterable, Identifiable {
     case partlyAccurate = "Partly accurate"
     case notAccurate = "Not accurate"
     case confusing = "Confusing"
-
     var id: String { rawValue }
 }
 
@@ -189,160 +128,30 @@ struct AnalysisHistoryItem: Codable, Identifiable, Equatable {
     var feedback: AnalysisFeedback?
 }
 
-// MARK: - Training plan
+enum VideoMode: String, Codable, CaseIterable, Identifiable {
+    case side
+    case rear
 
-enum TrainingTarget: String, CaseIterable, Codable, Identifiable {
-    case fiveK = "5K"
-    case tenK = "10K"
-    case halfMarathon = "Half Marathon"
-    case marathon = "Marathon"
-    case generalFitness = "General Fitness"
     var id: String { rawValue }
-}
 
-
-struct FormIssueContext: Codable, Identifiable, Equatable {
-    var id: String { title + severity }
-    let title: String
-    let severity: String
-    let explanation: String
-    let exerciseNames: [String]
-
-    enum CodingKeys: String, CodingKey {
-        case title
-        case severity
-        case explanation
-        case exerciseNames = "exercise_names"
+    var label: String {
+        switch self {
+        case .side: return "Side"
+        case .rear: return "Rear"
+        }
     }
-}
-
-struct TrainingPlanInput: Codable {
-    let currentWeeklyKm: Double
-    let target: String
-    let availableRunningDays: Int
-    let injuryFlag: Bool
-    let formIssues: [FormIssueContext]
-    let recentAnalysisSummary: String?
-    let recentAnalysisConfidence: Double?
-    let previousWeekSummary: String?
-
-    init(
-        currentWeeklyKm: Double,
-        target: String,
-        availableRunningDays: Int,
-        injuryFlag: Bool,
-        formIssues: [FormIssueContext] = [],
-        recentAnalysisSummary: String? = nil,
-        recentAnalysisConfidence: Double? = nil,
-        previousWeekSummary: String? = nil
-    ) {
-        self.currentWeeklyKm = currentWeeklyKm
-        self.target = target
-        self.availableRunningDays = availableRunningDays
-        self.injuryFlag = injuryFlag
-        self.formIssues = formIssues
-        self.recentAnalysisSummary = recentAnalysisSummary
-        self.recentAnalysisConfidence = recentAnalysisConfidence
-        self.previousWeekSummary = previousWeekSummary
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case currentWeeklyKm = "current_weekly_km"
-        case target
-        case availableRunningDays = "available_running_days"
-        case injuryFlag = "injury_flag"
-        case formIssues = "form_issues"
-        case recentAnalysisSummary = "recent_analysis_summary"
-        case recentAnalysisConfidence = "recent_analysis_confidence"
-        case previousWeekSummary = "previous_week_summary"
-    }
-}
-
-struct PlannedWorkout: Codable, Identifiable, Equatable {
-    var id: String { day + title }
-    let day: String
-    let title: String
-    let category: String
-    let intensity: String
-    let details: String
-    let purpose: String
-    let distanceKm: Double?
-    let durationMinutes: Int?
-    let coachingFocus: String?
-
-    enum CodingKeys: String, CodingKey {
-        case day, title, category, intensity, details, purpose
-        case distanceKm = "distance_km"
-        case durationMinutes = "duration_minutes"
-        case coachingFocus = "coaching_focus"
-    }
-}
-
-struct TrainingPlanResponse: Codable, Equatable {
-    let summary: String
-    let plannedWeeklyKm: Double
-    let runningDays: Int
-    let workouts: [PlannedWorkout]
-    let notes: [String]
-    let connectedAnalysisUsed: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case summary
-        case plannedWeeklyKm = "planned_weekly_km"
-        case runningDays = "running_days"
-        case workouts
-        case notes
-        case connectedAnalysisUsed = "connected_analysis_used"
-    }
-}
-
-enum WorkoutStatus: String, Codable, CaseIterable, Identifiable {
-    case done     = "Done"
-    case skipped  = "Skipped"
-    case tooHard  = "Too Hard"
-    case pain     = "Pain"
-    var id: String { rawValue }
 
     var icon: String {
         switch self {
-        case .done:    return "checkmark.circle.fill"
-        case .skipped: return "minus.circle"
-        case .tooHard: return "exclamationmark.circle"
-        case .pain:    return "xmark.circle"
+        case .side: return "rectangle.portrait.on.rectangle.portrait"
+        case .rear: return "figure.run"
         }
     }
 
-    var color: Color {
+    var metrics: String {
         switch self {
-        case .done:    return Color(red: 0.25, green: 0.96, blue: 0.76)  // mint
-        case .skipped: return Color(red: 1.0, green: 0.62, blue: 0.22)   // orange
-        case .tooHard: return Color(red: 1.0, green: 0.85, blue: 0.20)   // yellow
-        case .pain:    return Color(red: 1.0, green: 0.30, blue: 0.30)   // red
+        case .side: return "cadence, overstride, trunk lean"
+        case .rear: return "hip stability, knee tracking"
         }
     }
-}
-
-struct SavedPlan: Codable, Identifiable, Equatable {
-    let id: UUID
-    let createdAt: Date
-    let target: String
-    let weeklyKm: Double
-    let plan: TrainingPlanResponse
-    var workoutLogs: [String: WorkoutStatus] = [:]
-}
-
-struct ManualWeekDayPlan: Codable, Identifiable, Equatable {
-    var id: Date { date }
-    let date: Date
-    let dayName: String
-    var planText: String
-}
-
-struct ManualNextWeekPlan: Codable, Identifiable, Equatable {
-    let id: UUID
-    let weekStartMonday: Date
-    let weekEndSunday: Date
-    let createdAt: Date
-    var updatedAt: Date
-    var days: [ManualWeekDayPlan]
 }
