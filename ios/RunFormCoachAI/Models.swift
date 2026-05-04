@@ -129,9 +129,17 @@ struct AnalysisHistoryItem: Codable, Identifiable, Equatable {
     var feedback: AnalysisFeedback?
 }
 
+struct ViewMetricCapability: Identifiable {
+    let id = UUID()
+    let metric: String
+    let icon: String
+    let level: String  // "Best", "Good", "Limited"
+}
+
 enum VideoMode: String, Codable, CaseIterable, Identifiable {
     case side
     case rear
+    case front
 
     var id: String { rawValue }
 
@@ -139,6 +147,7 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .side: return "Side"
         case .rear: return "Rear"
+        case .front: return "Front"
         }
     }
 
@@ -146,6 +155,7 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .side: return "rectangle.portrait.on.rectangle.portrait"
         case .rear: return "figure.run"
+        case .front: return "person.fill.viewfinder"
         }
     }
 
@@ -153,6 +163,33 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .side: return "cadence, overstride, trunk lean"
         case .rear: return "hip stability, knee tracking"
+        case .front: return "knee valgus, hip symmetry"
+        }
+    }
+
+    var capabilities: [ViewMetricCapability] {
+        switch self {
+        case .side:
+            return [
+                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Best"),
+                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Best"),
+                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Best"),
+                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Limited"),
+            ]
+        case .rear:
+            return [
+                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Good"),
+                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Best"),
+                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Limited"),
+                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Limited"),
+            ]
+        case .front:
+            return [
+                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Good"),
+                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Best"),
+                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Good"),
+                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Limited"),
+            ]
         }
     }
 }
