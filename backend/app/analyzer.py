@@ -109,16 +109,25 @@ def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
         Metric(name="Trunk lean", score=round(pose_input.trunk_lean_score, 2), status=pose_input.trunk_lean_status, explanation=trunk_explanation),
         Metric(name="Knee valgus / hip stability", score=round(pose_input.knee_valgus_risk_score, 2), status=pose_input.knee_valgus_status, explanation="Knee tracking relative to the hip-ankle alignment during stance. " + ("Inward knee collapse detected — suggests hip abductor control work." if pose_input.knee_valgus_status != "Good" else "Knee alignment during stance looks stable.")),
     ]
+    if pose_input.vertical_oscillation_status != "Not measurable":
+        metrics.append(Metric(name="Vertical oscillation", score=round(pose_input.vertical_oscillation_score, 2), status=pose_input.vertical_oscillation_status, explanation="Hip vertical bounce normalized to body height. " + ("Excessive bounce detected — aim for a quiet, gliding stride." if pose_input.vertical_oscillation_status != "Good" else "Vertical oscillation is in the efficient range.")))
+    if pose_input.shoulder_elevation_status != "Not measurable":
+        metrics.append(Metric(name="Shoulder elevation", score=round(pose_input.shoulder_elevation_score, 2), status=pose_input.shoulder_elevation_status, explanation="Shoulder-to-hip height ratio detecting hunching or raised/tense shoulders. " + ("Relax your shoulders and restore natural posture." if pose_input.shoulder_elevation_status != "Good" else "Shoulder posture looks relaxed and well-positioned.")))
+    if pose_input.arm_swing_status != "Not measurable":
+        metrics.append(Metric(name="Arm swing", score=round(pose_input.arm_swing_score, 2), status=pose_input.arm_swing_status, explanation="Elbow oscillation amplitude as a proxy for arm drive rhythm. " + ("Arm drive appears stiff or exaggerated — focus on relaxed 90° elbow swings." if pose_input.arm_swing_status != "Good" else "Arm swing rhythm looks natural and efficient.")))
 
     all_notes = pose_input.notes + pose_input.quality_notes
     notes_str = " Notes: " + "; ".join(all_notes) if all_notes else ""
+    vert_osc_line = f"\n- Vertical oscillation: score {pose_input.vertical_oscillation_score:.2f} | {pose_input.vertical_oscillation_status}" if pose_input.vertical_oscillation_status != "Not measurable" else ""
+    shoulder_line = f"\n- Shoulder elevation: score {pose_input.shoulder_elevation_score:.2f} | {pose_input.shoulder_elevation_status}" if pose_input.shoulder_elevation_status != "Not measurable" else ""
+    arm_swing_line = f"\n- Arm swing: score {pose_input.arm_swing_score:.2f} | {pose_input.arm_swing_status}" if pose_input.arm_swing_status != "Not measurable" else ""
     user_message = f"""Running form metrics from on-device Apple Vision pose detection:
 - Capture mode: {pose_input.video_mode}
 - Video quality: {quality_pct}% | pose detection rate {pose_input.pose_detection_rate:.2f}
 - Cadence: {pose_input.cadence_estimate_spm:.0f} steps/min | score {pose_input.cadence_score:.2f} | {pose_input.cadence_status}
 - Overstride risk: score {pose_input.overstride_risk_score:.2f} | {pose_input.overstride_status}
 - Trunk lean: {pose_input.trunk_lean_degrees:.1f}° | score {pose_input.trunk_lean_score:.2f} | {pose_input.trunk_lean_status}
-- Knee valgus / hip stability: score {pose_input.knee_valgus_risk_score:.2f} | {pose_input.knee_valgus_status}
+- Knee valgus / hip stability: score {pose_input.knee_valgus_risk_score:.2f} | {pose_input.knee_valgus_status}{vert_osc_line}{shoulder_line}{arm_swing_line}
 - Frames analyzed: {pose_input.frame_count} over {pose_input.video_duration_seconds:.1f}s{notes_str}
 Generate targeted coaching issues and exercise recommendations based on these measurements."""
 

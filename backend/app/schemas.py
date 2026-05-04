@@ -40,6 +40,12 @@ class PoseMetricsInput(BaseModel):
     trunk_lean_status: str
     knee_valgus_risk_score: float
     knee_valgus_status: str
+    vertical_oscillation_score: float = 0.5
+    vertical_oscillation_status: str = "Not measurable"
+    shoulder_elevation_score: float = 0.5
+    shoulder_elevation_status: str = "Not measurable"
+    arm_swing_score: float = 0.0
+    arm_swing_status: str = "Not measurable"
     frame_count: int
     video_duration_seconds: float
     notes: List[str] = []
