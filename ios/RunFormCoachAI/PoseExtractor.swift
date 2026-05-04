@@ -196,8 +196,11 @@ final class PoseExtractor {
                   let hpX = avgX(pose.leftHip, pose.rightHip),
                   let hpY = avgY(pose.leftHip, pose.rightHip), shY > hpY else { continue }
             let angle = atan2(shX - hpX, shY - hpY) * 180.0 / .pi
-            let w = ((pose.leftShoulder?.confidence ?? 0) + (pose.rightShoulder?.confidence ?? 0) +
-                     (pose.leftHip?.confidence    ?? 0) + (pose.rightHip?.confidence    ?? 0)) / 4.0
+            let lsConf: Double = pose.leftShoulder?.confidence ?? 0
+            let rsConf: Double = pose.rightShoulder?.confidence ?? 0
+            let lhConf: Double = pose.leftHip?.confidence ?? 0
+            let rhConf: Double = pose.rightHip?.confidence ?? 0
+            let w = (lsConf + rsConf + lhConf + rhConf) / 4.0
             trunkAngleWeights.append((angle: angle, weight: max(w, 0.01)))
         }
         let meanTrunkLean: Double
