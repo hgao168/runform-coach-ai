@@ -5,6 +5,9 @@ name: iOS Production Build (App Store)
 on:
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     name: Build & Export Production iOS IPA
