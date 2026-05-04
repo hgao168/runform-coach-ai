@@ -33,3 +33,8 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         DEVELOPMENT_TEAM: "39CYNW3CYT"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Debug:
+          BACKEND_BASE_URL: https://runform-coach-ai-staging.up.railway.app
+        Release:
+          BACKEND_BASE_URL: https://runform-coach-ai-production.up.railway.app

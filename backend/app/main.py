@@ -1,8 +1,12 @@
+import os
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
 from .schemas import AnalysisResponse, PoseMetricsInput, TrainingPlanInput, TrainingPlanResponse
+
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 app = FastAPI(title="RunForm Coach AI API", version="0.4.0")
 
@@ -17,7 +21,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "runform-coach-ai", "version": "0.4.0"}
+    return {"status": "ok", "service": "runform-coach-ai", "version": "0.4.0", "environment": ENVIRONMENT}
 
 
 @app.post("/training-plan", response_model=TrainingPlanResponse)

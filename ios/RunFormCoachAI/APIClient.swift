@@ -4,12 +4,15 @@ final class APIClient {
     static let shared = APIClient()
 
     private let baseURL: URL = {
-        if let urlString = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
-           !urlString.isEmpty,
-           let url = URL(string: urlString) {
-            return url
+        guard
+            let urlString = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
+            !urlString.isEmpty,
+            let url = URL(string: urlString)
+        else {
+            // BACKEND_BASE_URL must be set via project.yml configs (Debug/Release).
+            fatalError("BACKEND_BASE_URL is not configured. Check project.yml build settings.")
         }
-        return URL(string: "https://runform-coach-ai-production.up.railway.app")!
+        return url
     }()
 
     func analyzeMetrics(_ metrics: PoseMetrics) async throws -> AnalysisResponse {
