@@ -1,7 +1,6 @@
-name: iOS Production Build (App Store)
+name: iOS Production → TestFlight (Manual)
 
-# Manual dispatch only — protects against accidental production uploads.
-# Builds the RELEASE configuration → production backend URL → uploads to TestFlight/App Store.
+# Manual dispatch only — always checks out 'master', builds RELEASE config → production backend.
 on:
   workflow_dispatch:
 
@@ -14,8 +13,10 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout master branch
         uses: actions/checkout@v4
+        with:
+          ref: master
 
       - name: Install XcodeGen
         run: brew install xcodegen

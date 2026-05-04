@@ -1,11 +1,8 @@
-name: iOS Staging Build (TestFlight)
+name: iOS Staging → TestFlight (Manual)
 
-# Runs automatically on every push to staging, or manually.
-# Builds the DEBUG configuration → staging backend URL → uploads to TestFlight.
+# Manual dispatch only — run this when you want to push a staging build to TestFlight.
+# Always checks out the 'staging' branch, builds DEBUG config → staging backend URL.
 on:
-  push:
-    branches:
-      - staging
   workflow_dispatch:
 
 env:
@@ -17,8 +14,10 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout staging branch
         uses: actions/checkout@v4
+        with:
+          ref: staging
 
       - name: Install XcodeGen
         run: brew install xcodegen
