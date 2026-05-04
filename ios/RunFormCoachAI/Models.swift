@@ -62,6 +62,12 @@ struct PoseMetrics: Codable {
     let trunkLeanStatus: String
     let kneeValgusRiskScore: Double
     let kneeValgusStatus: String
+    let verticalOscillationScore: Double
+    let verticalOscillationStatus: String
+    let shoulderElevationScore: Double
+    let shoulderElevationStatus: String
+    let armSwingScore: Double
+    let armSwingStatus: String
     let frameCount: Int
     let videoDurationSeconds: Double
     let notes: [String]
@@ -81,6 +87,12 @@ struct PoseMetrics: Codable {
         case trunkLeanStatus = "trunk_lean_status"
         case kneeValgusRiskScore = "knee_valgus_risk_score"
         case kneeValgusStatus = "knee_valgus_status"
+        case verticalOscillationScore = "vertical_oscillation_score"
+        case verticalOscillationStatus = "vertical_oscillation_status"
+        case shoulderElevationScore = "shoulder_elevation_score"
+        case shoulderElevationStatus = "shoulder_elevation_status"
+        case armSwingScore = "arm_swing_score"
+        case armSwingStatus = "arm_swing_status"
         case frameCount = "frame_count"
         case videoDurationSeconds = "video_duration_seconds"
         case notes

@@ -55,6 +55,7 @@ final class PoseExtractor {
                 leftKnee: point(.leftKnee), rightKnee: point(.rightKnee),
                 leftHip: point(.leftHip), rightHip: point(.rightHip),
                 leftShoulder: point(.leftShoulder), rightShoulder: point(.rightShoulder),
+                leftElbow: point(.leftElbow), rightElbow: point(.rightElbow),
                 neck: point(.neck), nose: point(.nose)
             ))
         }
@@ -241,6 +242,74 @@ final class PoseExtractor {
         let valgusScore = clamp(1.0 - (avgValgus / 0.10), 0.10, 1.0)
         let valgusStatus = valgusScore >= 0.75 ? "Good" : valgusScore >= 0.50 ? "Moderate" : "Needs work"
 
+        // --- Shared body height estimate (used by vertical oscillation and arm swing) ---
+        let bodyHeights = usablePoses.compactMap { pose -> Double? in
+            guard let top = pose.topVisibleY, let bot = pose.bottomVisibleY, (top - bot) > 0.2 else { return nil }
+            return top - bot
+        }
+        let avgBodyH = bodyHeights.isEmpty ? 0.70 : bodyHeights.reduce(0, +) / Double(bodyHeights.count)
+
+        // --- Vertical Oscillation: hip Y std dev normalized by body height ---
+        // Low = efficient runner (less bounce), high = energy wasted bouncing
+        let hipMidYs = usablePoses.compactMap { avgY($0.leftHip, $0.rightHip) }
+        let meanHipY = hipMidYs.isEmpty ? 0.5 : hipMidYs.reduce(0, +) / Double(hipMidYs.count)
+        let hipYStdDev = hipMidYs.count >= 3
+            ? sqrt(hipMidYs.map { ($0 - meanHipY) * ($0 - meanHipY) }.reduce(0, +) / Double(hipMidYs.count))
+            : 0.03
+        let normalizedOscill = hipYStdDev / avgBodyH
+        // < 0.025 normalized = smooth; > 0.09 = very bouncy
+        let vertOscScore = clamp(1.0 - (normalizedOscill - 0.025) / 0.065, 0.10, 1.0)
+        let vertOscStatus = vertOscScore >= 0.75 ? "Good" : vertOscScore >= 0.50 ? "Moderate" : "Needs work"
+
+        // --- Shoulder Elevation: shoulder-hip height ratio normalized by body height ---
+        // Detects hunched (low ratio) or raised/tense shoulders (high ratio)
+        var shoulderElevSamples: [Double] = []
+        for pose in usablePoses {
+            guard let shY = avgY(pose.leftShoulder, pose.rightShoulder),
+                  let hpY = avgY(pose.leftHip, pose.rightHip),
+                  let top = pose.topVisibleY, let bot = pose.bottomVisibleY else { continue }
+            let bodyH = top - bot
+            guard bodyH > 0.15 else { continue }
+            shoulderElevSamples.append((shY - hpY) / bodyH)
+        }
+        let meanShoulderRatio = shoulderElevSamples.isEmpty ? 0.40
+            : shoulderElevSamples.reduce(0, +) / Double(shoulderElevSamples.count)
+        // Ideal ~0.38–0.45 of body height. Hunched < 0.28. Raised/tense > 0.52.
+        let shoulderDeviation = abs(meanShoulderRatio - 0.40)
+        let shoulderElevScore = clamp(1.0 - shoulderDeviation / 0.18, 0.10, 1.0)
+        let shoulderElevStatus = shoulderElevScore >= 0.75 ? "Good" : shoulderElevScore >= 0.50 ? "Moderate" : "Needs work"
+
+        // --- Arm Swing: elbow Y oscillation relative to shoulder (confidence-weighted) ---
+        // Active arm drive → elbow swings rhythmically (moderate std dev)
+        // Stiff arms → very low std dev; exaggerated pump → very high
+        var elbowDropValues: [Double] = []
+        for pose in usablePoses {
+            if let ls = pose.leftShoulder, let le = pose.leftElbow {
+                let w = (ls.confidence + le.confidence) / 2.0
+                if w > 0.30 { elbowDropValues.append(ls.y - le.y) }
+            }
+            if let rs = pose.rightShoulder, let re = pose.rightElbow {
+                let w = (rs.confidence + re.confidence) / 2.0
+                if w > 0.30 { elbowDropValues.append(rs.y - re.y) }
+            }
+        }
+        let armSwingScore: Double
+        let armSwingStatus: String
+        if elbowDropValues.count < 10 {
+            armSwingScore = 0.0
+            armSwingStatus = "Not measurable"
+        } else {
+            let meanDrop = elbowDropValues.reduce(0, +) / Double(elbowDropValues.count)
+            let dropStdDev = sqrt(elbowDropValues.map { ($0 - meanDrop) * ($0 - meanDrop) }.reduce(0, +) / Double(elbowDropValues.count))
+            let normDropStdDev = dropStdDev / avgBodyH
+            // Optimal oscillation: ~0.055–0.075 of body height std dev
+            // Stiff: < 0.02; exaggerated: > 0.13
+            let armDeviation = abs(normDropStdDev - 0.065)
+            let armSwingVal = clamp(1.0 - armDeviation / 0.065, 0.10, 1.0)
+            armSwingScore = armSwingVal
+            armSwingStatus = armSwingVal >= 0.75 ? "Good" : armSwingVal >= 0.50 ? "Moderate" : "Needs work"
+        }
+
         return PoseMetrics(
             cadenceEstimateSPM: cadenceSPM,
             cadenceScore: cadenceScore,
@@ -252,6 +321,12 @@ final class PoseExtractor {
             trunkLeanStatus: trunkStatus,
             kneeValgusRiskScore: valgusScore,
             kneeValgusStatus: valgusStatus,
+            verticalOscillationScore: vertOscScore,
+            verticalOscillationStatus: vertOscStatus,
+            shoulderElevationScore: shoulderElevScore,
+            shoulderElevationStatus: shoulderElevStatus,
+            armSwingScore: armSwingScore,
+            armSwingStatus: armSwingStatus,
             frameCount: usablePoses.count,
             videoDurationSeconds: durationSeconds,
             notes: notes,
@@ -268,6 +343,7 @@ final class PoseExtractor {
         let leftKnee: JointPoint?; let rightKnee: JointPoint?
         let leftHip: JointPoint?; let rightHip: JointPoint?
         let leftShoulder: JointPoint?; let rightShoulder: JointPoint?
+        let leftElbow: JointPoint?; let rightElbow: JointPoint?
         let neck: JointPoint?; let nose: JointPoint?
         var points: [JointPoint] { [leftAnkle,rightAnkle,leftKnee,rightKnee,leftHip,rightHip,leftShoulder,rightShoulder,neck,nose].compactMap { $0 } }
         var completeness: Double { Double(points.count) / 10.0 }
