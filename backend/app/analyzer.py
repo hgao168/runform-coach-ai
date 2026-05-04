@@ -131,11 +131,29 @@ Generate targeted coaching issues and exercise recommendations based on these me
         response_format={"type": "json_object"},
     )
     data = json.loads(response.choices[0].message.content)
-    metric_avg = sum(m.score for m in metrics[1:]) / 4
-    quality_adjusted_confidence = min(float(data.get("confidence", metric_avg)), pose_input.video_quality_score + 0.20, 0.95)
+
+    # --- Form Score: weighted average of biomechanical metric values ---
+    # Cadence is excluded when "Not measurable" so it doesn't unfairly tank the score.
+    # Weights reflect injury-risk significance: cadence + overstride highest.
+    form_components: list[tuple[float, float]] = []  # (score, weight)
+    if pose_input.cadence_status != "Not measurable":
+        form_components.append((pose_input.cadence_score, 0.30))
+    form_components.append((pose_input.overstride_risk_score, 0.25))
+    form_components.append((pose_input.trunk_lean_score, 0.25))
+    form_components.append((pose_input.knee_valgus_risk_score, 0.20))
+
+    total_weight = sum(w for _, w in form_components)
+    form_score = sum(s * w for s, w in form_components) / total_weight
+
+    # --- Quality factor: poor video reduces trust in the form score ---
+    # A perfect video gives full form score. A poor video (0.4) caps it at ~70%.
+    # This means good video does NOT inflate the score — only bad video deflates it.
+    quality_factor = min(1.0, 0.70 + 0.30 * pose_input.video_quality_score)
+    final_score = round(form_score * quality_factor, 2)
+
     return AnalysisResponse(
         summary=data["summary"],
-        confidence=round(quality_adjusted_confidence, 2),
+        confidence=final_score,
         metrics=metrics,
         issues=_parse_issues(data),
         video_quality_score=round(pose_input.video_quality_score, 2),
