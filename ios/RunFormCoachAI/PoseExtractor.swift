@@ -167,45 +167,76 @@ final class PoseExtractor {
         }
 
         let stanceThreshold = percentile(usablePoses.flatMap { [$0.leftAnkle?.y, $0.rightAnkle?.y].compactMap { $0 } }, p: 0.35) ?? 0.28
-        var overstrideValues: [Double] = []
+        // Overstride: confidence-weighted ankle-to-hip distance during stance
+        var overstrideWeightedSum = 0.0
+        var overstrideWeightTotal = 0.0
         for pose in usablePoses {
             guard let hipMidX = avgX(pose.leftHip, pose.rightHip) else { continue }
-            if let la = pose.leftAnkle, la.y < stanceThreshold { overstrideValues.append(abs(la.x - hipMidX)) }
-            if let ra = pose.rightAnkle, ra.y < stanceThreshold { overstrideValues.append(abs(ra.x - hipMidX)) }
+            if let la = pose.leftAnkle, la.y < stanceThreshold {
+                let w = la.confidence
+                overstrideWeightedSum  += abs(la.x - hipMidX) * w
+                overstrideWeightTotal  += w
+            }
+            if let ra = pose.rightAnkle, ra.y < stanceThreshold {
+                let w = ra.confidence
+                overstrideWeightedSum  += abs(ra.x - hipMidX) * w
+                overstrideWeightTotal  += w
+            }
         }
-        let avgOverstride = overstrideValues.isEmpty ? 0.12 : overstrideValues.reduce(0, +) / Double(overstrideValues.count)
-        let overstrideScore = 1.0 - clamp((avgOverstride - 0.05) / 0.17, 0, 1)
-        let overstrideStatus = overstrideScore > 0.70 ? "Good" : overstrideScore > 0.45 ? "Moderate" : "Needs work"
+        let avgOverstride = overstrideWeightTotal > 0 ? overstrideWeightedSum / overstrideWeightTotal : 0.12
+        // Continuous score: 0.05 landing = 1.0, 0.22 landing = 0.0
+        let overstrideScore = clamp(1.0 - ((avgOverstride - 0.05) / 0.17), 0.05, 1.0)
+        let overstrideStatus = overstrideScore >= 0.75 ? "Good" : overstrideScore >= 0.50 ? "Moderate" : "Needs work"
 
-        var trunkAngles: [Double] = []
+        // Trunk lean: confidence-weighted angles, then trimmed mean (drop outer 10% outliers)
+        var trunkAngleWeights: [(angle: Double, weight: Double)] = []
         for pose in usablePoses {
             guard let shX = avgX(pose.leftShoulder, pose.rightShoulder),
                   let shY = avgY(pose.leftShoulder, pose.rightShoulder),
                   let hpX = avgX(pose.leftHip, pose.rightHip),
                   let hpY = avgY(pose.leftHip, pose.rightHip), shY > hpY else { continue }
-            trunkAngles.append(atan2(shX - hpX, shY - hpY) * 180.0 / .pi)
+            let angle = atan2(shX - hpX, shY - hpY) * 180.0 / .pi
+            let w = ((pose.leftShoulder?.confidence ?? 0) + (pose.rightShoulder?.confidence ?? 0) +
+                     (pose.leftHip?.confidence    ?? 0) + (pose.rightHip?.confidence    ?? 0)) / 4.0
+            trunkAngleWeights.append((angle: angle, weight: max(w, 0.01)))
         }
-        let meanTrunkLean = trunkAngles.isEmpty ? 0.0 : trunkAngles.reduce(0,+) / Double(trunkAngles.count)
+        let meanTrunkLean: Double
+        if trunkAngleWeights.isEmpty {
+            meanTrunkLean = 0.0
+        } else {
+            // Trimmed mean: drop bottom and top 10% by angle magnitude
+            let sorted = trunkAngleWeights.sorted { abs($0.angle) < abs($1.angle) }
+            let trimCount = max(1, sorted.count - 2 * max(1, sorted.count / 10))
+            let trimmed = Array(sorted.prefix(trimCount))
+            let totalW = trimmed.map(\.weight).reduce(0, +)
+            meanTrunkLean = trimmed.map { $0.angle * $0.weight }.reduce(0, +) / totalW
+        }
         let absLean = abs(meanTrunkLean)
-        let (trunkScore, trunkStatus): (Double, String)
-        switch absLean {
-        case ..<5: (trunkScore, trunkStatus) = (0.88, "Good")
-        case 5..<12: (trunkScore, trunkStatus) = (0.65, "Moderate")
-        default: (trunkScore, trunkStatus) = (0.42, "Needs work")
-        }
+        // Continuous score: 0° = 0.95, 8° = 0.65, 20° = 0.20 — smooth sigmoid-like curve
+        let trunkScore = clamp(0.95 - 0.0375 * absLean, 0.15, 0.95)
+        let trunkStatus = trunkScore >= 0.75 ? "Good" : trunkScore >= 0.50 ? "Moderate" : "Needs work"
 
-        var valgusDeviations: [Double] = []
+        // Valgus: confidence-weighted deviation (both inward and outward collapse)
+        var valgusWeightedSum = 0.0
+        var valgusWeightTotal = 0.0
         for pose in usablePoses {
             if let la = pose.leftAnkle, la.y < stanceThreshold, let lk = pose.leftKnee, let lh = pose.leftHip {
-                valgusDeviations.append(max(0, lk.x - ((lh.x + la.x) / 2.0)))
+                let deviation = abs(lk.x - ((lh.x + la.x) / 2.0))  // both inward and outward
+                let w = (lk.confidence + lh.confidence + la.confidence) / 3.0
+                valgusWeightedSum  += deviation * w
+                valgusWeightTotal  += w
             }
             if let ra = pose.rightAnkle, ra.y < stanceThreshold, let rk = pose.rightKnee, let rh = pose.rightHip {
-                valgusDeviations.append(max(0, ((rh.x + ra.x) / 2.0) - rk.x))
+                let deviation = abs(rk.x - ((rh.x + ra.x) / 2.0))
+                let w = (rk.confidence + rh.confidence + ra.confidence) / 3.0
+                valgusWeightedSum  += deviation * w
+                valgusWeightTotal  += w
             }
         }
-        let avgValgus = valgusDeviations.isEmpty ? 0.04 : valgusDeviations.reduce(0,+) / Double(valgusDeviations.count)
-        let valgusScore = 1.0 - clamp((avgValgus - 0.02) / 0.08, 0, 1)
-        let valgusStatus = valgusScore > 0.70 ? "Good" : valgusScore > 0.45 ? "Moderate" : "Needs work"
+        let avgValgus = valgusWeightTotal > 0 ? valgusWeightedSum / valgusWeightTotal : 0.04
+        // Continuous score: 0 deviation = 1.0, 0.10 deviation = ~0.20
+        let valgusScore = clamp(1.0 - (avgValgus / 0.10), 0.10, 1.0)
+        let valgusStatus = valgusScore >= 0.75 ? "Good" : valgusScore >= 0.50 ? "Moderate" : "Needs work"
 
         return PoseMetrics(
             cadenceEstimateSPM: cadenceSPM,
