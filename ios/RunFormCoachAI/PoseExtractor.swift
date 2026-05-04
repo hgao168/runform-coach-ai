@@ -310,6 +310,35 @@ final class PoseExtractor {
             armSwingStatus = armSwingVal >= 0.75 ? "Good" : armSwingVal >= 0.50 ? "Moderate" : "Needs work"
         }
 
+        // --- Pelvic Drop / Hip Symmetry: left-right hip Y difference during movement ---
+        // In Vision coords Y=0 is bottom, Y=1 is top.
+        // (leftHip.y - rightHip.y) > 0 → left is higher → right hip drops
+        // (leftHip.y - rightHip.y) < 0 → right is higher → left hip drops
+        // Needs front or rear view; both hips visible with high confidence.
+        var hipTiltSamples: [Double] = []
+        for pose in usablePoses {
+            guard let lh = pose.leftHip, let rh = pose.rightHip,
+                  lh.confidence > 0.42, rh.confidence > 0.42 else { continue }
+            hipTiltSamples.append(lh.y - rh.y)
+        }
+        let pelvicDropScore: Double
+        let pelvicDropStatus: String
+        if hipTiltSamples.count < 10 {
+            pelvicDropScore = 0.0
+            pelvicDropStatus = "Not measurable"
+        } else {
+            let meanTilt = hipTiltSamples.reduce(0, +) / Double(hipTiltSamples.count)
+            let tiltStdDev = sqrt(hipTiltSamples.map { ($0 - meanTilt) * ($0 - meanTilt) }.reduce(0, +) / Double(hipTiltSamples.count))
+            let normMeanBias = abs(meanTilt) / avgBodyH
+            let normTiltStdDev = tiltStdDev / avgBodyH
+            // Combined: static structural lean (× 0.5) + dynamic drop oscillation
+            // Ideal total < 0.020 normalized; concerning > 0.065
+            let pelvicDropMag = normMeanBias * 0.5 + normTiltStdDev
+            let pelvicDropVal = clamp(1.0 - (pelvicDropMag - 0.020) / 0.045, 0.10, 1.0)
+            pelvicDropScore = pelvicDropVal
+            pelvicDropStatus = pelvicDropVal >= 0.75 ? "Good" : pelvicDropVal >= 0.50 ? "Moderate" : "Needs work"
+        }
+
         return PoseMetrics(
             cadenceEstimateSPM: cadenceSPM,
             cadenceScore: cadenceScore,
@@ -327,6 +356,8 @@ final class PoseExtractor {
             shoulderElevationStatus: shoulderElevStatus,
             armSwingScore: armSwingScore,
             armSwingStatus: armSwingStatus,
+            pelvicDropScore: pelvicDropScore,
+            pelvicDropStatus: pelvicDropStatus,
             frameCount: usablePoses.count,
             videoDurationSeconds: durationSeconds,
             notes: notes,

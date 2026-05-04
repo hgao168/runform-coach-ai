@@ -68,6 +68,8 @@ struct PoseMetrics: Codable {
     let shoulderElevationStatus: String
     let armSwingScore: Double
     let armSwingStatus: String
+    let pelvicDropScore: Double
+    let pelvicDropStatus: String
     let frameCount: Int
     let videoDurationSeconds: Double
     let notes: [String]
@@ -93,6 +95,8 @@ struct PoseMetrics: Codable {
         case shoulderElevationStatus = "shoulder_elevation_status"
         case armSwingScore = "arm_swing_score"
         case armSwingStatus = "arm_swing_status"
+        case pelvicDropScore = "pelvic_drop_score"
+        case pelvicDropStatus = "pelvic_drop_status"
         case frameCount = "frame_count"
         case videoDurationSeconds = "video_duration_seconds"
         case notes
