@@ -1,13 +1,16 @@
-name: iOS Production Build (App Store)
+name: iOS Staging Build (TestFlight)
 
-# Manual dispatch only — protects against accidental production uploads.
-# Builds the RELEASE configuration → production backend URL → uploads to TestFlight/App Store.
+# Runs automatically on every push to staging, or manually.
+# Builds the DEBUG configuration → staging backend URL → uploads to TestFlight.
 on:
+  push:
+    branches:
+      - staging
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build & Export Production iOS IPA
+    name: Build & Upload Staging IPA to TestFlight
     runs-on: macos-latest
 
     steps:
@@ -34,7 +37,6 @@ jobs:
           security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" "$KEYCHAIN_PATH"
-          # Add to the search list so Xcode can find it
           security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
 
       - name: Import distribution certificate
@@ -62,26 +64,27 @@ jobs:
           echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
           echo "Installed provisioning profile UUID: $PROFILE_UUID"
 
-      # ── Generate & Archive ──────────────────────────────────────────────────
+      # ── Generate & Archive (DEBUG = staging backend) ────────────────────────
 
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Archive app (Release configuration → production backend)
+      - name: Archive app (Debug configuration → staging backend)
         run: |
           xcodebuild archive \
             -project RunFormCoachAI.xcodeproj \
             -scheme RunFormCoachAI \
-            -configuration Release \
-            -archivePath "$RUNNER_TEMP/RunFormCoachAI.xcarchive" \
+            -configuration Debug \
+            -archivePath "$RUNNER_TEMP/RunFormCoachAI-Staging.xcarchive" \
             -destination 'generic/platform=iOS' \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=39CYNW3CYT \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="RunFormCoachAI-Prod" \
-            BACKEND_BASE_URL="${{ secrets.BACKEND_BASE_URL }}" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             MARKETING_VERSION="1.0"
+          # Note: BACKEND_BASE_URL is NOT overridden here.
+          # The Debug config in project.yml embeds the staging backend URL automatically.
 
       # ── Export IPA ──────────────────────────────────────────────────────────
 
@@ -114,10 +117,9 @@ jobs:
       - name: Export IPA
         run: |
           xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/RunFormCoachAI.xcarchive" \
+            -archivePath "$RUNNER_TEMP/RunFormCoachAI-Staging.xcarchive" \
             -exportPath "$RUNNER_TEMP/export" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
-          # Locate IPA regardless of filename and store path for subsequent steps
           IPA_PATH=$(find "$RUNNER_TEMP/export" -name "*.ipa" | head -1)
           echo "IPA_PATH=$IPA_PATH" >> "$GITHUB_ENV"
           echo "Exported IPA: $IPA_PATH"
@@ -125,15 +127,14 @@ jobs:
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RunFormCoachAI-ipa
+          name: RunFormCoachAI-Staging-ipa
           path: ${{ runner.temp }}/export/*.ipa
-          retention-days: 30
+          retention-days: 14
 
       # ── TestFlight Upload ────────────────────────────────────────────────────
 
       - name: Upload to TestFlight
         run: |
-          # altool requires the .p8 to be in ~/.appstoreconnect/private_keys/
           mkdir -p ~/.appstoreconnect/private_keys
           echo "${{ secrets.APP_STORE_CONNECT_API_KEY }}" | base64 --decode \
             > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
