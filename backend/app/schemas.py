@@ -48,6 +48,10 @@ class PoseMetricsInput(BaseModel):
     arm_swing_status: str = "Not measurable"
     pelvic_drop_score: float = 0.0
     pelvic_drop_status: str = "Not measurable"
+    step_symmetry_score: float = 0.0
+    step_symmetry_status: str = "Not measurable"
+    head_forward_score: float = 0.0
+    head_forward_status: str = "Not measurable"
     frame_count: int
     video_duration_seconds: float
     notes: List[str] = []

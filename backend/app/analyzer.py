@@ -117,6 +117,10 @@ def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
         metrics.append(Metric(name="Arm swing", score=round(pose_input.arm_swing_score, 2), status=pose_input.arm_swing_status, explanation="Elbow oscillation amplitude as a proxy for arm drive rhythm. " + ("Arm drive appears stiff or exaggerated — focus on relaxed 90° elbow swings." if pose_input.arm_swing_status != "Good" else "Arm swing rhythm looks natural and efficient.")))
     if pose_input.pelvic_drop_status != "Not measurable":
         metrics.append(Metric(name="Pelvic drop / hip symmetry", score=round(pose_input.pelvic_drop_score, 2), status=pose_input.pelvic_drop_status, explanation="Left-right hip height symmetry during running. " + ("Pelvic drop detected — suggests weak glute medius or hip abductor imbalance." if pose_input.pelvic_drop_status != "Good" else "Hip symmetry looks balanced through the gait cycle.")))
+    if pose_input.step_symmetry_status != "Not measurable":
+        metrics.append(Metric(name="Step symmetry", score=round(pose_input.step_symmetry_score, 2), status=pose_input.step_symmetry_status, explanation="Left-right ankle oscillation amplitude balance. " + ("Asymmetric stride detected — one leg is doing more work than the other, increasing injury risk." if pose_input.step_symmetry_status != "Good" else "Step symmetry looks well-balanced between left and right sides.")))
+    if pose_input.head_forward_status != "Not measurable":
+        metrics.append(Metric(name="Head forward position", score=round(pose_input.head_forward_score, 2), status=pose_input.head_forward_status, explanation="Nose horizontal offset from shoulder line, indicating forward head posture. " + ("Forward head detected — chin tuck and gaze-forward cues recommended." if pose_input.head_forward_status != "Good" else "Head position looks well-aligned over the shoulders.")))
 
     all_notes = pose_input.notes + pose_input.quality_notes
     notes_str = " Notes: " + "; ".join(all_notes) if all_notes else ""
@@ -124,13 +128,15 @@ def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
     shoulder_line = f"\n- Shoulder elevation: score {pose_input.shoulder_elevation_score:.2f} | {pose_input.shoulder_elevation_status}" if pose_input.shoulder_elevation_status != "Not measurable" else ""
     arm_swing_line = f"\n- Arm swing: score {pose_input.arm_swing_score:.2f} | {pose_input.arm_swing_status}" if pose_input.arm_swing_status != "Not measurable" else ""
     pelvic_drop_line = f"\n- Pelvic drop / hip symmetry: score {pose_input.pelvic_drop_score:.2f} | {pose_input.pelvic_drop_status}" if pose_input.pelvic_drop_status != "Not measurable" else ""
+    step_symmetry_line = f"\n- Step symmetry: score {pose_input.step_symmetry_score:.2f} | {pose_input.step_symmetry_status}" if pose_input.step_symmetry_status != "Not measurable" else ""
+    head_forward_line = f"\n- Head forward position: score {pose_input.head_forward_score:.2f} | {pose_input.head_forward_status}" if pose_input.head_forward_status != "Not measurable" else ""
     user_message = f"""Running form metrics from on-device Apple Vision pose detection:
 - Capture mode: {pose_input.video_mode}
 - Video quality: {quality_pct}% | pose detection rate {pose_input.pose_detection_rate:.2f}
 - Cadence: {pose_input.cadence_estimate_spm:.0f} steps/min | score {pose_input.cadence_score:.2f} | {pose_input.cadence_status}
 - Overstride risk: score {pose_input.overstride_risk_score:.2f} | {pose_input.overstride_status}
 - Trunk lean: {pose_input.trunk_lean_degrees:.1f}° | score {pose_input.trunk_lean_score:.2f} | {pose_input.trunk_lean_status}
-- Knee valgus / hip stability: score {pose_input.knee_valgus_risk_score:.2f} | {pose_input.knee_valgus_status}{vert_osc_line}{shoulder_line}{arm_swing_line}{pelvic_drop_line}
+- Knee valgus / hip stability: score {pose_input.knee_valgus_risk_score:.2f} | {pose_input.knee_valgus_status}{vert_osc_line}{shoulder_line}{arm_swing_line}{pelvic_drop_line}{step_symmetry_line}{head_forward_line}
 - Frames analyzed: {pose_input.frame_count} over {pose_input.video_duration_seconds:.1f}s{notes_str}
 Generate targeted coaching issues and exercise recommendations based on these measurements."""
 

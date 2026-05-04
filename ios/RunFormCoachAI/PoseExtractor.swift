@@ -339,6 +339,78 @@ final class PoseExtractor {
             pelvicDropStatus = pelvicDropVal >= 0.75 ? "Good" : pelvicDropVal >= 0.50 ? "Moderate" : "Needs work"
         }
 
+        // --- Left/Right Step Symmetry: compare ankle Y oscillation amplitude between sides ---
+        // Far-side ankle in side view has low confidence → naturally produces < 10 samples → "Not measurable"
+        // Reliable in front/rear view where both ankles are clearly visible.
+        var leftAnkleYs: [Double] = []
+        var rightAnkleYs: [Double] = []
+        for pose in usablePoses {
+            if let la = pose.leftAnkle, la.confidence > 0.30 { leftAnkleYs.append(la.y) }
+            if let ra = pose.rightAnkle, ra.confidence > 0.30 { rightAnkleYs.append(ra.y) }
+        }
+        let stepSymmetryScore: Double
+        let stepSymmetryStatus: String
+        if leftAnkleYs.count < 10 || rightAnkleYs.count < 10 {
+            stepSymmetryScore = 0.0
+            stepSymmetryStatus = "Not measurable"
+        } else {
+            let leftMean = leftAnkleYs.reduce(0, +) / Double(leftAnkleYs.count)
+            let rightMean = rightAnkleYs.reduce(0, +) / Double(rightAnkleYs.count)
+            let leftStd = sqrt(leftAnkleYs.map { ($0 - leftMean) * ($0 - leftMean) }.reduce(0, +) / Double(leftAnkleYs.count))
+            let rightStd = sqrt(rightAnkleYs.map { ($0 - rightMean) * ($0 - rightMean) }.reduce(0, +) / Double(rightAnkleYs.count))
+            let avgStd = (leftStd + rightStd) / 2.0
+            if avgStd < 0.002 {
+                // Signal too flat — likely static capture or extreme zoom
+                stepSymmetryScore = 0.0
+                stepSymmetryStatus = "Not measurable"
+            } else {
+                // asymmetry: 0 = perfect; ~0.15 = noticeable; ~0.30 = significant
+                let asymmetry = abs(leftStd - rightStd) / avgStd
+                let symVal = clamp(1.0 - asymmetry / 0.30, 0.10, 1.0)
+                stepSymmetryScore = symVal
+                stepSymmetryStatus = symVal >= 0.75 ? "Good" : symVal >= 0.50 ? "Moderate" : "Needs work"
+            }
+        }
+
+        // --- Head Forward Position: nose X offset from shoulder line, side view only ---
+        // Detects forward head / text-neck posture while running.
+        // Only meaningful in side view (small shoulder X spread).
+        var headOffsetSamples: [Double] = []
+        var shoulderSpreadSamples: [Double] = []
+        for pose in usablePoses {
+            if let ls = pose.leftShoulder, let rs = pose.rightShoulder,
+               ls.confidence > 0.30, rs.confidence > 0.30 {
+                shoulderSpreadSamples.append(abs(ls.x - rs.x))
+            }
+            guard let nos = pose.nose, nos.confidence > 0.30 else { continue }
+            var refX: Double? = nil
+            if let ls = pose.leftShoulder, let rs = pose.rightShoulder,
+               ls.confidence > 0.30, rs.confidence > 0.30 {
+                refX = (ls.x + rs.x) / 2.0
+            } else if let ls = pose.leftShoulder, ls.confidence > 0.40 {
+                refX = ls.x
+            } else if let rs = pose.rightShoulder, rs.confidence > 0.40 {
+                refX = rs.x
+            }
+            guard let sx = refX else { continue }
+            headOffsetSamples.append(abs(nos.x - sx) / avgBodyH)
+        }
+        // avgShoulderSpread ≥ 0.22 → front/rear view → head forward not meaningful
+        let avgShoulderSpread = shoulderSpreadSamples.isEmpty ? 1.0
+            : shoulderSpreadSamples.reduce(0, +) / Double(shoulderSpreadSamples.count)
+        let headForwardScore: Double
+        let headForwardStatus: String
+        if headOffsetSamples.count < 10 || avgShoulderSpread >= 0.22 {
+            headForwardScore = 0.0
+            headForwardStatus = "Not measurable"
+        } else {
+            let meanHeadOffset = headOffsetSamples.reduce(0, +) / Double(headOffsetSamples.count)
+            // ≤ 0.05 normalized: good; > 0.12: significant forward head (text neck)
+            let headVal = clamp(1.0 - max(0.0, meanHeadOffset - 0.05) / 0.07, 0.10, 1.0)
+            headForwardScore = headVal
+            headForwardStatus = headVal >= 0.75 ? "Good" : headVal >= 0.50 ? "Moderate" : "Needs work"
+        }
+
         return PoseMetrics(
             cadenceEstimateSPM: cadenceSPM,
             cadenceScore: cadenceScore,
@@ -358,6 +430,10 @@ final class PoseExtractor {
             armSwingStatus: armSwingStatus,
             pelvicDropScore: pelvicDropScore,
             pelvicDropStatus: pelvicDropStatus,
+            stepSymmetryScore: stepSymmetryScore,
+            stepSymmetryStatus: stepSymmetryStatus,
+            headForwardScore: headForwardScore,
+            headForwardStatus: headForwardStatus,
             frameCount: usablePoses.count,
             videoDurationSeconds: durationSeconds,
             notes: notes,
