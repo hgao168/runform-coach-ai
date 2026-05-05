@@ -4,6 +4,15 @@ name: iOS Staging → TestFlight (Manual)
 # Always checks out the 'staging' branch, builds DEBUG config → staging backend URL.
 on:
   workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: 'Upload IPA to TestFlight after build'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -144,6 +153,7 @@ jobs:
       # ── TestFlight Upload ────────────────────────────────────────────────────
 
       - name: Upload to TestFlight
+        if: ${{ github.event.inputs.upload_to_testflight == 'true' }}
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           echo "${{ secrets.APP_STORE_CONNECT_API_KEY }}" | base64 --decode \
