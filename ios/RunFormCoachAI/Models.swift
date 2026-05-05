@@ -123,10 +123,14 @@ enum RunnerLevel: String, Codable, CaseIterable, Identifiable {
 }
 
 struct TesterProfile: Codable, Equatable {
+    var firstName: String = ""
+    var lastName: String = ""
     var nickname: String = ""
     var level: RunnerLevel = .beginner
     var weeklyMileageKm: Double = 15
     var runningDaysPerWeek: Int = 3
+    var heightCm: Double = 170
+    var weightKg: Double = 70
     var target: String = "General fitness"
     var injuryNote: String = ""
 }
