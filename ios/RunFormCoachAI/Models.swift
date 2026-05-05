@@ -131,7 +131,7 @@ struct TesterProfile: Codable, Equatable {
     var runningDaysPerWeek: Int = 3
     var heightCm: Double = 170
     var weightKg: Double = 70
-    var target: String = "General fitness"
+    var target: String = "General Fitness"
     var injuryNote: String = ""
 }
 
