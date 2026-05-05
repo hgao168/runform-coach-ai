@@ -300,7 +300,7 @@ final class PoseExtractor {
             armSwingStatus = "Not measurable"
         } else {
             let meanDrop = elbowDropValues.reduce(0, +) / Double(elbowDropValues.count)
-            let dropStdDev = sqrt(elbowDropValues.map { ($0 - meanDrop) * ($0 - meanDrop) }.reduce(0, +) / Double(elbowDropValues.count))
+            let dropStdDev: Double = sqrt(elbowDropValues.map { ($0 - meanDrop) * ($0 - meanDrop) }.reduce(0, +) / Double(elbowDropValues.count))
             let normDropStdDev = dropStdDev / avgBodyH
             // Optimal oscillation: ~0.055–0.075 of body height std dev
             // Stiff: < 0.02; exaggerated: > 0.13
@@ -328,7 +328,7 @@ final class PoseExtractor {
             pelvicDropStatus = "Not measurable"
         } else {
             let meanTilt = hipTiltSamples.reduce(0, +) / Double(hipTiltSamples.count)
-            let tiltStdDev = sqrt(hipTiltSamples.map { ($0 - meanTilt) * ($0 - meanTilt) }.reduce(0, +) / Double(hipTiltSamples.count))
+            let tiltStdDev: Double = sqrt(hipTiltSamples.map { ($0 - meanTilt) * ($0 - meanTilt) }.reduce(0, +) / Double(hipTiltSamples.count))
             let normMeanBias = abs(meanTilt) / avgBodyH
             let normTiltStdDev = tiltStdDev / avgBodyH
             // Combined: static structural lean (× 0.5) + dynamic drop oscillation
@@ -356,8 +356,8 @@ final class PoseExtractor {
         } else {
             let leftMean = leftAnkleYs.reduce(0, +) / Double(leftAnkleYs.count)
             let rightMean = rightAnkleYs.reduce(0, +) / Double(rightAnkleYs.count)
-            let leftStd = sqrt(leftAnkleYs.map { ($0 - leftMean) * ($0 - leftMean) }.reduce(0, +) / Double(leftAnkleYs.count))
-            let rightStd = sqrt(rightAnkleYs.map { ($0 - rightMean) * ($0 - rightMean) }.reduce(0, +) / Double(rightAnkleYs.count))
+            let leftStd: Double = sqrt(leftAnkleYs.map { ($0 - leftMean) * ($0 - leftMean) }.reduce(0, +) / Double(leftAnkleYs.count))
+            let rightStd: Double = sqrt(rightAnkleYs.map { ($0 - rightMean) * ($0 - rightMean) }.reduce(0, +) / Double(rightAnkleYs.count))
             let avgStd = (leftStd + rightStd) / 2.0
             if avgStd < 0.002 {
                 // Signal too flat — likely static capture or extreme zoom
