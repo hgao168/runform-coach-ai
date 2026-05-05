@@ -8,27 +8,13 @@ def _round_half(value: float) -> float:
     return round(value * 2) / 2
 
 
-def _target_cap(target: str) -> float:
-    if target == "5K":
-        return 60.0
-    if target == "10K":
-        return 80.0
-    if target == "Half Marathon":
-        return 100.0
-    if target == "Marathon":
-        return 120.0
-    # General Fitness / Speed & Power / Weight Loss — honour user input up to a safe ceiling
-    return 150.0
-
-
 def _planned_weekly_km(inp: TrainingPlanInput) -> float:
     if inp.current_weekly_km <= 0:
         starter = 10.0 if inp.available_running_days <= 2 else 15.0
         return _round_half(starter)
-    # Use current weekly km directly so the plan matches the user's input volume.
+    # Use current weekly km directly — no artificial cap.
     # Injury flag reduces volume by 10% to give recovery headroom.
     planned = inp.current_weekly_km * 0.90 if inp.injury_flag else inp.current_weekly_km
-    planned = min(planned, _target_cap(inp.target))
     return _round_half(max(planned, 1.0))
 
 
