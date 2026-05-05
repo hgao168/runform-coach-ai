@@ -126,6 +126,7 @@ struct TesterProfile: Codable, Equatable {
     var nickname: String = ""
     var level: RunnerLevel = .beginner
     var weeklyMileageKm: Double = 15
+    var runningDaysPerWeek: Int = 3
     var target: String = "General fitness"
     var injuryNote: String = ""
 }

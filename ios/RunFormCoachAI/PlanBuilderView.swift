@@ -70,12 +70,16 @@ struct PlanBuilderView: View {
                     if let t = TrainingTarget(rawValue: saved.target) { target = t }
                 } else if !weeklyKmEditedByUser {
                     setWeeklyKmText(appStore.profile.weeklyMileageKm)
+                    availableRunningDays = appStore.profile.runningDaysPerWeek
                 }
             }
             .onChange(of: appStore.profile.weeklyMileageKm) { mileage in
                 if !weeklyKmEditedByUser {
                     setWeeklyKmText(mileage)
                 }
+            }
+            .onChange(of: appStore.profile.runningDaysPerWeek) { days in
+                availableRunningDays = days
             }
             .sheet(isPresented: $showSavedPlans) {
                 SavedPlansView()

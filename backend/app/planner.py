@@ -22,10 +22,11 @@ def _planned_weekly_km(inp: TrainingPlanInput) -> float:
     if inp.current_weekly_km <= 0:
         starter = 10.0 if inp.available_running_days <= 2 else 15.0
         return _round_half(starter)
-    increase = 0.05 if inp.injury_flag else 0.10
-    planned = inp.current_weekly_km * (1 + increase)
+    # Use current weekly km directly so the plan matches the user's input volume.
+    # Injury flag reduces volume by 10% to give recovery headroom.
+    planned = inp.current_weekly_km * 0.90 if inp.injury_flag else inp.current_weekly_km
     planned = min(planned, _target_cap(inp.target))
-    return _round_half(max(planned, min(inp.current_weekly_km, _target_cap(inp.target))))
+    return _round_half(max(planned, 1.0))
 
 
 def generate_training_plan(inp: TrainingPlanInput) -> TrainingPlanResponse:

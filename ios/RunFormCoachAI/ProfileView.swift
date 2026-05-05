@@ -5,6 +5,7 @@ struct ProfileView: View {
     @State private var nickname = ""
     @State private var level: RunnerLevel = .beginner
     @State private var weeklyMileageKm: Double = 15
+    @State private var runningDaysPerWeek: Int = 3
     @State private var target: TrainingTarget = .generalFitness
     @State private var injuryNote = ""
     @State private var savedMessage: String?
@@ -106,6 +107,10 @@ struct ProfileView: View {
                         .tint(AppTheme.mint)
                 }
 
+                Stepper("Running days / week: \(runningDaysPerWeek)", value: $runningDaysPerWeek, in: 1...7)
+                    .foregroundStyle(.white)
+                    .font(.subheadline)
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Goal")
                         .font(.caption.bold())
@@ -165,6 +170,7 @@ struct ProfileView: View {
         nickname = profile.nickname
         level = profile.level
         weeklyMileageKm = profile.weeklyMileageKm
+        runningDaysPerWeek = profile.runningDaysPerWeek
         if let targetValue = TrainingTarget(rawValue: profile.target) {
             target = targetValue
         } else {
@@ -180,6 +186,7 @@ struct ProfileView: View {
             nickname: nickname,
             level: level,
             weeklyMileageKm: weeklyMileageKm,
+            runningDaysPerWeek: runningDaysPerWeek,
             target: target.rawValue,
             injuryNote: injuryNote
         )
