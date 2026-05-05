@@ -299,8 +299,9 @@ final class PoseExtractor {
             armSwingScore = 0.0
             armSwingStatus = "Not measurable"
         } else {
-            let meanDrop = elbowDropValues.reduce(0, +) / Double(elbowDropValues.count)
-            let dropStdDev: Double = sqrt(elbowDropValues.map { ($0 - meanDrop) * ($0 - meanDrop) }.reduce(0, +) / Double(elbowDropValues.count))
+            let meanDrop: Double = elbowDropValues.reduce(0.0, +) / Double(elbowDropValues.count)
+            let dropSumSq: Double = elbowDropValues.reduce(0.0) { $0 + ($1 - meanDrop) * ($1 - meanDrop) }
+            let dropStdDev: Double = sqrt(dropSumSq / Double(elbowDropValues.count))
             let normDropStdDev = dropStdDev / avgBodyH
             // Optimal oscillation: ~0.055–0.075 of body height std dev
             // Stiff: < 0.02; exaggerated: > 0.13
@@ -327,8 +328,9 @@ final class PoseExtractor {
             pelvicDropScore = 0.0
             pelvicDropStatus = "Not measurable"
         } else {
-            let meanTilt = hipTiltSamples.reduce(0, +) / Double(hipTiltSamples.count)
-            let tiltStdDev: Double = sqrt(hipTiltSamples.map { ($0 - meanTilt) * ($0 - meanTilt) }.reduce(0, +) / Double(hipTiltSamples.count))
+            let meanTilt: Double = hipTiltSamples.reduce(0.0, +) / Double(hipTiltSamples.count)
+            let tiltSumSq: Double = hipTiltSamples.reduce(0.0) { $0 + ($1 - meanTilt) * ($1 - meanTilt) }
+            let tiltStdDev: Double = sqrt(tiltSumSq / Double(hipTiltSamples.count))
             let normMeanBias = abs(meanTilt) / avgBodyH
             let normTiltStdDev = tiltStdDev / avgBodyH
             // Combined: static structural lean (× 0.5) + dynamic drop oscillation
@@ -342,22 +344,24 @@ final class PoseExtractor {
         // --- Left/Right Step Symmetry: compare ankle Y oscillation amplitude between sides ---
         // Far-side ankle in side view has low confidence → naturally produces < 10 samples → "Not measurable"
         // Reliable in front/rear view where both ankles are clearly visible.
-        var leftAnkleYs: [Double] = []
-        var rightAnkleYs: [Double] = []
+        var leftSymAnkleYs: [Double] = []
+        var rightSymAnkleYs: [Double] = []
         for pose in usablePoses {
-            if let la = pose.leftAnkle, la.confidence > 0.30 { leftAnkleYs.append(la.y) }
-            if let ra = pose.rightAnkle, ra.confidence > 0.30 { rightAnkleYs.append(ra.y) }
+            if let la = pose.leftAnkle, la.confidence > 0.30 { leftSymAnkleYs.append(la.y) }
+            if let ra = pose.rightAnkle, ra.confidence > 0.30 { rightSymAnkleYs.append(ra.y) }
         }
         let stepSymmetryScore: Double
         let stepSymmetryStatus: String
-        if leftAnkleYs.count < 10 || rightAnkleYs.count < 10 {
+        if leftSymAnkleYs.count < 10 || rightSymAnkleYs.count < 10 {
             stepSymmetryScore = 0.0
             stepSymmetryStatus = "Not measurable"
         } else {
-            let leftMean = leftAnkleYs.reduce(0, +) / Double(leftAnkleYs.count)
-            let rightMean = rightAnkleYs.reduce(0, +) / Double(rightAnkleYs.count)
-            let leftStd: Double = sqrt(leftAnkleYs.map { ($0 - leftMean) * ($0 - leftMean) }.reduce(0, +) / Double(leftAnkleYs.count))
-            let rightStd: Double = sqrt(rightAnkleYs.map { ($0 - rightMean) * ($0 - rightMean) }.reduce(0, +) / Double(rightAnkleYs.count))
+            let leftMean: Double = leftSymAnkleYs.reduce(0.0, +) / Double(leftSymAnkleYs.count)
+            let rightMean: Double = rightSymAnkleYs.reduce(0.0, +) / Double(rightSymAnkleYs.count)
+            let leftSumSq: Double = leftSymAnkleYs.reduce(0.0) { $0 + ($1 - leftMean) * ($1 - leftMean) }
+            let rightSumSq: Double = rightSymAnkleYs.reduce(0.0) { $0 + ($1 - rightMean) * ($1 - rightMean) }
+            let leftStd: Double = sqrt(leftSumSq / Double(leftSymAnkleYs.count))
+            let rightStd: Double = sqrt(rightSumSq / Double(rightSymAnkleYs.count))
             let avgStd = (leftStd + rightStd) / 2.0
             if avgStd < 0.002 {
                 // Signal too flat — likely static capture or extreme zoom
