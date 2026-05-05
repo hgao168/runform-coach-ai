@@ -10,12 +10,15 @@ def _round_half(value: float) -> float:
 
 def _target_cap(target: str) -> float:
     if target == "5K":
-        return 30.0
-    if target == "10K":
-        return 45.0
-    if target == "Half Marathon":
         return 60.0
-    return 35.0
+    if target == "10K":
+        return 80.0
+    if target == "Half Marathon":
+        return 100.0
+    if target == "Marathon":
+        return 120.0
+    # General Fitness / Speed & Power / Weight Loss — honour user input up to a safe ceiling
+    return 150.0
 
 
 def _planned_weekly_km(inp: TrainingPlanInput) -> float:
