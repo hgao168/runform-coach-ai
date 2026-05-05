@@ -40,7 +40,6 @@ struct ContentView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {
                         heroCard
-                        quickStatsRow
                         videoCard
                         recordingTipsCard
                         actionButtons
@@ -94,10 +93,10 @@ struct ContentView: View {
                             .foregroundStyle(AppTheme.mint)
                             .textCase(.uppercase)
                             .tracking(0.6)
-                        Text("Run Better")
-                            .font(.system(size: 38, weight: .black, design: .rounded))
+                        Text("Unlock Your Speed with a Better Form")
+                            .font(.system(size: 30, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
-                        Text("Upload a short clip. Get movement metrics, form issues, and strength work built for runners.")
+                        Text("Upload a short clip and get precision feedback, efficiency metrics, and targeted training.")
                             .font(.callout)
                             .foregroundStyle(.white.opacity(0.68))
                             .fixedSize(horizontal: false, vertical: true)
@@ -106,19 +105,7 @@ struct ContentView: View {
                     IconBubble(systemImage: "figure.run", gradient: AppTheme.actionGradient, size: 62)
                 }
 
-                HStack(spacing: 8) {
-                    MetricPill(text: appStore.profile.level.rawValue, systemImage: "bolt.heart.fill")
-                    MetricPill(text: "\(Int(appStore.profile.weeklyMileageKm)) km/wk", systemImage: "speedometer")
-                }
             }
-        }
-    }
-
-    private var quickStatsRow: some View {
-        HStack(spacing: 12) {
-            MiniStatCard(title: "Quality", value: selectedVideoURL == nil ? "Ready" : "Clip", icon: "checkmark.seal.fill")
-            MiniStatCard(title: "Output", value: "Metrics", icon: "waveform.path.ecg")
-            MiniStatCard(title: "Plan", value: "Strength", icon: "dumbbell.fill")
         }
     }
 
@@ -165,6 +152,42 @@ struct ContentView: View {
                         }
                         .buttonStyle(.plain)
                     }
+                }
+
+                // Metric accuracy grid — updates instantly when mode changes
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(videoMode.label) view captures")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.45))
+                    let columns = [GridItem(.flexible()), GridItem(.flexible())]
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 6) {
+                        ForEach(videoMode.capabilities) { cap in
+                            HStack(spacing: 5) {
+                                Image(systemName: cap.icon)
+                                    .font(.system(size: 9, weight: .bold))
+                                Text(cap.metric)
+                                    .font(.caption2.weight(.semibold))
+                                Spacer(minLength: 0)
+                                Text(cap.level)
+                                    .font(.system(size: 9, weight: .medium))
+                                    .opacity(0.85)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(
+                                cap.level == "Best" ? AppTheme.mint.opacity(0.13) :
+                                cap.level == "Good" ? AppTheme.cyan.opacity(0.10) :
+                                AppTheme.orange.opacity(0.10)
+                            )
+                            .foregroundStyle(
+                                cap.level == "Best" ? AppTheme.mint :
+                                cap.level == "Good" ? AppTheme.cyan :
+                                AppTheme.orange
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.18), value: videoMode)
                 }
 
                 if let selectedVideoURL {
@@ -217,15 +240,18 @@ struct ContentView: View {
     private var recordingTipsCard: some View {
         DarkCard {
             VStack(alignment: .leading, spacing: 13) {
-                SectionTitle("Capture guide", subtitle: videoMode == .side ? "Side view tips" : "Rear view tips", systemImage: "checklist.checked")
+                SectionTitle("Capture guide", subtitle: videoMode == .side ? "Side view tips" : videoMode == .rear ? "Rear view tips" : "Front view tips", systemImage: "checklist.checked")
                 VStack(alignment: .leading, spacing: 10) {
                     GuidelineRow(text: "Record 10–20 seconds at normal running pace", icon: "timer")
                     if videoMode == .side {
                         GuidelineRow(text: "Side view: phone at hip height, parallel to your direction of travel", icon: "iphone.gen3")
                         GuidelineRow(text: "Full body visible — both feet must stay in frame", icon: "figure.walk.motion")
-                    } else {
+                    } else if videoMode == .rear {
                         GuidelineRow(text: "Rear view: phone centered behind you at waist height", icon: "iphone.gen3")
                         GuidelineRow(text: "Full body visible from head to heels, keep hips/knees in frame", icon: "figure.walk.motion")
+                    } else {
+                        GuidelineRow(text: "Front view: phone centered in front of you at waist height", icon: "iphone.gen3")
+                        GuidelineRow(text: "Face the camera directly — full body visible from head to feet", icon: "figure.walk.motion")
                     }
                     GuidelineRow(text: "Use bright lighting and avoid motion blur", icon: "sun.max.fill")
                 }

@@ -22,3 +22,6 @@ xcuserdata/
 
 # Android local cache
 android/.gradle-home/
+
+#My backlogs
+Backlog.md

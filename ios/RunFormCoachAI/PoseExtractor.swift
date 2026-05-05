@@ -55,6 +55,7 @@ final class PoseExtractor {
                 leftKnee: point(.leftKnee), rightKnee: point(.rightKnee),
                 leftHip: point(.leftHip), rightHip: point(.rightHip),
                 leftShoulder: point(.leftShoulder), rightShoulder: point(.rightShoulder),
+                leftElbow: point(.leftElbow), rightElbow: point(.rightElbow),
                 neck: point(.neck), nose: point(.nose)
             ))
         }
@@ -167,45 +168,248 @@ final class PoseExtractor {
         }
 
         let stanceThreshold = percentile(usablePoses.flatMap { [$0.leftAnkle?.y, $0.rightAnkle?.y].compactMap { $0 } }, p: 0.35) ?? 0.28
-        var overstrideValues: [Double] = []
+        // Overstride: confidence-weighted ankle-to-hip distance during stance
+        var overstrideWeightedSum = 0.0
+        var overstrideWeightTotal = 0.0
         for pose in usablePoses {
             guard let hipMidX = avgX(pose.leftHip, pose.rightHip) else { continue }
-            if let la = pose.leftAnkle, la.y < stanceThreshold { overstrideValues.append(abs(la.x - hipMidX)) }
-            if let ra = pose.rightAnkle, ra.y < stanceThreshold { overstrideValues.append(abs(ra.x - hipMidX)) }
+            if let la = pose.leftAnkle, la.y < stanceThreshold {
+                let w = la.confidence
+                overstrideWeightedSum  += abs(la.x - hipMidX) * w
+                overstrideWeightTotal  += w
+            }
+            if let ra = pose.rightAnkle, ra.y < stanceThreshold {
+                let w = ra.confidence
+                overstrideWeightedSum  += abs(ra.x - hipMidX) * w
+                overstrideWeightTotal  += w
+            }
         }
-        let avgOverstride = overstrideValues.isEmpty ? 0.12 : overstrideValues.reduce(0, +) / Double(overstrideValues.count)
-        let overstrideScore = 1.0 - clamp((avgOverstride - 0.05) / 0.17, 0, 1)
-        let overstrideStatus = overstrideScore > 0.70 ? "Good" : overstrideScore > 0.45 ? "Moderate" : "Needs work"
+        let avgOverstride = overstrideWeightTotal > 0 ? overstrideWeightedSum / overstrideWeightTotal : 0.12
+        // Continuous score: 0.05 landing = 1.0, 0.22 landing = 0.0
+        let overstrideScore = clamp(1.0 - ((avgOverstride - 0.05) / 0.17), 0.05, 1.0)
+        let overstrideStatus = overstrideScore >= 0.75 ? "Good" : overstrideScore >= 0.50 ? "Moderate" : "Needs work"
 
-        var trunkAngles: [Double] = []
+        // Trunk lean: confidence-weighted angles, then trimmed mean (drop outer 10% outliers)
+        var trunkAngleWeights: [(angle: Double, weight: Double)] = []
         for pose in usablePoses {
             guard let shX = avgX(pose.leftShoulder, pose.rightShoulder),
                   let shY = avgY(pose.leftShoulder, pose.rightShoulder),
                   let hpX = avgX(pose.leftHip, pose.rightHip),
                   let hpY = avgY(pose.leftHip, pose.rightHip), shY > hpY else { continue }
-            trunkAngles.append(atan2(shX - hpX, shY - hpY) * 180.0 / .pi)
+            let angle = atan2(shX - hpX, shY - hpY) * 180.0 / .pi
+            let lsConf: Double = pose.leftShoulder?.confidence ?? 0
+            let rsConf: Double = pose.rightShoulder?.confidence ?? 0
+            let lhConf: Double = pose.leftHip?.confidence ?? 0
+            let rhConf: Double = pose.rightHip?.confidence ?? 0
+            let w = (lsConf + rsConf + lhConf + rhConf) / 4.0
+            trunkAngleWeights.append((angle: angle, weight: max(w, 0.01)))
         }
-        let meanTrunkLean = trunkAngles.isEmpty ? 0.0 : trunkAngles.reduce(0,+) / Double(trunkAngles.count)
+        let meanTrunkLean: Double
+        if trunkAngleWeights.isEmpty {
+            meanTrunkLean = 0.0
+        } else {
+            // Trimmed mean: drop bottom and top 10% by angle magnitude
+            let sorted = trunkAngleWeights.sorted { abs($0.angle) < abs($1.angle) }
+            let trimCount = max(1, sorted.count - 2 * max(1, sorted.count / 10))
+            let trimmed = Array(sorted.prefix(trimCount))
+            let totalW = trimmed.map(\.weight).reduce(0, +)
+            meanTrunkLean = trimmed.map { $0.angle * $0.weight }.reduce(0, +) / totalW
+        }
         let absLean = abs(meanTrunkLean)
-        let (trunkScore, trunkStatus): (Double, String)
-        switch absLean {
-        case ..<5: (trunkScore, trunkStatus) = (0.88, "Good")
-        case 5..<12: (trunkScore, trunkStatus) = (0.65, "Moderate")
-        default: (trunkScore, trunkStatus) = (0.42, "Needs work")
-        }
+        // Continuous score: 0° = 0.95, 8° = 0.65, 20° = 0.20 — smooth sigmoid-like curve
+        let trunkScore = clamp(0.95 - 0.0375 * absLean, 0.15, 0.95)
+        let trunkStatus = trunkScore >= 0.75 ? "Good" : trunkScore >= 0.50 ? "Moderate" : "Needs work"
 
-        var valgusDeviations: [Double] = []
+        // Valgus: confidence-weighted deviation (both inward and outward collapse)
+        var valgusWeightedSum = 0.0
+        var valgusWeightTotal = 0.0
         for pose in usablePoses {
             if let la = pose.leftAnkle, la.y < stanceThreshold, let lk = pose.leftKnee, let lh = pose.leftHip {
-                valgusDeviations.append(max(0, lk.x - ((lh.x + la.x) / 2.0)))
+                let deviation = abs(lk.x - ((lh.x + la.x) / 2.0))  // both inward and outward
+                let w = (lk.confidence + lh.confidence + la.confidence) / 3.0
+                valgusWeightedSum  += deviation * w
+                valgusWeightTotal  += w
             }
             if let ra = pose.rightAnkle, ra.y < stanceThreshold, let rk = pose.rightKnee, let rh = pose.rightHip {
-                valgusDeviations.append(max(0, ((rh.x + ra.x) / 2.0) - rk.x))
+                let deviation = abs(rk.x - ((rh.x + ra.x) / 2.0))
+                let w = (rk.confidence + rh.confidence + ra.confidence) / 3.0
+                valgusWeightedSum  += deviation * w
+                valgusWeightTotal  += w
             }
         }
-        let avgValgus = valgusDeviations.isEmpty ? 0.04 : valgusDeviations.reduce(0,+) / Double(valgusDeviations.count)
-        let valgusScore = 1.0 - clamp((avgValgus - 0.02) / 0.08, 0, 1)
-        let valgusStatus = valgusScore > 0.70 ? "Good" : valgusScore > 0.45 ? "Moderate" : "Needs work"
+        let avgValgus = valgusWeightTotal > 0 ? valgusWeightedSum / valgusWeightTotal : 0.04
+        // Continuous score: 0 deviation = 1.0, 0.10 deviation = ~0.20
+        let valgusScore = clamp(1.0 - (avgValgus / 0.10), 0.10, 1.0)
+        let valgusStatus = valgusScore >= 0.75 ? "Good" : valgusScore >= 0.50 ? "Moderate" : "Needs work"
+
+        // --- Shared body height estimate (used by vertical oscillation and arm swing) ---
+        let bodyHeights = usablePoses.compactMap { pose -> Double? in
+            guard let top = pose.topVisibleY, let bot = pose.bottomVisibleY, (top - bot) > 0.2 else { return nil }
+            return top - bot
+        }
+        let avgBodyH = bodyHeights.isEmpty ? 0.70 : bodyHeights.reduce(0, +) / Double(bodyHeights.count)
+
+        // --- Vertical Oscillation: hip Y std dev normalized by body height ---
+        // Low = efficient runner (less bounce), high = energy wasted bouncing
+        let hipMidYs = usablePoses.compactMap { avgY($0.leftHip, $0.rightHip) }
+        let meanHipY = hipMidYs.isEmpty ? 0.5 : hipMidYs.reduce(0, +) / Double(hipMidYs.count)
+        let hipYStdDev = hipMidYs.count >= 3
+            ? sqrt(hipMidYs.map { ($0 - meanHipY) * ($0 - meanHipY) }.reduce(0, +) / Double(hipMidYs.count))
+            : 0.03
+        let normalizedOscill = hipYStdDev / avgBodyH
+        // < 0.025 normalized = smooth; > 0.09 = very bouncy
+        let vertOscScore = clamp(1.0 - (normalizedOscill - 0.025) / 0.065, 0.10, 1.0)
+        let vertOscStatus = vertOscScore >= 0.75 ? "Good" : vertOscScore >= 0.50 ? "Moderate" : "Needs work"
+
+        // --- Shoulder Elevation: shoulder-hip height ratio normalized by body height ---
+        // Detects hunched (low ratio) or raised/tense shoulders (high ratio)
+        var shoulderElevSamples: [Double] = []
+        for pose in usablePoses {
+            guard let shY = avgY(pose.leftShoulder, pose.rightShoulder),
+                  let hpY = avgY(pose.leftHip, pose.rightHip),
+                  let top = pose.topVisibleY, let bot = pose.bottomVisibleY else { continue }
+            let bodyH = top - bot
+            guard bodyH > 0.15 else { continue }
+            shoulderElevSamples.append((shY - hpY) / bodyH)
+        }
+        let meanShoulderRatio = shoulderElevSamples.isEmpty ? 0.40
+            : shoulderElevSamples.reduce(0, +) / Double(shoulderElevSamples.count)
+        // Ideal ~0.38–0.45 of body height. Hunched < 0.28. Raised/tense > 0.52.
+        let shoulderDeviation = abs(meanShoulderRatio - 0.40)
+        let shoulderElevScore = clamp(1.0 - shoulderDeviation / 0.18, 0.10, 1.0)
+        let shoulderElevStatus = shoulderElevScore >= 0.75 ? "Good" : shoulderElevScore >= 0.50 ? "Moderate" : "Needs work"
+
+        // --- Arm Swing: elbow Y oscillation relative to shoulder (confidence-weighted) ---
+        // Active arm drive → elbow swings rhythmically (moderate std dev)
+        // Stiff arms → very low std dev; exaggerated pump → very high
+        var elbowDropValues: [Double] = []
+        for pose in usablePoses {
+            if let ls = pose.leftShoulder, let le = pose.leftElbow {
+                let w = (ls.confidence + le.confidence) / 2.0
+                if w > 0.30 { elbowDropValues.append(ls.y - le.y) }
+            }
+            if let rs = pose.rightShoulder, let re = pose.rightElbow {
+                let w = (rs.confidence + re.confidence) / 2.0
+                if w > 0.30 { elbowDropValues.append(rs.y - re.y) }
+            }
+        }
+        let armSwingScore: Double
+        let armSwingStatus: String
+        if elbowDropValues.count < 10 {
+            armSwingScore = 0.0
+            armSwingStatus = "Not measurable"
+        } else {
+            let meanDrop = elbowDropValues.reduce(0, +) / Double(elbowDropValues.count)
+            let dropStdDev = sqrt(elbowDropValues.map { ($0 - meanDrop) * ($0 - meanDrop) }.reduce(0, +) / Double(elbowDropValues.count))
+            let normDropStdDev = dropStdDev / avgBodyH
+            // Optimal oscillation: ~0.055–0.075 of body height std dev
+            // Stiff: < 0.02; exaggerated: > 0.13
+            let armDeviation = abs(normDropStdDev - 0.065)
+            let armSwingVal = clamp(1.0 - armDeviation / 0.065, 0.10, 1.0)
+            armSwingScore = armSwingVal
+            armSwingStatus = armSwingVal >= 0.75 ? "Good" : armSwingVal >= 0.50 ? "Moderate" : "Needs work"
+        }
+
+        // --- Pelvic Drop / Hip Symmetry: left-right hip Y difference during movement ---
+        // In Vision coords Y=0 is bottom, Y=1 is top.
+        // (leftHip.y - rightHip.y) > 0 → left is higher → right hip drops
+        // (leftHip.y - rightHip.y) < 0 → right is higher → left hip drops
+        // Needs front or rear view; both hips visible with high confidence.
+        var hipTiltSamples: [Double] = []
+        for pose in usablePoses {
+            guard let lh = pose.leftHip, let rh = pose.rightHip,
+                  lh.confidence > 0.42, rh.confidence > 0.42 else { continue }
+            hipTiltSamples.append(lh.y - rh.y)
+        }
+        let pelvicDropScore: Double
+        let pelvicDropStatus: String
+        if hipTiltSamples.count < 10 {
+            pelvicDropScore = 0.0
+            pelvicDropStatus = "Not measurable"
+        } else {
+            let meanTilt = hipTiltSamples.reduce(0, +) / Double(hipTiltSamples.count)
+            let tiltStdDev = sqrt(hipTiltSamples.map { ($0 - meanTilt) * ($0 - meanTilt) }.reduce(0, +) / Double(hipTiltSamples.count))
+            let normMeanBias = abs(meanTilt) / avgBodyH
+            let normTiltStdDev = tiltStdDev / avgBodyH
+            // Combined: static structural lean (× 0.5) + dynamic drop oscillation
+            // Ideal total < 0.020 normalized; concerning > 0.065
+            let pelvicDropMag = normMeanBias * 0.5 + normTiltStdDev
+            let pelvicDropVal = clamp(1.0 - (pelvicDropMag - 0.020) / 0.045, 0.10, 1.0)
+            pelvicDropScore = pelvicDropVal
+            pelvicDropStatus = pelvicDropVal >= 0.75 ? "Good" : pelvicDropVal >= 0.50 ? "Moderate" : "Needs work"
+        }
+
+        // --- Left/Right Step Symmetry: compare ankle Y oscillation amplitude between sides ---
+        // Far-side ankle in side view has low confidence → naturally produces < 10 samples → "Not measurable"
+        // Reliable in front/rear view where both ankles are clearly visible.
+        var leftAnkleYs: [Double] = []
+        var rightAnkleYs: [Double] = []
+        for pose in usablePoses {
+            if let la = pose.leftAnkle, la.confidence > 0.30 { leftAnkleYs.append(la.y) }
+            if let ra = pose.rightAnkle, ra.confidence > 0.30 { rightAnkleYs.append(ra.y) }
+        }
+        let stepSymmetryScore: Double
+        let stepSymmetryStatus: String
+        if leftAnkleYs.count < 10 || rightAnkleYs.count < 10 {
+            stepSymmetryScore = 0.0
+            stepSymmetryStatus = "Not measurable"
+        } else {
+            let leftMean = leftAnkleYs.reduce(0, +) / Double(leftAnkleYs.count)
+            let rightMean = rightAnkleYs.reduce(0, +) / Double(rightAnkleYs.count)
+            let leftStd = sqrt(leftAnkleYs.map { ($0 - leftMean) * ($0 - leftMean) }.reduce(0, +) / Double(leftAnkleYs.count))
+            let rightStd = sqrt(rightAnkleYs.map { ($0 - rightMean) * ($0 - rightMean) }.reduce(0, +) / Double(rightAnkleYs.count))
+            let avgStd = (leftStd + rightStd) / 2.0
+            if avgStd < 0.002 {
+                // Signal too flat — likely static capture or extreme zoom
+                stepSymmetryScore = 0.0
+                stepSymmetryStatus = "Not measurable"
+            } else {
+                // asymmetry: 0 = perfect; ~0.15 = noticeable; ~0.30 = significant
+                let asymmetry = abs(leftStd - rightStd) / avgStd
+                let symVal = clamp(1.0 - asymmetry / 0.30, 0.10, 1.0)
+                stepSymmetryScore = symVal
+                stepSymmetryStatus = symVal >= 0.75 ? "Good" : symVal >= 0.50 ? "Moderate" : "Needs work"
+            }
+        }
+
+        // --- Head Forward Position: nose X offset from shoulder line, side view only ---
+        // Detects forward head / text-neck posture while running.
+        // Only meaningful in side view (small shoulder X spread).
+        var headOffsetSamples: [Double] = []
+        var shoulderSpreadSamples: [Double] = []
+        for pose in usablePoses {
+            if let ls = pose.leftShoulder, let rs = pose.rightShoulder,
+               ls.confidence > 0.30, rs.confidence > 0.30 {
+                shoulderSpreadSamples.append(abs(ls.x - rs.x))
+            }
+            guard let nos = pose.nose, nos.confidence > 0.30 else { continue }
+            var refX: Double? = nil
+            if let ls = pose.leftShoulder, let rs = pose.rightShoulder,
+               ls.confidence > 0.30, rs.confidence > 0.30 {
+                refX = (ls.x + rs.x) / 2.0
+            } else if let ls = pose.leftShoulder, ls.confidence > 0.40 {
+                refX = ls.x
+            } else if let rs = pose.rightShoulder, rs.confidence > 0.40 {
+                refX = rs.x
+            }
+            guard let sx = refX else { continue }
+            headOffsetSamples.append(abs(nos.x - sx) / avgBodyH)
+        }
+        // avgShoulderSpread ≥ 0.22 → front/rear view → head forward not meaningful
+        let avgShoulderSpread = shoulderSpreadSamples.isEmpty ? 1.0
+            : shoulderSpreadSamples.reduce(0, +) / Double(shoulderSpreadSamples.count)
+        let headForwardScore: Double
+        let headForwardStatus: String
+        if headOffsetSamples.count < 10 || avgShoulderSpread >= 0.22 {
+            headForwardScore = 0.0
+            headForwardStatus = "Not measurable"
+        } else {
+            let meanHeadOffset = headOffsetSamples.reduce(0, +) / Double(headOffsetSamples.count)
+            // ≤ 0.05 normalized: good; > 0.12: significant forward head (text neck)
+            let headVal = clamp(1.0 - max(0.0, meanHeadOffset - 0.05) / 0.07, 0.10, 1.0)
+            headForwardScore = headVal
+            headForwardStatus = headVal >= 0.75 ? "Good" : headVal >= 0.50 ? "Moderate" : "Needs work"
+        }
 
         return PoseMetrics(
             cadenceEstimateSPM: cadenceSPM,
@@ -218,6 +422,18 @@ final class PoseExtractor {
             trunkLeanStatus: trunkStatus,
             kneeValgusRiskScore: valgusScore,
             kneeValgusStatus: valgusStatus,
+            verticalOscillationScore: vertOscScore,
+            verticalOscillationStatus: vertOscStatus,
+            shoulderElevationScore: shoulderElevScore,
+            shoulderElevationStatus: shoulderElevStatus,
+            armSwingScore: armSwingScore,
+            armSwingStatus: armSwingStatus,
+            pelvicDropScore: pelvicDropScore,
+            pelvicDropStatus: pelvicDropStatus,
+            stepSymmetryScore: stepSymmetryScore,
+            stepSymmetryStatus: stepSymmetryStatus,
+            headForwardScore: headForwardScore,
+            headForwardStatus: headForwardStatus,
             frameCount: usablePoses.count,
             videoDurationSeconds: durationSeconds,
             notes: notes,
@@ -234,6 +450,7 @@ final class PoseExtractor {
         let leftKnee: JointPoint?; let rightKnee: JointPoint?
         let leftHip: JointPoint?; let rightHip: JointPoint?
         let leftShoulder: JointPoint?; let rightShoulder: JointPoint?
+        let leftElbow: JointPoint?; let rightElbow: JointPoint?
         let neck: JointPoint?; let nose: JointPoint?
         var points: [JointPoint] { [leftAnkle,rightAnkle,leftKnee,rightKnee,leftHip,rightHip,leftShoulder,rightShoulder,neck,nose].compactMap { $0 } }
         var completeness: Double { Double(points.count) / 10.0 }

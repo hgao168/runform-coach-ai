@@ -14,10 +14,10 @@ struct HistoryView: View {
         sorted.map(\.result.confidence)
     }
 
-    // Cadence / stride quality — "Overstride risk" metric score, higher = better form
+    // Cadence — actual cadence metric score from backend
     private var cadenceScores: [Double] {
         sorted.compactMap { item in
-            item.result.metrics.first { $0.name.lowercased().contains("overstride") }?.score
+            item.result.metrics.first { $0.name.lowercased().contains("cadence") }?.score
         }
     }
 
@@ -28,10 +28,13 @@ struct HistoryView: View {
         }
     }
 
-    // Sessions recorded in the last 30 days
+    // Distinct calendar days with at least one session in the last 30 days
     private var recentSessionCount: Int {
         let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-        return appStore.history.filter { $0.createdAt >= cutoff }.count
+        let recentDates = appStore.history
+            .filter { $0.createdAt >= cutoff }
+            .map { Calendar.current.startOfDay(for: $0.createdAt) }
+        return Set(recentDates).count
     }
 
     var body: some View {
@@ -75,7 +78,7 @@ struct HistoryView: View {
             )
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 TrendCard(title: "Form score", values: formScores, color: AppTheme.mint)
-                TrendCard(title: "Cadence / stride", values: cadenceScores, color: AppTheme.cyan)
+                TrendCard(title: "Cadence", values: cadenceScores, color: AppTheme.cyan)
                 TrendCard(title: "Hip stability", values: hipScores, color: AppTheme.violet)
                 ConsistencyCard(sessionCount: recentSessionCount)
             }
@@ -282,6 +285,7 @@ struct ConsistencyCard: View {
         case 0: return "No sessions yet"
         case 1: return "Good start!"
         case 2...3: return "Building habit"
+        case 4...6: return "Staying consistent"
         default: return "Great consistency!"
         }
     }
@@ -297,7 +301,7 @@ struct ConsistencyCard: View {
                     Text("\(sessionCount)")
                         .font(.title2.bold())
                         .foregroundStyle(AppTheme.orange)
-                    Text("/ 30 d")
+                    Text("days / 30d")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.48))
                         .padding(.bottom, 2)

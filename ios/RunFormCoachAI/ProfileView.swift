@@ -2,9 +2,14 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var appStore: AppStore
+    @State private var firstName = ""
+    @State private var lastName = ""
     @State private var nickname = ""
     @State private var level: RunnerLevel = .beginner
     @State private var weeklyMileageKm: Double = 15
+    @State private var runningDaysPerWeek: Int = 3
+    @State private var heightCm: Double = 170
+    @State private var weightKg: Double = 70
     @State private var target: TrainingTarget = .generalFitness
     @State private var injuryNote = ""
     @State private var savedMessage: String?
@@ -49,7 +54,13 @@ struct ProfileView: View {
             HStack(spacing: 15) {
                 IconBubble(systemImage: "person.crop.circle.fill", gradient: AppTheme.actionGradient, size: 62)
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Test Runner" : nickname)
+                    let displayName: String = {
+                        let full = "\(firstName.trimmingCharacters(in: .whitespacesAndNewlines)) \(lastName.trimmingCharacters(in: .whitespacesAndNewlines))".trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !full.isEmpty { return full }
+                        let nick = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                        return nick.isEmpty ? "Runner" : nick
+                    }()
+                    Text(displayName)
                         .font(.title2.bold())
                         .foregroundStyle(.white)
                     Text("\(level.rawValue) • \(Int(weeklyMileageKm)) km/week")
@@ -65,6 +76,33 @@ struct ProfileView: View {
         DarkCard {
             VStack(alignment: .leading, spacing: 18) {
                 SectionTitle("Runner setup", subtitle: "Used to personalize TestFlight feedback", systemImage: "slider.horizontal.3")
+
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("First name")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.62))
+                        TextField("First name", text: $firstName)
+                            .textInputAutocapitalization(.words)
+                            .focused($fieldFocused)
+                            .padding(13)
+                            .background(.black.opacity(0.20))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .foregroundStyle(.white)
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Last name")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.62))
+                        TextField("Last name", text: $lastName)
+                            .textInputAutocapitalization(.words)
+                            .focused($fieldFocused)
+                            .padding(13)
+                            .background(.black.opacity(0.20))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .foregroundStyle(.white)
+                    }
+                }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Nickname")
@@ -103,6 +141,38 @@ struct ProfileView: View {
                             .foregroundStyle(AppTheme.mint)
                     }
                     Slider(value: $weeklyMileageKm, in: 0...120, step: 1)
+                        .tint(AppTheme.mint)
+                }
+
+                Stepper("Running days / week: \(runningDaysPerWeek)", value: $runningDaysPerWeek, in: 1...7)
+                    .foregroundStyle(.white)
+                    .font(.subheadline)
+
+                VStack(alignment: .leading, spacing: 9) {
+                    HStack {
+                        Label("Height", systemImage: "ruler")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.72))
+                        Spacer()
+                        Text("\(Int(heightCm)) cm")
+                            .font(.headline.bold())
+                            .foregroundStyle(AppTheme.mint)
+                    }
+                    Slider(value: $heightCm, in: 130...220, step: 1)
+                        .tint(AppTheme.mint)
+                }
+
+                VStack(alignment: .leading, spacing: 9) {
+                    HStack {
+                        Label("Weight", systemImage: "scalemass")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.72))
+                        Spacer()
+                        Text("\(Int(weightKg)) kg")
+                            .font(.headline.bold())
+                            .foregroundStyle(AppTheme.mint)
+                    }
+                    Slider(value: $weightKg, in: 30...200, step: 1)
                         .tint(AppTheme.mint)
                 }
 
@@ -162,9 +232,14 @@ struct ProfileView: View {
 
     private func loadDraftFromStore() {
         let profile = appStore.profile
+        firstName = profile.firstName
+        lastName = profile.lastName
         nickname = profile.nickname
         level = profile.level
         weeklyMileageKm = profile.weeklyMileageKm
+        runningDaysPerWeek = profile.runningDaysPerWeek
+        heightCm = profile.heightCm
+        weightKg = profile.weightKg
         if let targetValue = TrainingTarget(rawValue: profile.target) {
             target = targetValue
         } else {
@@ -177,9 +252,14 @@ struct ProfileView: View {
         fieldFocused = false
         dismissKeyboard()
         appStore.profile = TesterProfile(
+            firstName: firstName,
+            lastName: lastName,
             nickname: nickname,
             level: level,
             weeklyMileageKm: weeklyMileageKm,
+            runningDaysPerWeek: runningDaysPerWeek,
+            heightCm: heightCm,
+            weightKg: weightKg,
             target: target.rawValue,
             injuryNote: injuryNote
         )

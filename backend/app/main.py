@@ -8,7 +8,7 @@ from .schemas import AnalysisResponse, PoseMetricsInput, TrainingPlanInput, Trai
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
-app = FastAPI(title="RunForm Coach AI API", version="0.4.0")
+app = FastAPI(title="RunForm Coach AI API", version="0.4.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,7 +21,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "runform-coach-ai", "version": "0.4.0", "environment": ENVIRONMENT}
+    return {"status": "ok", "service": "runform-coach-ai", "version": "0.4.1", "environment": ENVIRONMENT}
 
 
 @app.post("/training-plan", response_model=TrainingPlanResponse)

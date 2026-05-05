@@ -78,7 +78,7 @@ struct LiveGuidanceRecorderView: View {
     private var guidancePanel: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label(videoMode == .side ? "Side View Guidance" : "Rear View Guidance", systemImage: "viewfinder.circle")
+                Label(videoMode == .side ? "Side View Guidance" : videoMode == .rear ? "Rear View Guidance" : "Front View Guidance", systemImage: "viewfinder.circle")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                 Spacer()
@@ -342,11 +342,16 @@ private final class LiveGuidanceRecorderController: NSObject, ObservableObject {
                 score -= 0.12
             }
 
+            let shoulderSpread = abs(ls.location.x - rs.location.x)
+            let hipSpread = abs(lh.location.x - rh.location.x)
             if expectedMode == .side {
-                let shoulderSpread = abs(ls.location.x - rs.location.x)
-                let hipSpread = abs(lh.location.x - rh.location.x)
                 if shoulderSpread > 0.18 || hipSpread > 0.18 {
                     warnings.append("Side-view needed. Rotate to true side profile.")
+                    score -= 0.16
+                }
+            } else if expectedMode == .front {
+                if shoulderSpread < 0.12 || hipSpread < 0.12 {
+                    warnings.append("Face camera directly. Rotate to front-facing position.")
                     score -= 0.16
                 }
             }

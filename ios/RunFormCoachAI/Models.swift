@@ -62,6 +62,18 @@ struct PoseMetrics: Codable {
     let trunkLeanStatus: String
     let kneeValgusRiskScore: Double
     let kneeValgusStatus: String
+    let verticalOscillationScore: Double
+    let verticalOscillationStatus: String
+    let shoulderElevationScore: Double
+    let shoulderElevationStatus: String
+    let armSwingScore: Double
+    let armSwingStatus: String
+    let pelvicDropScore: Double
+    let pelvicDropStatus: String
+    let stepSymmetryScore: Double
+    let stepSymmetryStatus: String
+    let headForwardScore: Double
+    let headForwardStatus: String
     let frameCount: Int
     let videoDurationSeconds: Double
     let notes: [String]
@@ -81,6 +93,18 @@ struct PoseMetrics: Codable {
         case trunkLeanStatus = "trunk_lean_status"
         case kneeValgusRiskScore = "knee_valgus_risk_score"
         case kneeValgusStatus = "knee_valgus_status"
+        case verticalOscillationScore = "vertical_oscillation_score"
+        case verticalOscillationStatus = "vertical_oscillation_status"
+        case shoulderElevationScore = "shoulder_elevation_score"
+        case shoulderElevationStatus = "shoulder_elevation_status"
+        case armSwingScore = "arm_swing_score"
+        case armSwingStatus = "arm_swing_status"
+        case pelvicDropScore = "pelvic_drop_score"
+        case pelvicDropStatus = "pelvic_drop_status"
+        case stepSymmetryScore = "step_symmetry_score"
+        case stepSymmetryStatus = "step_symmetry_status"
+        case headForwardScore = "head_forward_score"
+        case headForwardStatus = "head_forward_status"
         case frameCount = "frame_count"
         case videoDurationSeconds = "video_duration_seconds"
         case notes
@@ -99,10 +123,15 @@ enum RunnerLevel: String, Codable, CaseIterable, Identifiable {
 }
 
 struct TesterProfile: Codable, Equatable {
+    var firstName: String = ""
+    var lastName: String = ""
     var nickname: String = ""
     var level: RunnerLevel = .beginner
     var weeklyMileageKm: Double = 15
-    var target: String = "General fitness"
+    var runningDaysPerWeek: Int = 3
+    var heightCm: Double = 170
+    var weightKg: Double = 70
+    var target: String = "General Fitness"
     var injuryNote: String = ""
 }
 
@@ -129,9 +158,17 @@ struct AnalysisHistoryItem: Codable, Identifiable, Equatable {
     var feedback: AnalysisFeedback?
 }
 
+struct ViewMetricCapability: Identifiable {
+    let id = UUID()
+    let metric: String
+    let icon: String
+    let level: String  // "Best", "Good", "Limited"
+}
+
 enum VideoMode: String, Codable, CaseIterable, Identifiable {
     case side
     case rear
+    case front
 
     var id: String { rawValue }
 
@@ -139,6 +176,7 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .side: return "Side"
         case .rear: return "Rear"
+        case .front: return "Front"
         }
     }
 
@@ -146,6 +184,7 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .side: return "rectangle.portrait.on.rectangle.portrait"
         case .rear: return "figure.run"
+        case .front: return "person.fill.viewfinder"
         }
     }
 
@@ -153,6 +192,33 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .side: return "cadence, overstride, trunk lean"
         case .rear: return "hip stability, knee tracking"
+        case .front: return "knee valgus, hip symmetry"
+        }
+    }
+
+    var capabilities: [ViewMetricCapability] {
+        switch self {
+        case .side:
+            return [
+                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Best"),
+                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Best"),
+                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Best"),
+                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Limited"),
+            ]
+        case .rear:
+            return [
+                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Good"),
+                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Best"),
+                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Limited"),
+                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Limited"),
+            ]
+        case .front:
+            return [
+                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Good"),
+                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Best"),
+                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Good"),
+                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Limited"),
+            ]
         }
     }
 }
