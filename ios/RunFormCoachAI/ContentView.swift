@@ -40,7 +40,6 @@ struct ContentView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {
                         heroCard
-                        quickStatsRow
                         videoCard
                         recordingTipsCard
                         actionButtons
@@ -94,10 +93,10 @@ struct ContentView: View {
                             .foregroundStyle(AppTheme.mint)
                             .textCase(.uppercase)
                             .tracking(0.6)
-                        Text("Run Better")
-                            .font(.system(size: 38, weight: .black, design: .rounded))
+                        Text("Unlock Your Speed with a Better Form")
+                            .font(.system(size: 30, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
-                        Text("Upload a short clip. Get movement metrics, form issues, and strength work built for runners.")
+                        Text("Upload a short clip and get precision feedback, efficiency metrics, and targeted training.")
                             .font(.callout)
                             .foregroundStyle(.white.opacity(0.68))
                             .fixedSize(horizontal: false, vertical: true)
@@ -106,19 +105,7 @@ struct ContentView: View {
                     IconBubble(systemImage: "figure.run", gradient: AppTheme.actionGradient, size: 62)
                 }
 
-                HStack(spacing: 8) {
-                    MetricPill(text: appStore.profile.level.rawValue, systemImage: "bolt.heart.fill")
-                    MetricPill(text: "\(Int(appStore.profile.weeklyMileageKm)) km/wk", systemImage: "speedometer")
-                }
             }
-        }
-    }
-
-    private var quickStatsRow: some View {
-        HStack(spacing: 12) {
-            MiniStatCard(title: "Quality", value: selectedVideoURL == nil ? "Ready" : "Clip", icon: "checkmark.seal.fill")
-            MiniStatCard(title: "Output", value: "Metrics", icon: "waveform.path.ecg")
-            MiniStatCard(title: "Plan", value: "Strength", icon: "dumbbell.fill")
         }
     }
 
