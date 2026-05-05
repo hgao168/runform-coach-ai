@@ -1,0 +1,29 @@
+name: Backend Staging → Railway (Manual)
+
+# Manual dispatch only — triggers a Railway deployment of the staging backend.
+# Railway auto-deploy is disabled (watchPatterns: __never_auto_deploy__).
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Backend to Railway Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Railway staging deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          curl -fsSL -X POST https://backboard.railway.com/graphql/v2 \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"mutation { serviceInstanceDeployV2(serviceId: \"d2bdff7b-1da5-4144-838b-681527e8ee8d\", environmentId: \"ac84ae0a-1117-46da-a004-acdd44027184\") }"}' \
+            | tee /tmp/deploy_result.json
+          echo ""
+          # Fail if the response contains errors
+          if grep -q '"errors"' /tmp/deploy_result.json; then
+            echo "Deploy trigger failed"
+            exit 1
+          fi
+          echo "Deploy triggered successfully"
