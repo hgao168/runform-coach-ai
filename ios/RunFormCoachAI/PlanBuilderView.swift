@@ -157,7 +157,7 @@ struct PlanBuilderView: View {
                         .foregroundStyle(.white.opacity(0.6))
                     Picker("Target", selection: $target) {
                         ForEach(TrainingTarget.allCases) { item in
-                            Text(item.rawValue).tag(item)
+                            Text(LocalizedStringKey(item.rawValue)).tag(item)
                         }
                     }
                     .pickerStyle(.menu)
@@ -292,7 +292,7 @@ struct PlanBuilderView: View {
         dismissKeyboard()
 
         guard let km = Double(currentWeeklyKmText.replacingOccurrences(of: ",", with: ".")) else {
-            errorMessage = "Please enter a valid weekly km number."
+            errorMessage = String(localized: "error.invalid_km")
             return
         }
 
@@ -334,7 +334,8 @@ struct PlanBuilderView: View {
             formIssues: appStore.latestCoachingIssues,
             recentAnalysisSummary: appStore.latestAnalysisSummary,
             recentAnalysisConfidence: appStore.latestAnalysisConfidence,
-            previousWeekSummary: previousWeekSummary
+            previousWeekSummary: previousWeekSummary,
+            language: Bundle.main.preferredLocalizations.first ?? "en"
         )
 
         do {
@@ -342,7 +343,7 @@ struct PlanBuilderView: View {
             plan = result
             appStore.setNextWeekPlan(result, target: target.rawValue, weeklyKm: adaptedKm)
         } catch {
-            errorMessage = "Plan generation failed. Check your connection."
+            errorMessage = String(localized: "error.plan_failed")
         }
     }
 
@@ -612,10 +613,10 @@ struct WorkoutCard: View {
                         .foregroundStyle(AppTheme.mint)
                         .frame(width: 38, alignment: .leading)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(workout.title)
+                        Text(LocalizedStringKey(workout.title))
                             .font(.headline)
                             .foregroundStyle(.white)
-                        Text(workout.category)
+                        Text(LocalizedStringKey(workout.category))
                             .font(.caption)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)
@@ -682,7 +683,7 @@ struct WorkoutStatusRow: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: status.icon)
-                        Text(status.rawValue)
+                        Text(LocalizedStringKey(status.rawValue))
                     }
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(currentStatus == status ? .black : .white.opacity(0.65))

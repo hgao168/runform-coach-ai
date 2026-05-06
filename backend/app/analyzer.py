@@ -23,6 +23,23 @@ Rules:
 - Provide 2 recommended exercises per issue.
 - Maximum 3 issues."""
 
+_LANGUAGE_NAMES: dict[str, str] = {
+    "zh-Hans": "Simplified Chinese (简体中文)",
+    "zh": "Simplified Chinese (简体中文)",
+    "nl": "Dutch (Nederlands)",
+}
+
+
+def _build_metrics_prompt(language: str) -> str:
+    prompt = _METRICS_SYSTEM_PROMPT
+    lang_name = _LANGUAGE_NAMES.get(language)
+    if lang_name:
+        prompt += (
+            f"\n\nIMPORTANT: Return ALL coaching text in {lang_name}. "
+            "This includes the summary, all issue titles, explanations, exercise names, and reasons. "
+            "Keep metric names in English only."
+        )
+    return prompt
 
 def _extract_frames(video_path: str, num_frames: int = 8) -> list[str]:
     cap = cv2.VideoCapture(video_path)
@@ -143,7 +160,7 @@ Generate targeted coaching issues and exercise recommendations based on these me
     client = OpenAI(api_key=api_key)
     response = client.chat.completions.create(
         model="gpt-4o",
-        messages=[{"role": "system", "content": _METRICS_SYSTEM_PROMPT}, {"role": "user", "content": user_message}],
+        messages=[{"role": "system", "content": _build_metrics_prompt(pose_input.language)}, {"role": "user", "content": user_message}],
         max_tokens=1500,
         temperature=0.2,
         response_format={"type": "json_object"},

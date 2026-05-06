@@ -166,11 +166,11 @@ struct MetricPill: View {
 }
 
 struct SectionTitle: View {
-    let title: String
-    let subtitle: String?
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey?
     let systemImage: String
 
-    init(_ title: String, subtitle: String? = nil, systemImage: String) {
+    init(_ title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil, systemImage: String) {
         self.title = title
         self.subtitle = subtitle
         self.systemImage = systemImage

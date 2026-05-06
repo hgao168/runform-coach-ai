@@ -68,7 +68,7 @@ struct ContentView: View {
                     analysis = nil
                     latestHistoryItemID = nil
                     errorMessage = nil
-                    statusMessage = "Video selected. RunForm will check pose quality before coaching."
+                    statusMessage = String(localized: "status.video_selected")
                 }
             }
             .sheet(isPresented: $showLiveRecorder) {
@@ -77,7 +77,7 @@ struct ContentView: View {
                     analysis = nil
                     latestHistoryItemID = nil
                     errorMessage = nil
-                    statusMessage = "Recording captured with live guidance. Ready to analyze."
+                    statusMessage = String(localized: "status.recording_captured")
                 }
             }
         }
@@ -312,11 +312,12 @@ struct ContentView: View {
         guard let selectedVideoURL else { return }
         isAnalyzing = true
         errorMessage = nil
-        statusMessage = "Extracting pose metrics on device..."
+        statusMessage = String(localized: "status.extracting_pose")
 
         do {
             var poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL, expectedVideoMode: videoMode.rawValue)
             poseMetrics.videoMode = videoMode.rawValue
+            poseMetrics.language = Bundle.main.preferredLocalizations.first ?? "en"
             if poseMetrics.videoQualityScore < 0.40 {
                 let topIssue = poseMetrics.qualityNotes.first ?? "Video quality is too low for reliable form analysis."
                 errorMessage = "Please re-record: \(topIssue)"
@@ -329,14 +330,14 @@ struct ContentView: View {
                 let topGuidance = poseMetrics.qualityNotes.prefix(2).joined(separator: " ")
                 statusMessage = "Video quality is low. \(topGuidance)"
             } else {
-                statusMessage = "Pose quality looks usable. Generating coaching advice..."
+                statusMessage = String(localized: "status.quality_usable")
             }
 
             let result = try await APIClient.shared.analyzeMetrics(poseMetrics)
             analysis = result
             appStore.addHistory(result: result, videoURL: selectedVideoURL)
             latestHistoryItemID = appStore.history.first?.id
-            statusMessage = "Analysis saved. Please add feedback after review."
+            statusMessage = String(localized: "status.analysis_saved")
         } catch {
             errorMessage = "Analysis failed: \(error.localizedDescription)"
             statusMessage = nil
@@ -374,7 +375,7 @@ struct MiniStatCard: View {
 }
 
 struct GuidelineRow: View {
-    let text: String
+    let text: LocalizedStringKey
     var icon: String = "checkmark.circle.fill"
 
     var body: some View {
@@ -414,8 +415,8 @@ struct MessageBanner: View {
 }
 
 struct FeatureRow: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
     let icon: String
 
     var body: some View {

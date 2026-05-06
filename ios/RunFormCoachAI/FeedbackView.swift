@@ -22,7 +22,7 @@ struct FeedbackView: View {
 
                 Picker("Rating", selection: $rating) {
                     ForEach(FeedbackRating.allCases) { rating in
-                        Text(rating.rawValue).tag(rating)
+                        Text(LocalizedStringKey(rating.rawValue)).tag(rating)
                     }
                 }
                 .pickerStyle(.menu)

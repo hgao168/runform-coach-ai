@@ -59,7 +59,7 @@ class PoseMetricsInput(BaseModel):
     pose_detection_rate: float = 0.0
     quality_notes: List[str] = []
     video_mode: str = "side"
-
+    language: str = "en"
 
 class FormIssueContext(BaseModel):
     title: str
@@ -77,7 +77,7 @@ class TrainingPlanInput(BaseModel):
     recent_analysis_summary: Optional[str] = None
     recent_analysis_confidence: Optional[float] = None
     previous_week_summary: Optional[str] = None
-
+    language: str = "en"
 
 class PlannedWorkout(BaseModel):
     day: str

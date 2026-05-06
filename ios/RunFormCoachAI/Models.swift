@@ -81,6 +81,7 @@ struct PoseMetrics: Codable {
     let poseDetectionRate: Double
     let qualityNotes: [String]
     var videoMode: String = "side"
+    var language: String = "en"
 
     enum CodingKeys: String, CodingKey {
         case cadenceEstimateSPM = "cadence_estimate_spm"
@@ -112,6 +113,7 @@ struct PoseMetrics: Codable {
         case poseDetectionRate = "pose_detection_rate"
         case qualityNotes = "quality_notes"
         case videoMode = "video_mode"
+        case language
     }
 }
 
@@ -174,9 +176,9 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .side: return "Side"
-        case .rear: return "Rear"
-        case .front: return "Front"
+        case .side: return String(localized: "Side")
+        case .rear: return String(localized: "Rear")
+        case .front: return String(localized: "Front")
         }
     }
 
@@ -190,9 +192,9 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
 
     var metrics: String {
         switch self {
-        case .side: return "cadence, overstride, trunk lean"
-        case .rear: return "hip stability, knee tracking"
-        case .front: return "knee valgus, hip symmetry"
+        case .side: return String(localized: "cadence, overstride, trunk lean")
+        case .rear: return String(localized: "hip stability, knee tracking")
+        case .front: return String(localized: "knee valgus, hip symmetry")
         }
     }
 
@@ -200,24 +202,24 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .side:
             return [
-                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Best"),
-                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Best"),
-                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Best"),
-                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Limited"),
+                ViewMetricCapability(metric: String(localized: "Cadence"), icon: "metronome", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Overstride"), icon: "arrow.forward", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Trunk lean"), icon: "arrow.up.forward", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Knee valgus"), icon: "figure.run", level: String(localized: "Limited")),
             ]
         case .rear:
             return [
-                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Good"),
-                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Best"),
-                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Limited"),
-                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Limited"),
+                ViewMetricCapability(metric: String(localized: "Cadence"), icon: "metronome", level: String(localized: "Good")),
+                ViewMetricCapability(metric: String(localized: "Knee valgus"), icon: "figure.run", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Trunk lean"), icon: "arrow.up.forward", level: String(localized: "Limited")),
+                ViewMetricCapability(metric: String(localized: "Overstride"), icon: "arrow.forward", level: String(localized: "Limited")),
             ]
         case .front:
             return [
-                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Good"),
-                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Best"),
-                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Good"),
-                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Limited"),
+                ViewMetricCapability(metric: String(localized: "Cadence"), icon: "metronome", level: String(localized: "Good")),
+                ViewMetricCapability(metric: String(localized: "Knee valgus"), icon: "figure.run", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Trunk lean"), icon: "arrow.up.forward", level: String(localized: "Good")),
+                ViewMetricCapability(metric: String(localized: "Overstride"), icon: "arrow.forward", level: String(localized: "Limited")),
             ]
         }
     }
@@ -257,6 +259,7 @@ struct TrainingPlanInput: Codable {
     let recentAnalysisSummary: String?
     let recentAnalysisConfidence: Double?
     let previousWeekSummary: String?
+    let language: String
 
     init(
         currentWeeklyKm: Double,
@@ -266,7 +269,8 @@ struct TrainingPlanInput: Codable {
         formIssues: [FormIssueContext] = [],
         recentAnalysisSummary: String? = nil,
         recentAnalysisConfidence: Double? = nil,
-        previousWeekSummary: String? = nil
+        previousWeekSummary: String? = nil,
+        language: String = "en"
     ) {
         self.currentWeeklyKm = currentWeeklyKm
         self.target = target
@@ -276,6 +280,7 @@ struct TrainingPlanInput: Codable {
         self.recentAnalysisSummary = recentAnalysisSummary
         self.recentAnalysisConfidence = recentAnalysisConfidence
         self.previousWeekSummary = previousWeekSummary
+        self.language = language
     }
 
     enum CodingKeys: String, CodingKey {
@@ -287,6 +292,7 @@ struct TrainingPlanInput: Codable {
         case recentAnalysisSummary = "recent_analysis_summary"
         case recentAnalysisConfidence = "recent_analysis_confidence"
         case previousWeekSummary = "previous_week_summary"
+        case language
     }
 }
 

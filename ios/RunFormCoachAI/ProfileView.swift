@@ -123,7 +123,7 @@ struct ProfileView: View {
                         .foregroundStyle(.white.opacity(0.62))
                     Picker("Running level", selection: $level) {
                         ForEach(RunnerLevel.allCases) { level in
-                            Text(level.rawValue).tag(level)
+                            Text(LocalizedStringKey(level.rawValue)).tag(level)
                         }
                     }
                     .pickerStyle(.menu)
@@ -182,7 +182,7 @@ struct ProfileView: View {
                         .foregroundStyle(.white.opacity(0.62))
                     Picker("Goal", selection: $target) {
                         ForEach(TrainingTarget.allCases) { item in
-                            Text(item.rawValue).tag(item)
+                            Text(LocalizedStringKey(item.rawValue)).tag(item)
                         }
                     }
                     .pickerStyle(.menu)
@@ -263,7 +263,7 @@ struct ProfileView: View {
             target: target.rawValue,
             injuryNote: injuryNote
         )
-        savedMessage = "Profile saved"
+        savedMessage = String(localized: "profile.saved")
     }
 
     private func dismissKeyboard() {

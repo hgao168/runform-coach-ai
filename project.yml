@@ -1,6 +1,7 @@
 name: RunFormCoachAI
 options:
   bundleIdPrefix: com.runformcoach
+  developmentLanguage: en
   deploymentTarget:
     iOS: "16.0"
 targets:

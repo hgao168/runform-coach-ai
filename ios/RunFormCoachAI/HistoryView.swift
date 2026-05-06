@@ -282,11 +282,11 @@ struct ConsistencyCard: View {
 
     private var label: String {
         switch sessionCount {
-        case 0: return "No sessions yet"
-        case 1: return "Good start!"
-        case 2...3: return "Building habit"
-        case 4...6: return "Staying consistent"
-        default: return "Great consistency!"
+        case 0: return String(localized: "No sessions yet")
+        case 1: return String(localized: "Good start!")
+        case 2...3: return String(localized: "Building habit")
+        case 4...6: return String(localized: "Staying consistent")
+        default: return String(localized: "Great consistency!")
         }
     }
 
