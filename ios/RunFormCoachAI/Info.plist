@@ -8,5 +8,7 @@
     <string>Select a short running video for form analysis.</string>
     <key>BACKEND_BASE_URL</key>
     <string>$(BACKEND_BASE_URL)</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 </dict>
 </plist>
