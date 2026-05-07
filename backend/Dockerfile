@@ -1,4 +1,5 @@
 FROM python:3.12-slim
+# v0.5.0 - elite athlete comparison
 
 WORKDIR /app
 
