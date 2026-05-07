@@ -39,6 +39,7 @@
 /* Analyze tab - actions */
 "Record Live" = "Record Live";
 "Pick Video" = "Pick Video";
+"Pick an existing video" = "Pick an existing video";
 "Analyzing" = "Analyzing";
 
 /* Analyze tab - ready card */

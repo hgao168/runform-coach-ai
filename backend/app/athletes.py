@@ -36,11 +36,12 @@ _ATHLETE_DB: dict[str, dict[str, Any]] = {
         "name": "Sebastian Sawe",
         "event": "Marathon",
         "nationality": "Kenyan",
-        "achievement": "World Marathon Record (2:02:05, Chicago 2024)",
+        "achievement": "World Marathon Record (1:59:30, London 2026)",
         "bio": (
-            "Sebastian Sawe set the world marathon record in 2024 at the Chicago Marathon "
-            "with a time of 2:02:05. Known for elite midfoot striking, exceptional cadence "
-            "control, and near-zero overstride, he exemplifies efficient modern marathon form."
+            "Sebastian Sawe made history at the 2026 London Marathon by becoming the first person "
+            "to run a sub-2-hour marathon in an official World Athletics-sanctioned race, clocking "
+            "1:59:30. Known for elite midfoot striking, exceptional cadence control, and near-zero "
+            "overstride, he represents the absolute pinnacle of marathon running efficiency."
         ),
         "photo_url": "",
         "benchmarks": {

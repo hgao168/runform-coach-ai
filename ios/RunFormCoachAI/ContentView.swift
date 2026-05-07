@@ -42,6 +42,11 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         heroCard
                         videoCard
+                        Button { showVideoPicker = true } label: {
+                            Label("Pick an existing video", systemImage: "photo.on.rectangle")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(SecondaryButtonStyle())
                         recordingTipsCard
                         actionButtons
                         messageSection
@@ -211,12 +216,12 @@ struct ContentView: View {
                             VStack(spacing: 14) {
                                 ZStack {
                                     Circle().fill(AppTheme.cyan.opacity(0.14)).frame(width: 90, height: 90)
-                                    Image(systemName: "video.badge.plus")
+                                    Image(systemName: "record.circle")
                                         .font(.system(size: 42, weight: .semibold))
                                         .foregroundStyle(AppTheme.mint)
                                 }
                                 VStack(spacing: 5) {
-                                    Text("Choose a running video")
+                                    Text("Record Live")
                                         .font(.headline)
                                         .foregroundStyle(.white)
                                     Text("10–20 seconds, full body visible, both feet in frame")
@@ -232,7 +237,7 @@ struct ContentView: View {
                                 .stroke(style: StrokeStyle(lineWidth: 1, dash: [7, 7]))
                                 .foregroundStyle(.white.opacity(0.16))
                         )
-                        .onTapGesture { showVideoPicker = true }
+                        .onTapGesture { showLiveRecorder = true }
                 }
             }
         }
@@ -262,17 +267,11 @@ struct ContentView: View {
 
     private var actionButtons: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                Button { showLiveRecorder = true } label: {
-                    Label("Record Live", systemImage: "record.circle")
-                }
-                .buttonStyle(SecondaryButtonStyle())
-
-                Button { showVideoPicker = true } label: {
-                    Label("Pick Video", systemImage: "plus")
-                }
-                .buttonStyle(SecondaryButtonStyle())
+            Button { showLiveRecorder = true } label: {
+                Label("Record Live", systemImage: "record.circle")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(SecondaryButtonStyle())
 
             Button { Task { await analyzeSelectedVideo() } } label: {
                 if isAnalyzing {
