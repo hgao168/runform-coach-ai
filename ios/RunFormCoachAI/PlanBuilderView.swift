@@ -6,8 +6,14 @@ struct PlanBuilderView: View {
     @State private var weeklyKmEditedByUser = false
     @State private var suppressWeeklyKmTracking = false
     @State private var target: TrainingTarget = .generalFitness
-    @State private var availableRunningDays = 3
+    @State private var selectedRunDays: Set<Int> = [0, 2, 4]  // Mon Wed Fri default
     @State private var injuryFlag = false
+
+    private var availableRunningDays: Int { selectedRunDays.count }
+
+    private static func defaultRunDays(_ count: Int) -> Set<Int> {
+        Set((0..<min(max(count, 1), 7)).map { $0 })
+    }
     @State private var isGenerating = false
     @State private var plan: TrainingPlanResponse?
     @State private var errorMessage: String?
@@ -70,7 +76,7 @@ struct PlanBuilderView: View {
                     if let t = TrainingTarget(rawValue: saved.target) { target = t }
                 } else if !weeklyKmEditedByUser {
                     setWeeklyKmText(appStore.profile.weeklyMileageKm)
-                    availableRunningDays = appStore.profile.runningDaysPerWeek
+                    selectedRunDays = Self.defaultRunDays(appStore.profile.runningDaysPerWeek)
                     if let t = TrainingTarget(rawValue: appStore.profile.target) { target = t }
                 }
             }
@@ -80,7 +86,7 @@ struct PlanBuilderView: View {
                 }
             }
             .onChange(of: appStore.profile.runningDaysPerWeek) { days in
-                availableRunningDays = days
+                selectedRunDays = Self.defaultRunDays(days)
             }
             .onChange(of: appStore.profile.target) { profileTarget in
                 if let t = TrainingTarget(rawValue: profileTarget) { target = t }
@@ -164,8 +170,39 @@ struct PlanBuilderView: View {
                     .tint(AppTheme.mint)
                 }
 
-                Stepper("Running days: \(availableRunningDays)", value: $availableRunningDays, in: 1...7)
-                    .foregroundStyle(.white)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Run days")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.6))
+                        Spacer()
+                        Text("\(selectedRunDays.count) day\(selectedRunDays.count == 1 ? "" : "s") selected")
+                            .font(.caption.bold())
+                            .foregroundStyle(AppTheme.mint)
+                    }
+                    let dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                    HStack(spacing: 5) {
+                        ForEach(dayLabels.indices, id: \.self) { i in
+                            let selected = selectedRunDays.contains(i)
+                            Button {
+                                if selected {
+                                    if selectedRunDays.count > 1 { selectedRunDays.remove(i) }
+                                } else {
+                                    selectedRunDays.insert(i)
+                                }
+                            } label: {
+                                Text(dayLabels[i])
+                                    .font(.system(size: 11, weight: .bold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 9)
+                                    .background(selected ? AppTheme.mint : .white.opacity(0.08))
+                                    .foregroundStyle(selected ? Color.black : Color.white.opacity(0.6))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
 
                 Toggle("Injury / pain flag", isOn: $injuryFlag)
                     .tint(AppTheme.mint)

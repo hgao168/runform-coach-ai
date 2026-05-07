@@ -12,6 +12,8 @@ struct ProfileView: View {
     @State private var weightKg: Double = 70
     @State private var target: TrainingTarget = .generalFitness
     @State private var injuryNote = ""
+    @State private var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
+    @State private var weeklyExerciseHours: Double = 5
     @State private var savedMessage: String?
     @FocusState private var fieldFocused: Bool
 
@@ -118,6 +120,16 @@ struct ProfileView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
+                    Text("Date of Birth")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.62))
+                    DatePicker("", selection: $dateOfBirth, displayedComponents: .date)
+                        .labelsHidden()
+                        .tint(AppTheme.mint)
+                        .colorScheme(.dark)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Running level")
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.62))
@@ -147,6 +159,20 @@ struct ProfileView: View {
                 Stepper("Running days / week: \(runningDaysPerWeek)", value: $runningDaysPerWeek, in: 1...7)
                     .foregroundStyle(.white)
                     .font(.subheadline)
+
+                VStack(alignment: .leading, spacing: 9) {
+                    HStack {
+                        Label("Total exercise hours / week", systemImage: "clock.fill")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.72))
+                        Spacer()
+                        Text(String(format: "%.1f hrs", weeklyExerciseHours))
+                            .font(.headline.bold())
+                            .foregroundStyle(AppTheme.mint)
+                    }
+                    Slider(value: $weeklyExerciseHours, in: 0...30, step: 0.5)
+                        .tint(AppTheme.mint)
+                }
 
                 VStack(alignment: .leading, spacing: 9) {
                     HStack {
@@ -246,6 +272,8 @@ struct ProfileView: View {
             target = .generalFitness
         }
         injuryNote = profile.injuryNote
+        dateOfBirth = profile.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
+        weeklyExerciseHours = profile.weeklyExerciseHours
     }
 
     private func saveProfile() {
@@ -261,7 +289,9 @@ struct ProfileView: View {
             heightCm: heightCm,
             weightKg: weightKg,
             target: target.rawValue,
-            injuryNote: injuryNote
+            injuryNote: injuryNote,
+            dateOfBirth: dateOfBirth,
+            weeklyExerciseHours: weeklyExerciseHours
         )
         savedMessage = String(localized: "profile.saved")
     }

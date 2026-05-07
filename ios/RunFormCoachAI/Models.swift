@@ -135,6 +135,8 @@ struct TesterProfile: Codable, Equatable {
     var weightKg: Double = 70
     var target: String = "General Fitness"
     var injuryNote: String = ""
+    var dateOfBirth: Date? = nil
+    var weeklyExerciseHours: Double = 5
 }
 
 enum FeedbackRating: String, Codable, CaseIterable, Identifiable {
