@@ -363,10 +363,16 @@ struct PlanBuilderView: View {
         errorMessage = nil
         defer { isGenerating = false }
 
+        let dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        let selectedDayNames = selectedRunDays.sorted().compactMap { i in
+            i < dayLabels.count ? dayLabels[i] : nil
+        }
+
         let input = TrainingPlanInput(
             currentWeeklyKm: adaptedKm,
             target: target.rawValue,
             availableRunningDays: availableRunningDays,
+            selectedRunDays: selectedDayNames,
             injuryFlag: autoInjuryFlag,
             formIssues: appStore.latestCoachingIssues,
             recentAnalysisSummary: appStore.latestAnalysisSummary,

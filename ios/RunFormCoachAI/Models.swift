@@ -256,6 +256,7 @@ struct TrainingPlanInput: Codable {
     let currentWeeklyKm: Double
     let target: String
     let availableRunningDays: Int
+    let selectedRunDays: [String]
     let injuryFlag: Bool
     let formIssues: [FormIssueContext]
     let recentAnalysisSummary: String?
@@ -267,6 +268,7 @@ struct TrainingPlanInput: Codable {
         currentWeeklyKm: Double,
         target: String,
         availableRunningDays: Int,
+        selectedRunDays: [String] = [],
         injuryFlag: Bool,
         formIssues: [FormIssueContext] = [],
         recentAnalysisSummary: String? = nil,
@@ -277,6 +279,7 @@ struct TrainingPlanInput: Codable {
         self.currentWeeklyKm = currentWeeklyKm
         self.target = target
         self.availableRunningDays = availableRunningDays
+        self.selectedRunDays = selectedRunDays
         self.injuryFlag = injuryFlag
         self.formIssues = formIssues
         self.recentAnalysisSummary = recentAnalysisSummary
@@ -289,6 +292,7 @@ struct TrainingPlanInput: Codable {
         case currentWeeklyKm = "current_weekly_km"
         case target
         case availableRunningDays = "available_running_days"
+        case selectedRunDays = "selected_run_days"
         case injuryFlag = "injury_flag"
         case formIssues = "form_issues"
         case recentAnalysisSummary = "recent_analysis_summary"

@@ -72,6 +72,7 @@ class TrainingPlanInput(BaseModel):
     current_weekly_km: float
     target: str
     available_running_days: int = 3
+    selected_run_days: List[str] = []
     injury_flag: bool = False
     form_issues: List[FormIssueContext] = []
     recent_analysis_summary: Optional[str] = None
