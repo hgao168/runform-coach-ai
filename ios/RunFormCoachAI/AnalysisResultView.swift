@@ -170,25 +170,48 @@ struct AnalysisResultView: View {
 
 struct ExerciseCard: View {
     let exercise: Exercise
+    @Environment(\.openURL) private var openURL
+
+    private var videoSearchURL: URL? {
+        let query = "\(exercise.name) running exercise form"
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return nil }
+        let isChinaRegion = Locale.current.region?.identifier == "CN"
+        let urlString = isChinaRegion
+            ? "https://search.bilibili.com/all?keyword=\(encoded)"
+            : "https://www.youtube.com/results?search_query=\(encoded)"
+        return URL(string: urlString)
+    }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(AppTheme.actionGradient)
-                    .frame(width: 42, height: 42)
-                Image(systemName: "dumbbell.fill").foregroundStyle(.black)
+        Button {
+            if let url = videoSearchURL { openURL(url) }
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(AppTheme.actionGradient)
+                        .frame(width: 42, height: 42)
+                    Image(systemName: "dumbbell.fill").foregroundStyle(.black)
+                }
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 4) {
+                        Text(exercise.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                        Image(systemName: "play.circle")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.mint)
+                    }
+                    Text("\(exercise.category) • \(exercise.sets) sets • \(exercise.reps) • \(exercise.frequencyPerWeek)x/week")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.62))
+                    Text(exercise.reason).font(.caption).foregroundStyle(.white.opacity(0.62))
+                }
+                Spacer(minLength: 0)
             }
-            VStack(alignment: .leading, spacing: 5) {
-                Text(exercise.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                Text("\(exercise.category) • \(exercise.sets) sets • \(exercise.reps) • \(exercise.frequencyPerWeek)x/week")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.62))
-                Text(exercise.reason).font(.caption).foregroundStyle(.white.opacity(0.62))
-            }
+            .padding(13)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.black.opacity(0.18))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        .padding(13)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.black.opacity(0.18))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .buttonStyle(.plain)
     }
 }
