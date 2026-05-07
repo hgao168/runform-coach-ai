@@ -93,6 +93,39 @@ final class APIClient {
         let decoder = JSONDecoder()
         return try decoder.decode(TrainingPlanResponse.self, from: data)
     }
+
+    func fetchAthletes() async throws -> [AthleteListItem] {
+        let endpoint = baseURL.appendingPathComponent("athletes")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+            throw APIError.server(message)
+        }
+        return try JSONDecoder().decode([AthleteListItem].self, from: data)
+    }
+
+    func compareWithAthlete(athleteId: String, metrics: PoseMetrics) async throws -> CompareResponse {
+        let endpoint = baseURL.appendingPathComponent("compare")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30
+        let language = Bundle.main.preferredLocalizations.first ?? "en"
+        request.httpBody = try JSONEncoder().encode(
+            CompareRequest(userMetrics: metrics, athleteId: athleteId, language: language)
+        )
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+            throw APIError.server(message)
+        }
+        return try JSONDecoder().decode(CompareResponse.self, from: data)
+    }
 }
 
 enum APIError: LocalizedError {

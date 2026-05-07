@@ -2,14 +2,47 @@ import SwiftUI
 
 struct AnalysisResultView: View {
     let result: AnalysisResponse
+    var poseMetrics: PoseMetrics? = nil
+
+    @State private var showCompare = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             scoreCard
+            if poseMetrics != nil { compareButton }
             if let score = result.videoQualityScore { qualityCard(score: score) }
             metricsSection
             issuesSection
         }
+        .sheet(isPresented: $showCompare) {
+            if let metrics = poseMetrics {
+                CompareView(poseMetrics: metrics)
+            }
+        }
+    }
+
+    private var compareButton: some View {
+        Button {
+            showCompare = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "figure.run.circle.fill")
+                    .font(.headline)
+                Text("Compare with Elite")
+                    .font(.headline.weight(.semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .opacity(0.60)
+            }
+            .foregroundStyle(.black)
+            .padding(.vertical, 14)
+            .padding(.horizontal, 18)
+            .background(AppTheme.actionGradient)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: AppTheme.cyan.opacity(0.25), radius: 12, x: 0, y: 6)
+        }
+        .buttonStyle(.plain)
     }
 
     private var scoreCard: some View {

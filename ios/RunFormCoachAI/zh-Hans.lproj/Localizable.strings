@@ -196,8 +196,19 @@
 "Marathon" = "马拉松";
 "General Fitness" = "综合健身";
 
-/* Enums - FeedbackRating */
-"Accurate" = "准确";
+/* Compare with Elite */
+"Compare with Elite" = "与精英运动员比较";
+"Pick an athlete to compare your form against their elite biomechanical benchmarks." = "选择一位运动员，将你的跑步姿态与其精英生物力学基准进行对比。";
+"Comparing your form..." = "正在对比跑步姿态…";
+"Coach's Take" = "教练点评";
+"Biggest Gaps" = "主要差距";
+"Metric Breakdown" = "指标详情";
+"match" = "匹配度";
+"You" = "你";
+"Elite benchmark" = "精英基准";
+"Close" = "关闭";
+"Couldn't Load Athletes" = "无法加载运动员数据";
+"Comparison Failed" = "对比失败";
 "Partly accurate" = "部分准确";
 "Not accurate" = "不准确";
 "Confusing" = "令人困惑";

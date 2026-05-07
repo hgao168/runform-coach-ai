@@ -196,8 +196,19 @@
 "Marathon" = "Marathon";
 "General Fitness" = "Algemene conditie";
 
-/* Enums - FeedbackRating */
-"Accurate" = "Nauwkeurig";
+/* Compare with Elite */
+"Compare with Elite" = "Vergelijk met Elite";
+"Pick an athlete to compare your form against their elite biomechanical benchmarks." = "Kies een atleet om jouw looptechniek te vergelijken met hun elite biomechanische benchmarks.";
+"Comparing your form..." = "Jouw looptechniek vergelijken…";
+"Coach's Take" = "Mening van de coach";
+"Biggest Gaps" = "Grootste verbeterpunten";
+"Metric Breakdown" = "Metrieken overzicht";
+"match" = "overeenkomst";
+"You" = "Jij";
+"Elite benchmark" = "Elite benchmark";
+"Close" = "Sluiten";
+"Couldn't Load Athletes" = "Atleten laden mislukt";
+"Comparison Failed" = "Vergelijking mislukt";
 "Partly accurate" = "Deels nauwkeurig";
 "Not accurate" = "Niet nauwkeurig";
 "Confusing" = "Verwarrend";

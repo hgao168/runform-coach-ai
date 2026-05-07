@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var showLiveRecorder = false
     @State private var isAnalyzing = false
     @State private var analysis: AnalysisResponse?
+    @State private var lastPoseMetrics: PoseMetrics?
     @State private var latestHistoryItemID: UUID?
     @State private var errorMessage: String?
     @State private var statusMessage: String?
@@ -46,7 +47,7 @@ struct ContentView: View {
                         messageSection
 
                         if let analysis {
-                            AnalysisResultView(result: analysis)
+                            AnalysisResultView(result: analysis, poseMetrics: lastPoseMetrics)
                             if let latestHistoryItemID {
                                 FeedbackView(historyItemID: latestHistoryItemID)
                             }
@@ -318,6 +319,7 @@ struct ContentView: View {
             var poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL, expectedVideoMode: videoMode.rawValue)
             poseMetrics.videoMode = videoMode.rawValue
             poseMetrics.language = Bundle.main.preferredLocalizations.first ?? "en"
+            lastPoseMetrics = poseMetrics
             if poseMetrics.videoQualityScore < 0.40 {
                 let topIssue = poseMetrics.qualityNotes.first ?? "Video quality is too low for reliable form analysis."
                 errorMessage = "Please re-record: \(topIssue)"

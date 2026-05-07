@@ -217,3 +217,17 @@
 "Best" = "Best";
 "Good" = "Good";
 "Limited" = "Limited";
+
+/* Compare with Elite */
+"Compare with Elite" = "Compare with Elite";
+"Pick an athlete to compare your form against their elite biomechanical benchmarks." = "Pick an athlete to compare your form against their elite biomechanical benchmarks.";
+"Comparing your form..." = "Comparing your form...";
+"Coach's Take" = "Coach's Take";
+"Biggest Gaps" = "Biggest Gaps";
+"Metric Breakdown" = "Metric Breakdown";
+"match" = "match";
+"You" = "You";
+"Elite benchmark" = "Elite benchmark";
+"Close" = "Close";
+"Couldn't Load Athletes" = "Couldn't Load Athletes";
+"Comparison Failed" = "Comparison Failed";
