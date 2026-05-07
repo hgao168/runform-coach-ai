@@ -90,7 +90,9 @@ def generate_training_plan(inp: TrainingPlanInput) -> TrainingPlanResponse:
             and d != quality_day
             and not (running_days >= 4 and d == pre_long_day)
         ]
-        easy_km = _round_half(max(0.0, weekly_km - long_km - quality_km) / max(1, len(easy_days)))
+        # pre_long_day (Recovery Run) also uses easy_km, so include it in the denominator
+        easy_like_count = len(easy_days) + (1 if running_days >= 4 else 0)
+        easy_km = _round_half(max(0.0, weekly_km - long_km - quality_km) / max(1, easy_like_count))
 
         quality_title = "5K Rhythm Session" if inp.target == "5K" else "Tempo Run" if inp.target in {"10K", "Half Marathon"} else "Light Quality Run"
         quality_details = (
