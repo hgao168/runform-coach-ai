@@ -1,0 +1,217 @@
+/* pages/plan/plan.wxss */
+
+.header-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 24rpx;
+}
+
+.icon-bubble {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(135deg, rgba(0,245,160,0.18), rgba(0,212,255,0.18));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+  flex-shrink: 0;
+}
+
+.header-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.form-section {
+  margin-bottom: 32rpx;
+}
+
+.label-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.label-note {
+  font-size: 26rpx;
+}
+
+.km-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.km-slider {
+  flex: 1;
+}
+
+.km-badge {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 4rpx;
+  width: 100rpx;
+  justify-content: flex-end;
+}
+
+.km-num {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.km-unit {
+  font-size: 24rpx;
+  color: rgba(255,255,255,0.5);
+}
+
+.chip-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.chip {
+  padding: 12rpx 24rpx;
+  border-radius: 14rpx;
+  background: rgba(255,255,255,0.07);
+  border: 1rpx solid rgba(255,255,255,0.12);
+  font-size: 26rpx;
+  color: rgba(255,255,255,0.72);
+  transition: all 0.2s;
+}
+
+.chip-active {
+  background: rgba(0,245,160,0.18);
+  border-color: rgba(0,245,160,0.5);
+  color: #00f5a0;
+  font-weight: 700;
+}
+
+.day-chip {
+  min-width: 76rpx;
+  text-align: center;
+  padding: 12rpx 18rpx;
+}
+
+.injury-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.injury-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  padding-right: 20rpx;
+}
+
+.loading-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 36rpx;
+  height: 36rpx;
+  border: 4rpx solid rgba(0,0,0,0.3);
+  border-top-color: #000000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.full-btn {
+  width: 100%;
+  height: 96rpx;
+  font-size: 30rpx;
+  border-radius: 28rpx;
+}
+
+.plan-summary-row {
+  display: flex;
+  flex-direction: row;
+  gap: 32rpx;
+  margin-top: 16rpx;
+}
+
+.plan-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.plan-stat-num {
+  font-size: 60rpx;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.plan-stat-label {
+  font-size: 24rpx;
+  color: rgba(255,255,255,0.56);
+}
+
+.day-card {
+  background: rgba(255,255,255,0.05);
+  border-radius: 20rpx;
+  padding: 24rpx 24rpx 24rpx 28rpx;
+  margin-bottom: 16rpx;
+}
+
+.day-card-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 10rpx;
+}
+
+.day-tag {
+  padding: 6rpx 18rpx;
+  border-radius: 10rpx;
+  border: 1rpx solid transparent;
+}
+
+.day-type {
+  flex: 1;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.day-km {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.day-desc {
+  font-size: 26rpx;
+  color: rgba(255,255,255,0.68);
+  line-height: 1.6;
+}
+
+.day-notes {
+  margin-top: 10rpx;
+  padding: 10rpx 16rpx;
+  background: rgba(255,255,255,0.04);
+  border-radius: 10rpx;
+}

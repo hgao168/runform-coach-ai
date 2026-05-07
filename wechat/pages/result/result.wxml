@@ -1,0 +1,73 @@
+<!-- pages/result/result.wxml -->
+<view class="page-container">
+
+  <!-- Overall score hero card -->
+  <view class="hero-card">
+    <text class="hero-label">{{i.confidence}}</text>
+    <text class="hero-score" style="color: {{scoreColor}};">{{confidenceDisplay}}</text>
+    <view class="progress-track" style="margin-top: 16rpx;">
+      <view class="progress-fill" style="width: {{confidencePct}}%;"></view>
+    </view>
+    <text class="hero-summary">{{overallAssessment}}</text>
+  </view>
+
+  <!-- Form metrics -->
+  <view class="card" wx:if="{{metrics.length > 0}}">
+    <text class="section-title">{{i.metrics}}</text>
+    <view class="metrics-grid">
+      <view class="metric-item" wx:for="{{metrics}}" wx:key="index">
+        <text class="metric-label">{{item.label}}</text>
+        <view class="metric-bar-track">
+          <view class="metric-bar-fill" style="width: {{item.pct}}%; background: {{item.color}};"></view>
+        </view>
+        <text class="metric-value" style="color: {{item.color}};">{{item.valueText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Issues / Insights -->
+  <view class="card" wx:if="{{insights.length > 0}}">
+    <text class="section-title">⚠️ 姿态分析</text>
+    <view wx:for="{{insights}}" wx:key="index" class="insight-item">
+      <view class="insight-badge" style="background: {{item.color}}20; border-color: {{item.color}}40;">
+        <text class="insight-severity" style="color: {{item.color}};">{{item.severityText}}</text>
+      </view>
+      <view class="insight-body">
+        <text class="insight-title">{{item.title}}</text>
+        <text class="insight-desc">{{item.description}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- No issues -->
+  <view class="card" wx:if="{{insights.length === 0}}">
+    <view class="empty-good">
+      <text style="font-size: 64rpx;">✅</text>
+      <text class="text-mint" style="font-size: 30rpx; font-weight: 600; margin-top: 12rpx;">{{i.noIssues}}</text>
+    </view>
+  </view>
+
+  <!-- Strength / Exercise recommendations -->
+  <view class="card" wx:if="{{exercises.length > 0}}">
+    <text class="section-title">💪 {{i.strengthFocus}}</text>
+    <view wx:for="{{exercises}}" wx:key="index" class="exercise-item" bindtap="openExercise" data-index="{{index}}">
+      <view class="exercise-header">
+        <text class="exercise-name">{{item.name}}</text>
+        <text class="exercise-link-icon text-mint">▶</text>
+      </view>
+      <text class="exercise-desc">{{item.description}}</text>
+      <view wx:if="{{item.sets || item.duration}}" class="exercise-meta">
+        <text wx:if="{{item.sets}}" class="meta-chip">{{item.sets}} 组 × {{item.reps}} 次</text>
+        <text wx:if="{{item.duration}}" class="meta-chip">{{item.duration}}</text>
+        <text wx:if="{{item.frequency_per_week}}" class="meta-chip">{{item.frequency_per_week}}x/周</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Action buttons -->
+  <view class="action-section">
+    <button class="btn-secondary full-btn" bindtap="goCompare">{{i.compareWithElite}}</button>
+    <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" bindtap="shareResult">分享结果</button>
+  </view>
+
+</view>
