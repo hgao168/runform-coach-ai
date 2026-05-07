@@ -101,3 +101,52 @@ class TrainingPlanResponse(BaseModel):
     workouts: List[PlannedWorkout]
     notes: List[str] = []
     connected_analysis_used: bool = False
+
+
+# ── Elite athlete comparison ────────────────────────────────────────────────
+
+class AthleteListItem(BaseModel):
+    id: str
+    name: str
+    event: str
+    nationality: str
+    achievement: str
+    photo_url: str
+
+
+class AthleteProfile(BaseModel):
+    id: str
+    name: str
+    event: str
+    nationality: str
+    achievement: str
+    bio: str
+    photo_url: str
+
+
+class MetricComparison(BaseModel):
+    metric: str
+    metric_key: str
+    user_score: float
+    athlete_score: float
+    user_label: str
+    athlete_label: str
+    user_value: float
+    athlete_value: float
+    gap: float
+    gap_pct: float
+    status: str  # "gap" | "on_par" | "ahead"
+
+
+class CompareRequest(BaseModel):
+    user_metrics: PoseMetricsInput
+    athlete_id: str
+    language: str = "en"
+
+
+class CompareResponse(BaseModel):
+    athlete: AthleteProfile
+    comparisons: List[MetricComparison]
+    top_gaps: List[str]
+    coaching_narrative: str
+    overall_similarity_score: float

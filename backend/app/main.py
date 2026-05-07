@@ -4,11 +4,20 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
-from .schemas import AnalysisResponse, PoseMetricsInput, TrainingPlanInput, TrainingPlanResponse
+from .athletes import compare_with_athlete, get_all_athletes
+from .schemas import (
+    AnalysisResponse,
+    AthleteListItem,
+    CompareRequest,
+    CompareResponse,
+    PoseMetricsInput,
+    TrainingPlanInput,
+    TrainingPlanResponse,
+)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
-app = FastAPI(title="RunForm Coach AI API", version="0.4.1")
+app = FastAPI(title="RunForm Coach AI API", version="0.5.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,7 +30,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "runform-coach-ai", "version": "0.4.1", "environment": ENVIRONMENT}
+    return {"status": "ok", "service": "runform-coach-ai", "version": "0.5.0", "environment": ENVIRONMENT}
 
 
 @app.post("/training-plan", response_model=TrainingPlanResponse)
@@ -53,3 +62,22 @@ async def analyze(video: UploadFile = File(...)) -> AnalysisResponse:
         raise HTTPException(status_code=400, detail="Please upload a valid video file.")
     video_bytes = await video.read()
     return analyze_running_video(video_bytes, video.filename or "running-video.mp4")
+
+
+@app.get("/athletes", response_model=list[AthleteListItem])
+def list_athletes() -> list[AthleteListItem]:
+    """Return the list of available elite athlete benchmark profiles."""
+    return get_all_athletes()
+
+
+@app.post("/compare", response_model=CompareResponse)
+async def compare(request: CompareRequest) -> CompareResponse:
+    """Compare user running metrics against an elite athlete benchmark."""
+    try:
+        return compare_with_athlete(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Comparison error: {exc}") from exc
