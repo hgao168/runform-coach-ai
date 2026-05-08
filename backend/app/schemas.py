@@ -120,11 +120,13 @@ class MarathonPlanWeek(BaseModel):
     long_run_km: float
     key_workout: str
     terrain_focus: str
+    workouts: List[PlannedWorkout] = []
 
 
 class MarathonPlanBlock(BaseModel):
     race: str
     total_weeks: int
+    plan_profile: str
     course_profile: str
     elevation_note: str
     weeks: List[MarathonPlanWeek]

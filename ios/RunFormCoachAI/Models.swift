@@ -410,6 +410,7 @@ struct MarathonPlanWeek: Codable, Equatable, Identifiable {
     let longRunKm: Double
     let keyWorkout: String
     let terrainFocus: String
+    let workouts: [PlannedWorkout]
 
     enum CodingKeys: String, CodingKey {
         case week, phase
@@ -417,12 +418,14 @@ struct MarathonPlanWeek: Codable, Equatable, Identifiable {
         case longRunKm = "long_run_km"
         case keyWorkout = "key_workout"
         case terrainFocus = "terrain_focus"
+        case workouts
     }
 }
 
 struct MarathonPlanBlock: Codable, Equatable {
     let race: String
     let totalWeeks: Int
+    let planProfile: String
     let courseProfile: String
     let elevationNote: String
     let weeks: [MarathonPlanWeek]
@@ -430,6 +433,7 @@ struct MarathonPlanBlock: Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case race
         case totalWeeks = "total_weeks"
+        case planProfile = "plan_profile"
         case courseProfile = "course_profile"
         case elevationNote = "elevation_note"
         case weeks

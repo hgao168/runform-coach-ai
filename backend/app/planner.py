@@ -68,6 +68,156 @@ def _resolve_run_days(inp: TrainingPlanInput) -> list[str]:
     return sorted(defaults[:count], key=lambda d: day_order[d])
 
 
+def _closest_am_profile(weekly_km: float) -> int:
+    return 55 if abs(weekly_km - 55.0) <= abs(weekly_km - 70.0) else 70
+
+
+def _key_workout_for_phase(phase: str, week: int, injury_flag: bool) -> str:
+    if injury_flag:
+        if phase == "Base":
+            return "Aerobic progression run with short relaxed strides; keep effort controlled."
+        if phase == "BuildUp":
+            return "Steady aerobic run with brief marathon-effort blocks (no hard surges)."
+        if phase == "Peak":
+            return "Long run with controlled marathon-pace finish; stop if form degrades."
+        return "Taper sharpening with short rhythm segments and full recovery."
+
+    if phase == "Base":
+        pool = [
+            "Lactate-threshold session: 3 x 10 min at LT effort with short float recoveries.",
+            "General aerobic run + 8-10 strides, plus a medium-long run in the same week.",
+            "VO2 support: 6-8 x 800 m around 5K effort with equal jog recoveries.",
+        ]
+        return pool[(week - 1) % len(pool)]
+    if phase == "BuildUp":
+        pool = [
+            "Marathon-pace session: 3 x 4-5 km at MP with 1 km float jog.",
+            "Long run with quality finish: final 8-12 km around MP effort.",
+            "LT maintenance: 2 x 5 km at LT with short jog recovery.",
+        ]
+        return pool[(week - 1) % len(pool)]
+    if phase == "Peak":
+        pool = [
+            "Race-specific simulation: 14-20 km continuous at MP within the long run.",
+            "Tune-up effort week: 8-12 km race effort with reduced total load.",
+        ]
+        return pool[(week - 1) % len(pool)]
+    return "Taper sharpening: short MP blocks, reduced volume, and no residual fatigue."
+
+
+def _build_marathon_week_workouts(
+    run_days: list[str],
+    target_km: float,
+    long_run_km: float,
+    phase: str,
+    week: int,
+    injury_flag: bool,
+) -> list[PlannedWorkout]:
+    if not run_days:
+        return []
+
+    n = len(run_days)
+    slots: dict[str, str] = {run_days[-1]: "long"}
+
+    if n == 1:
+        pass
+    elif n == 2:
+        slots[run_days[0]] = "quality"
+    else:
+        pre_long_days = run_days[:-1]
+        quality_day = pre_long_days[len(pre_long_days) // 2]
+        slots[quality_day] = "quality"
+
+        if n >= 4:
+            medium_day = pre_long_days[-1]
+            if medium_day == quality_day and len(pre_long_days) > 1:
+                medium_day = pre_long_days[0]
+            if medium_day != quality_day:
+                slots[medium_day] = "medium"
+
+        for idx, day in enumerate(pre_long_days):
+            if day in slots:
+                continue
+            if n >= 5 and idx == 0:
+                slots[day] = "recovery"
+            else:
+                slots[day] = "easy"
+
+    long_run_km = min(long_run_km, target_km)
+    remaining_km = max(0.0, target_km - long_run_km)
+
+    non_long_days = [d for d in run_days if slots.get(d) != "long"]
+    base_weights = {"quality": 1.25, "medium": 1.12, "easy": 1.0, "recovery": 0.82}
+    weight_sum = sum(base_weights.get(slots[d], 1.0) for d in non_long_days)
+
+    day_km: dict[str, float] = {run_days[-1]: _round_half(long_run_km)}
+    for day in non_long_days:
+        if weight_sum <= 0:
+            planned = remaining_km / max(1, len(non_long_days))
+        else:
+            planned = remaining_km * (base_weights.get(slots[day], 1.0) / weight_sum)
+        day_km[day] = _round_half(planned)
+
+    total_assigned = sum(day_km.values())
+    diff = _round_half(target_km - total_assigned)
+    if non_long_days:
+        day_km[non_long_days[0]] = _round_half(max(2.0, day_km[non_long_days[0]] + diff))
+
+    quality_title = {
+        "Base": "LT / Rhythm Session",
+        "BuildUp": "Marathon Pace Session",
+        "Peak": "Race-Specific Session",
+        "Taper": "Taper Rhythm Session",
+    }.get(phase, "Quality Session")
+
+    workouts: list[PlannedWorkout] = []
+    for day in run_days:
+        slot = slots.get(day, "easy")
+        km = day_km.get(day, _round_half(target_km / max(1, n)))
+
+        if slot == "long":
+            title = "Long Run"
+            intensity = "Zone 2 / easy-moderate"
+            details = "Progressively extend durability. Keep posture stable and fuel well."
+            purpose = "Primary marathon-specific endurance stimulus."
+            if phase in {"BuildUp", "Peak"}:
+                details = "Include controlled marathon-pace finish in selected weeks."
+        elif slot == "quality":
+            title = quality_title
+            intensity = "Moderate to moderately hard" if not injury_flag else "Controlled moderate"
+            details = _key_workout_for_phase(phase, week, injury_flag)
+            purpose = "Build marathon pace durability and economy."
+        elif slot == "medium":
+            title = "Medium Long Run"
+            intensity = "Zone 2 steady"
+            details = "Steady aerobic run at relaxed effort, slightly longer than easy days."
+            purpose = "Increase aerobic volume without excessive fatigue."
+        elif slot == "recovery":
+            title = "Recovery Run"
+            intensity = "Very easy"
+            details = "Short and easy. Keep cadence relaxed and stop if soreness rises."
+            purpose = "Absorb training and maintain frequency."
+        else:
+            title = "Easy Run"
+            intensity = "Zone 2 / easy"
+            details = "Conversational pace. Focus on smooth form and relaxed shoulders."
+            purpose = "Add low-stress aerobic volume."
+
+        workouts.append(PlannedWorkout(
+            day=day,
+            title=title,
+            category="Marathon" if slot in {"quality", "long", "medium"} else "Easy",
+            intensity=intensity,
+            details=details,
+            purpose=purpose,
+            distance_km=km,
+            duration_minutes=None,
+            coaching_focus="Advanced Marathoning progression",
+        ))
+
+    return workouts
+
+
 def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonPlanBlock | None:
     if inp.target != "Marathon" or not inp.include_marathon_block:
         return None
@@ -76,7 +226,18 @@ def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonP
     race = inp.marathon_major or "Berlin"
     profile = MAJOR_MARATHON_PROFILES.get(race, MAJOR_MARATHON_PROFILES["Berlin"])
 
-    peak_km = max(weekly_km * 1.45, 55.0)
+    run_days = _resolve_run_days(inp)
+    am_profile_km = _closest_am_profile(weekly_km)
+    profile_label = f"AM {am_profile_km}"
+
+    start_km = max(16.0, weekly_km)
+    if am_profile_km == 70:
+        peak_km = min(78.0, max(64.0, start_km * 1.38))
+    else:
+        peak_km = min(62.0, max(52.0, start_km * 1.35))
+    if inp.injury_flag:
+        peak_km = _round_half(max(start_km, peak_km * 0.90))
+
     taper_weeks = 2 if requested_weeks == 12 else 3
     taper_start = requested_weeks - taper_weeks + 1
     weeks: list[MarathonPlanWeek] = []
@@ -103,36 +264,16 @@ def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonP
 
             if week <= base_end:
                 phase = "Base"
-                km_factor = 0.86 + 0.18 * progress
-                target_km = _round_half(min(peak_km * 0.88, peak_km * km_factor) * wave)
-                long_run = _round_half(min(30.0, max(18.0, target_km * 0.36)))
-                key_pool = [
-                    "Lactate-threshold run: 6-10 km total at LT effort (continuous or cruise intervals).",
-                    "General aerobic + 8-10 x 100 m strides; add a medium-long run (24-28% of weekly volume).",
-                    "VO2 support: 5-8 x 800 m at roughly 5K effort with equal jog recovery.",
-                ]
-                key = key_pool[(week - 1) % len(key_pool)]
+                target_km = _round_half((start_km + (peak_km - start_km) * (0.45 * progress)) * wave)
+                long_run = _round_half(min(30.0, max(16.0, target_km * 0.33)))
             elif week <= build_end:
-                phase = "Specific"
-                km_factor = 0.98 + 0.20 * progress
-                target_km = _round_half(min(peak_km, peak_km * km_factor) * wave)
-                long_run = _round_half(min(35.0, max(24.0, target_km * 0.40)))
-                key_pool = [
-                    "Marathon-pace workout: 3 x 5 km at MP with 1 km float jog.",
-                    "Long run with quality finish: last 8-12 km at MP effort.",
-                    "LT maintenance: 2 x 5 km at LT with short jog recovery + medium-long aerobic run.",
-                ]
-                key = key_pool[(week - base_end - 1) % len(key_pool)]
+                phase = "BuildUp"
+                target_km = _round_half((start_km + (peak_km - start_km) * (0.75 + 0.20 * progress)) * wave)
+                long_run = _round_half(min(35.0, max(20.0, target_km * 0.38)))
             else:
                 phase = "Peak"
-                km_factor = 1.0
-                target_km = _round_half(min(peak_km, peak_km * km_factor) * wave)
-                long_run = _round_half(min(35.0, max(28.0, target_km * 0.42)))
-                key_pool = [
-                    "Race-specific simulation: 16-22 km continuous at MP within long run.",
-                    "Tune-up race week: 8-15 km race effort plus reduced long run load.",
-                ]
-                key = key_pool[(week - build_end - 1) % len(key_pool)]
+                target_km = _round_half(min(peak_km, peak_km * wave))
+                long_run = _round_half(min(36.0, max(24.0, target_km * 0.41)))
         else:
             phase = "Taper"
             taper_index = week - taper_start
@@ -142,10 +283,12 @@ def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonP
             else:
                 taper_factors = [0.70, 0.48]
                 taper_longs = [20.0, 12.0]
-            target_km = _round_half(max(26.0, peak_km * taper_factors[min(taper_index, len(taper_factors) - 1)]))
+            target_km = _round_half(max(24.0, peak_km * taper_factors[min(taper_index, len(taper_factors) - 1)]))
             long_run = _round_half(taper_longs[min(taper_index, len(taper_longs) - 1)])
-            key = "Taper sharpening: short MP blocks, reduced volume, full recovery, and no accumulated fatigue."
+        if week == 1:
+            target_km = _round_half(start_km)
 
+        key = _key_workout_for_phase(phase, week, inp.injury_flag)
         if race == "Boston":
             key += " Add downhill repeats and late-session uphill repeats for Newton simulation."
         elif race == "New York City":
@@ -155,6 +298,15 @@ def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonP
         elif race == "Sydney":
             key += " Add rolling hill continuous runs every 1-2 weeks."
 
+        week_workouts = _build_marathon_week_workouts(
+            run_days=run_days,
+            target_km=target_km,
+            long_run_km=long_run,
+            phase=phase,
+            week=week,
+            injury_flag=inp.injury_flag,
+        )
+
         weeks.append(MarathonPlanWeek(
             week=week,
             phase=phase,
@@ -162,11 +314,13 @@ def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonP
             long_run_km=long_run,
             key_workout=key,
             terrain_focus=profile["terrain_focus"],
+            workouts=week_workouts,
         ))
 
     return MarathonPlanBlock(
         race=race,
         total_weeks=requested_weeks,
+        plan_profile=profile_label,
         course_profile=profile["course_profile"],
         elevation_note=profile["elevation_note"],
         weeks=weeks,
