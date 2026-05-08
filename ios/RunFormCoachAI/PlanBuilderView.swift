@@ -250,7 +250,7 @@ struct PlanBuilderView: View {
     private func kmDeltaLabel(from current: Double, to target: Double) -> String {
         let delta = target - current
         let sign = delta >= 0 ? "+" : ""
-        return "\(sign)\(delta, specifier: "%.1f") km"
+        return String(format: "%@%.1f km", sign, delta)
     }
 
     private var introCard: some View {
