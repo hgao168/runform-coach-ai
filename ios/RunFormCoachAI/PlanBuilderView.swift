@@ -625,7 +625,7 @@ struct TrainingPlanResultView: View {
 
     private func marathonPlanCard(_ marathonPlan: MarathonPlanBlock) -> some View {
         let boundaries = marathonPhaseBoundaries(marathonPlan.weeks)
-        DarkCard {
+        return DarkCard {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Marathon Block")
                     .font(.headline)
