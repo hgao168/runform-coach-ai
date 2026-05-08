@@ -69,7 +69,7 @@ def _resolve_run_days(inp: TrainingPlanInput) -> list[str]:
 
 
 def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonPlanBlock | None:
-    if inp.target != "Marathon":
+    if inp.target != "Marathon" or not inp.include_marathon_block:
         return None
 
     requested_weeks = inp.marathon_plan_weeks if inp.marathon_plan_weeks in {12, 16} else 16

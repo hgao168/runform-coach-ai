@@ -313,6 +313,7 @@ struct TrainingPlanInput: Codable {
     let language: String
     let marathonMajor: String?
     let marathonPlanWeeks: Int?
+    let includeMarathonBlock: Bool
 
     init(
         currentWeeklyKm: Double,
@@ -326,7 +327,8 @@ struct TrainingPlanInput: Codable {
         previousWeekSummary: String? = nil,
         language: String = "en",
         marathonMajor: String? = nil,
-        marathonPlanWeeks: Int? = nil
+        marathonPlanWeeks: Int? = nil,
+        includeMarathonBlock: Bool = true
     ) {
         self.currentWeeklyKm = currentWeeklyKm
         self.target = target
@@ -340,6 +342,7 @@ struct TrainingPlanInput: Codable {
         self.language = language
         self.marathonMajor = marathonMajor
         self.marathonPlanWeeks = marathonPlanWeeks
+        self.includeMarathonBlock = includeMarathonBlock
     }
 
     enum CodingKeys: String, CodingKey {
@@ -355,6 +358,7 @@ struct TrainingPlanInput: Codable {
         case language
         case marathonMajor = "marathon_major"
         case marathonPlanWeeks = "marathon_plan_weeks"
+        case includeMarathonBlock = "include_marathon_block"
     }
 }
 

@@ -99,6 +99,7 @@ class TrainingPlanInput(BaseModel):
     language: str = "en"
     marathon_major: Optional[str] = None
     marathon_plan_weeks: Optional[int] = None
+    include_marathon_block: bool = True
 
 class PlannedWorkout(BaseModel):
     day: str

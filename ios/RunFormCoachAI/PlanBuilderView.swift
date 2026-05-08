@@ -21,7 +21,14 @@ struct PlanBuilderView: View {
     @State private var errorMessage: String?
     @State private var showSavedPlans = false
     @State private var showManualPlanEditor = false
+    @State private var showWeeklyPlanDetails = false
+    @State private var selectedMarathonBoundary: MarathonPhaseLink?
     @FocusState private var kmFieldFocused: Bool
+
+    private enum GenerationKind {
+        case weekly
+        case marathon
+    }
 
     var body: some View {
         NavigationStack {
@@ -35,7 +42,7 @@ struct PlanBuilderView: View {
                         }
                         latestAnalysisCard
                         inputCard
-                        generateButton
+                        generateButtons
 
                         if let errorMessage {
                             Text(errorMessage)
@@ -44,12 +51,7 @@ struct PlanBuilderView: View {
                                 .padding(.horizontal, 4)
                         }
 
-                        if let plan {
-                            TrainingPlanResultView(
-                                plan: plan,
-                                planID: appStore.nextWeekPlan?.id
-                            )
-                        }
+                        if let plan { generatedPlanSections(plan) }
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 10)
@@ -99,7 +101,156 @@ struct PlanBuilderView: View {
             .sheet(isPresented: $showManualPlanEditor) {
                 ManualNextWeekPlanEditorView()
             }
+            .sheet(isPresented: $showWeeklyPlanDetails) {
+                if let plan {
+                    NavigationStack {
+                        ZStack {
+                            AppBackground()
+                            ScrollView(showsIndicators: false) {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    TrainingPlanResultView(
+                                        plan: plan,
+                                        planID: appStore.nextWeekPlan?.id,
+                                        showMarathonBlock: false
+                                    )
+                                }
+                                .padding(.horizontal, 18)
+                                .padding(.top, 12)
+                                .padding(.bottom, 24)
+                            }
+                        }
+                        .navigationTitle("Weekly Plan Details")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Done") { showWeeklyPlanDetails = false }
+                                    .foregroundStyle(AppTheme.mint)
+                            }
+                        }
+                        .toolbarColorScheme(.dark, for: .navigationBar)
+                    }
+                }
+            }
+            .sheet(item: $selectedMarathonBoundary) { boundary in
+                MarathonBlockDetailView(boundary: boundary) { selectedWeekKm in
+                    setWeeklyKmText(selectedWeekKm)
+                    weeklyKmEditedByUser = false
+                    selectedMarathonBoundary = nil
+                }
+            }
         }
+    }
+
+    private func generatedPlanSections(_ plan: TrainingPlanResponse) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle("Generated plan", subtitle: nil, systemImage: "checkmark.circle.fill")
+
+            DarkCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("1) Weekly Planning")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Text("Weekly target: \(plan.plannedWeeklyKm, specifier: "%.1f") km over \(plan.runningDays) running days.")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.72))
+                    Button {
+                        showWeeklyPlanDetails = true
+                    } label: {
+                        HStack {
+                            Label("View weekly plan details", systemImage: "link")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                        }
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                }
+            }
+
+            if let marathonPlan = plan.marathonPlan {
+                let boundaries = marathonPhaseLinks(from: marathonPlan.weeks)
+                let currentKm = Double(currentWeeklyKmText.replacingOccurrences(of: ",", with: ".")) ?? plan.plannedWeeklyKm
+                DarkCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("2) Specific Marathon Training Plan")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("\(marathonPlan.race) • \(marathonPlan.totalWeeks)-week block")
+                            .font(.caption.bold())
+                            .foregroundStyle(AppTheme.mint)
+                        Text("Tap any phase to view block details and apply week target km to weekly planning.")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.68))
+
+                        ForEach(boundaries) { boundary in
+                            Button {
+                                selectedMarathonBoundary = boundary
+                            } label: {
+                                HStack(alignment: .center, spacing: 8) {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("\(boundary.label): W\(boundary.startWeek)-W\(boundary.endWeek)")
+                                            .font(.caption.bold())
+                                        Text("\(boundary.startTargetKm, specifier: "%.1f") -> \(boundary.endTargetKm, specifier: "%.1f") km/week")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.65))
+                                    }
+                                    Spacer()
+                                    Text(kmDeltaLabel(from: currentKm, to: boundary.startTargetKm))
+                                        .font(.caption2.bold())
+                                        .foregroundStyle(.black)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(AppTheme.actionGradient)
+                                        .clipShape(Capsule())
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2.bold())
+                                        .foregroundStyle(.white.opacity(0.65))
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(8)
+                                .background(.white.opacity(0.06))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func marathonPhaseLinks(from weeks: [MarathonPlanWeek]) -> [MarathonPhaseLink] {
+        let sorted = weeks.sorted { $0.week < $1.week }
+        guard let first = sorted.first else { return [] }
+
+        var groups: [[MarathonPlanWeek]] = [[first]]
+        for week in sorted.dropFirst() {
+            if groups[groups.count - 1][0].phase == week.phase {
+                groups[groups.count - 1].append(week)
+            } else {
+                groups.append([week])
+            }
+        }
+
+        return groups.compactMap { group in
+            guard let start = group.first, let end = group.last else { return nil }
+            return MarathonPhaseLink(
+                id: "\(start.phase)-\(start.week)-\(end.week)",
+                label: start.phase,
+                startWeek: start.week,
+                endWeek: end.week,
+                startTargetKm: start.targetKm,
+                endTargetKm: end.targetKm,
+                startLongRunKm: start.longRunKm,
+                endLongRunKm: end.longRunKm,
+                weeks: group
+            )
+        }
+    }
+
+    private func kmDeltaLabel(from current: Double, to target: Double) -> String {
+        let delta = target - current
+        let sign = delta >= 0 ? "+" : ""
+        return "\(sign)\(delta, specifier: "%.1f") km"
     }
 
     private var introCard: some View {
@@ -340,26 +491,44 @@ struct PlanBuilderView: View {
         }
     }
 
-    private var generateButton: some View {
-        Button {
-            kmFieldFocused = false
-            dismissKeyboard()
-            Task { await generatePlan() }
-        } label: {
-            if isGenerating {
-                ProgressView().frame(maxWidth: .infinity)
-            } else {
-                Label("Generate Plan", systemImage: "sparkles")
+    private var generateButtons: some View {
+        HStack(spacing: 10) {
+            Button {
+                kmFieldFocused = false
+                dismissKeyboard()
+                Task { await generatePlan(kind: .weekly) }
+            } label: {
+                if isGenerating {
+                    ProgressView().frame(maxWidth: .infinity)
+                } else {
+                    Label("Weekly Plan", systemImage: "calendar.badge.plus")
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(GradientButtonStyle())
+            .disabled(isGenerating)
+
+            Button {
+                kmFieldFocused = false
+                dismissKeyboard()
+                Task { await generatePlan(kind: .marathon) }
+            } label: {
+                Label("Marathon Plan", systemImage: "flag.pattern.checkered")
                     .frame(maxWidth: .infinity)
             }
+            .buttonStyle(SecondaryButtonStyle())
+            .disabled(isGenerating || target != .marathon)
         }
-        .buttonStyle(GradientButtonStyle())
-        .disabled(isGenerating)
     }
 
-    private func generatePlan() async {
+    private func generatePlan(kind: GenerationKind) async {
         kmFieldFocused = false
         dismissKeyboard()
+
+        if kind == .marathon && target != .marathon {
+            errorMessage = "Select Marathon goal to generate a marathon block."
+            return
+        }
 
         guard let km = Double(currentWeeklyKmText.replacingOccurrences(of: ",", with: ".")) else {
             errorMessage = String(localized: "error.invalid_km")
@@ -413,7 +582,8 @@ struct PlanBuilderView: View {
             previousWeekSummary: previousWeekSummary,
             language: Bundle.main.preferredLocalizations.first ?? "en",
             marathonMajor: target == .marathon ? marathonMajor.rawValue : nil,
-            marathonPlanWeeks: target == .marathon ? marathonPlanWeeks : nil
+            marathonPlanWeeks: target == .marathon ? marathonPlanWeeks : nil,
+            includeMarathonBlock: kind == .marathon
         )
 
         do {
@@ -611,11 +781,12 @@ struct SavedPlanDetailView: View {
 struct TrainingPlanResultView: View {
     let plan: TrainingPlanResponse
     var planID: UUID? = nil
+    var showMarathonBlock: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             summaryCard
-            if let marathonPlan = plan.marathonPlan {
+            if showMarathonBlock, let marathonPlan = plan.marathonPlan {
                 marathonPlanCard(marathonPlan)
             }
             workoutList
@@ -780,6 +951,93 @@ struct TrainingPlanResultView: View {
                         .foregroundStyle(.white.opacity(0.7))
                 }
             }
+        }
+    }
+}
+
+private struct MarathonPhaseLink: Identifiable {
+    let id: String
+    let label: String
+    let startWeek: Int
+    let endWeek: Int
+    let startTargetKm: Double
+    let endTargetKm: Double
+    let startLongRunKm: Double
+    let endLongRunKm: Double
+    let weeks: [MarathonPlanWeek]
+}
+
+private struct MarathonBlockDetailView: View {
+    let boundary: MarathonPhaseLink
+    let onUseWeekKm: (Double) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        DarkCard {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("\(boundary.label) Block")
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                Text("Weeks \(boundary.startWeek)-\(boundary.endWeek)")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(AppTheme.mint)
+                                Text("Target km/week: \(boundary.startTargetKm, specifier: "%.1f") -> \(boundary.endTargetKm, specifier: "%.1f")")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.72))
+                                Text("Long run: \(boundary.startLongRunKm, specifier: "%.1f") -> \(boundary.endLongRunKm, specifier: "%.1f") km")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.72))
+                            }
+                        }
+
+                        ForEach(boundary.weeks) { week in
+                            DarkCard {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text("Week \(week.week)")
+                                            .font(.subheadline.bold())
+                                            .foregroundStyle(.white)
+                                        Spacer()
+                                        Text("\(week.targetKm, specifier: "%.1f") km")
+                                            .font(.caption.bold())
+                                            .foregroundStyle(AppTheme.mint)
+                                    }
+                                    Text("Long run: \(week.longRunKm, specifier: "%.1f") km")
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.65))
+                                    Text(week.keyWorkout)
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.78))
+                                    Button {
+                                        onUseWeekKm(week.targetKm)
+                                        dismiss()
+                                    } label: {
+                                        Label("Use \(week.targetKm, specifier: "%.1f") km for weekly planning", systemImage: "arrow.up.right.square")
+                                    }
+                                    .buttonStyle(SecondaryButtonStyle())
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 12)
+                    .padding(.bottom, 24)
+                }
+            }
+            .navigationTitle("Block Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(AppTheme.mint)
+                }
+            }
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
 }
