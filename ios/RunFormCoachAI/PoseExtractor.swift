@@ -56,6 +56,7 @@ final class PoseExtractor {
                 leftHip: point(.leftHip), rightHip: point(.rightHip),
                 leftShoulder: point(.leftShoulder), rightShoulder: point(.rightShoulder),
                 leftElbow: point(.leftElbow), rightElbow: point(.rightElbow),
+                leftWrist: point(.leftWrist), rightWrist: point(.rightWrist),
                 neck: point(.neck), nose: point(.nose)
             ))
         }
@@ -311,6 +312,143 @@ final class PoseExtractor {
             armSwingStatus = armSwingVal >= 0.75 ? "Good" : armSwingVal >= 0.50 ? "Moderate" : "Needs work"
         }
 
+        // --- Arm crossing direction ("knitting") ---
+        // Detect whether elbows frequently cross body midline instead of driving front-back.
+        var leftCrossVals: [Double] = []
+        var rightCrossVals: [Double] = []
+        for pose in usablePoses {
+            guard let ls = pose.leftShoulder, let rs = pose.rightShoulder else { continue }
+            let shoulderWidth = abs(rs.x - ls.x)
+            guard shoulderWidth > 0.01 else { continue }
+            let midX = (ls.x + rs.x) / 2.0
+
+            if let le = pose.leftElbow, le.confidence > 0.35 {
+                let leftCross = max(0.0, (le.x - midX) / shoulderWidth)
+                leftCrossVals.append(leftCross)
+            }
+            if let re = pose.rightElbow, re.confidence > 0.35 {
+                let rightCross = max(0.0, (midX - re.x) / shoulderWidth)
+                rightCrossVals.append(rightCross)
+            }
+        }
+
+        let armCrossingScore: Double
+        let armCrossingStatus: String
+        let armCrossingDirection: String
+        if leftCrossVals.count < 8 || rightCrossVals.count < 8 {
+            armCrossingScore = 0.0
+            armCrossingStatus = "Not measurable"
+            armCrossingDirection = "Not measurable"
+        } else {
+            let leftCrossMean = leftCrossVals.reduce(0, +) / Double(leftCrossVals.count)
+            let rightCrossMean = rightCrossVals.reduce(0, +) / Double(rightCrossVals.count)
+            let crossMagnitude = (leftCrossMean + rightCrossMean) / 2.0
+            let score = clamp(1.0 - crossMagnitude / 0.22, 0.10, 1.0)
+            armCrossingScore = score
+            armCrossingStatus = score >= 0.75 ? "Good" : score >= 0.50 ? "Moderate" : "Needs work"
+            if abs(leftCrossMean - rightCrossMean) < 0.02 {
+                armCrossingDirection = "balanced"
+            } else {
+                armCrossingDirection = leftCrossMean > rightCrossMean ? "left_over_right" : "right_over_left"
+            }
+        }
+
+        // --- Backward elbow drive angle ---
+        // Estimate running direction from hip progression and measure rearward elbow drive angle.
+        let hipMidXs = usablePoses.compactMap { avgX($0.leftHip, $0.rightHip) }
+        var hipDelta: [Double] = []
+        if hipMidXs.count > 1 {
+            for i in 1..<hipMidXs.count { hipDelta.append(hipMidXs[i] - hipMidXs[i - 1]) }
+        }
+        let directionSign = median(hipDelta) >= 0 ? 1.0 : -1.0
+
+        var backwardDriveAngles: [Double] = []
+        for pose in usablePoses {
+            let pairs: [(JointPoint?, JointPoint?)] = [(pose.leftShoulder, pose.leftElbow), (pose.rightShoulder, pose.rightElbow)]
+            for (shoulder, elbow) in pairs {
+                guard let sh = shoulder, let el = elbow else { continue }
+                let dx = (sh.x - el.x) * directionSign // positive means elbow behind shoulder
+                guard dx > 0 else { continue }
+                let dy = abs(sh.y - el.y)
+                backwardDriveAngles.append(atan2(dx, max(0.001, dy)) * 180.0 / .pi)
+            }
+        }
+
+        let backwardElbowDriveAngleDegrees: Double
+        let backwardElbowDriveScore: Double
+        let backwardElbowDriveStatus: String
+        if backwardDriveAngles.count < 8 {
+            backwardElbowDriveAngleDegrees = 0.0
+            backwardElbowDriveScore = 0.0
+            backwardElbowDriveStatus = "Not measurable"
+        } else {
+            let meanDrive = backwardDriveAngles.reduce(0, +) / Double(backwardDriveAngles.count)
+            backwardElbowDriveAngleDegrees = meanDrive
+            let driveDeviation = abs(meanDrive - 40.0)
+            let score = clamp(1.0 - driveDeviation / 35.0, 0.10, 1.0)
+            backwardElbowDriveScore = score
+            backwardElbowDriveStatus = score >= 0.75 ? "Good" : score >= 0.50 ? "Moderate" : "Needs work"
+        }
+
+        // --- Elbow angle (shoulder-elbow-wrist) ---
+        var elbowAngleSamples: [Double] = []
+        for pose in usablePoses {
+            let chains: [(JointPoint?, JointPoint?, JointPoint?)] = [
+                (pose.leftShoulder, pose.leftElbow, pose.leftWrist),
+                (pose.rightShoulder, pose.rightElbow, pose.rightWrist),
+            ]
+            for (shoulder, elbow, wrist) in chains {
+                guard let sh = shoulder, let el = elbow, let wr = wrist else { continue }
+                let angle = angleAtVertex(a: sh, vertex: el, c: wr)
+                elbowAngleSamples.append(angle)
+            }
+        }
+
+        let elbowAngleDegrees: Double
+        let elbowAngleScore: Double
+        let elbowAngleStatus: String
+        if elbowAngleSamples.count < 10 {
+            elbowAngleDegrees = 0.0
+            elbowAngleScore = 0.0
+            elbowAngleStatus = "Not measurable"
+        } else {
+            let meanElbowAngle = elbowAngleSamples.reduce(0, +) / Double(elbowAngleSamples.count)
+            elbowAngleDegrees = meanElbowAngle
+            let elbowDeviation = abs(meanElbowAngle - 90.0)
+            let score = clamp(1.0 - elbowDeviation / 45.0, 0.10, 1.0)
+            elbowAngleScore = score
+            elbowAngleStatus = score >= 0.75 ? "Good" : score >= 0.50 ? "Moderate" : "Needs work"
+        }
+
+        // --- Shoulder-arm independence ---
+        // High torso-arm coupling suggests the torso is rotating with arm swing instead of stable carriage.
+        var torsoTwist: [Double] = []
+        var armPhase: [Double] = []
+        for pose in usablePoses {
+            guard let ls = pose.leftShoulder, let rs = pose.rightShoulder,
+                  let lh = pose.leftHip, let rh = pose.rightHip,
+                  let le = pose.leftElbow, let re = pose.rightElbow else { continue }
+            let shoulderLine = ls.x - rs.x
+            let hipLine = lh.x - rh.x
+            torsoTwist.append(shoulderLine - hipLine)
+
+            let leftOffset = le.x - ls.x
+            let rightOffset = re.x - rs.x
+            armPhase.append(leftOffset - rightOffset)
+        }
+
+        let shoulderArmIndependenceScore: Double
+        let shoulderArmIndependenceStatus: String
+        if torsoTwist.count < 10 || armPhase.count < 10 {
+            shoulderArmIndependenceScore = 0.0
+            shoulderArmIndependenceStatus = "Not measurable"
+        } else {
+            let corr = abs(pearsonCorrelation(torsoTwist, armPhase))
+            let score = clamp(1.0 - corr, 0.10, 1.0)
+            shoulderArmIndependenceScore = score
+            shoulderArmIndependenceStatus = score >= 0.75 ? "Good" : score >= 0.50 ? "Moderate" : "Needs work"
+        }
+
         // --- Pelvic Drop / Hip Symmetry: left-right hip Y difference during movement ---
         // In Vision coords Y=0 is bottom, Y=1 is top.
         // (leftHip.y - rightHip.y) > 0 → left is higher → right hip drops
@@ -415,6 +553,51 @@ final class PoseExtractor {
             headForwardStatus = headVal >= 0.75 ? "Good" : headVal >= 0.50 ? "Moderate" : "Needs work"
         }
 
+        // --- Composite 0-100 categories (stored as 0.0-1.0) ---
+        let postureScore = weightedAverage([
+            (trunkScore, 0.40),
+            (shoulderElevScore, 0.30),
+            (headForwardScore, 0.30),
+        ])
+        let efficiencyScore = weightedAverage([
+            (cadenceScore, 0.40),
+            (overstrideScore, 0.35),
+            (vertOscScore, 0.25),
+        ])
+        let stabilityScore = weightedAverage([
+            (valgusScore, 0.45),
+            (pelvicDropScore, 0.30),
+            (stepSymmetryScore, 0.25),
+        ])
+        let propulsionScore = weightedAverage([
+            (cadenceScore, 0.35),
+            (overstrideScore, 0.35),
+            (backwardElbowDriveScore, 0.30),
+        ])
+        let armMechanicsScore = weightedAverage([
+            (armSwingScore, 0.25),
+            (armCrossingScore, 0.20),
+            (elbowAngleScore, 0.20),
+            (backwardElbowDriveScore, 0.20),
+            (shoulderArmIndependenceScore, 0.15),
+        ])
+        let symmetryScore = weightedAverage([
+            (stepSymmetryScore, 0.40),
+            (pelvicDropScore, 0.35),
+            (armCrossingScore, 0.25),
+        ])
+        let injuryRiskScore = clamp(
+            1.0 - weightedAverage([
+                (stabilityScore, 0.35),
+                (symmetryScore, 0.20),
+                (overstrideScore, 0.20),
+                (postureScore, 0.10),
+                (efficiencyScore, 0.15),
+            ]),
+            0.05,
+            0.95
+        )
+
         return PoseMetrics(
             cadenceEstimateSPM: cadenceSPM,
             cadenceScore: cadenceScore,
@@ -432,12 +615,30 @@ final class PoseExtractor {
             shoulderElevationStatus: shoulderElevStatus,
             armSwingScore: armSwingScore,
             armSwingStatus: armSwingStatus,
+            armCrossingScore: armCrossingScore,
+            armCrossingStatus: armCrossingStatus,
+            armCrossingDirection: armCrossingDirection,
+            backwardElbowDriveScore: backwardElbowDriveScore,
+            backwardElbowDriveStatus: backwardElbowDriveStatus,
+            backwardElbowDriveAngleDegrees: backwardElbowDriveAngleDegrees,
+            elbowAngleScore: elbowAngleScore,
+            elbowAngleStatus: elbowAngleStatus,
+            elbowAngleDegrees: elbowAngleDegrees,
+            shoulderArmIndependenceScore: shoulderArmIndependenceScore,
+            shoulderArmIndependenceStatus: shoulderArmIndependenceStatus,
             pelvicDropScore: pelvicDropScore,
             pelvicDropStatus: pelvicDropStatus,
             stepSymmetryScore: stepSymmetryScore,
             stepSymmetryStatus: stepSymmetryStatus,
             headForwardScore: headForwardScore,
             headForwardStatus: headForwardStatus,
+            postureScore: postureScore,
+            efficiencyScore: efficiencyScore,
+            stabilityScore: stabilityScore,
+            propulsionScore: propulsionScore,
+            armMechanicsScore: armMechanicsScore,
+            symmetryScore: symmetryScore,
+            injuryRiskScore: injuryRiskScore,
             frameCount: usablePoses.count,
             videoDurationSeconds: durationSeconds,
             notes: notes,
@@ -455,12 +656,68 @@ final class PoseExtractor {
         let leftHip: JointPoint?; let rightHip: JointPoint?
         let leftShoulder: JointPoint?; let rightShoulder: JointPoint?
         let leftElbow: JointPoint?; let rightElbow: JointPoint?
+        let leftWrist: JointPoint?; let rightWrist: JointPoint?
         let neck: JointPoint?; let nose: JointPoint?
-        var points: [JointPoint] { [leftAnkle,rightAnkle,leftKnee,rightKnee,leftHip,rightHip,leftShoulder,rightShoulder,neck,nose].compactMap { $0 } }
-        var completeness: Double { Double(points.count) / 10.0 }
+        var points: [JointPoint] { [leftAnkle,rightAnkle,leftKnee,rightKnee,leftHip,rightHip,leftShoulder,rightShoulder,leftElbow,rightElbow,leftWrist,rightWrist,neck,nose].compactMap { $0 } }
+        var completeness: Double { Double(points.count) / 14.0 }
         var averageConfidence: Double { points.isEmpty ? 0 : points.map(\.confidence).reduce(0,+) / Double(points.count) }
         var topVisibleY: Double? { points.map(\.y).max() }
         var bottomVisibleY: Double? { points.map(\.y).min() }
+    }
+
+    private func angleAtVertex(a: JointPoint, vertex: JointPoint, c: JointPoint) -> Double {
+        let v1x = a.x - vertex.x
+        let v1y = a.y - vertex.y
+        let v2x = c.x - vertex.x
+        let v2y = c.y - vertex.y
+        let dot = v1x * v2x + v1y * v2y
+        let n1 = sqrt(v1x * v1x + v1y * v1y)
+        let n2 = sqrt(v2x * v2x + v2y * v2y)
+        guard n1 > 0.0001, n2 > 0.0001 else { return 180.0 }
+        let cosTheta = clamp(dot / (n1 * n2), -1.0, 1.0)
+        return acos(cosTheta) * 180.0 / .pi
+    }
+
+    private func weightedAverage(_ values: [(Double, Double)]) -> Double {
+        var weighted = 0.0
+        var weightTotal = 0.0
+        for (value, weight) in values where value > 0 {
+            weighted += value * weight
+            weightTotal += weight
+        }
+        guard weightTotal > 0 else { return 0.0 }
+        return clamp(weighted / weightTotal, 0.0, 1.0)
+    }
+
+    private func pearsonCorrelation(_ x: [Double], _ y: [Double]) -> Double {
+        let n = min(x.count, y.count)
+        guard n >= 3 else { return 0.0 }
+        let xs = Array(x.prefix(n))
+        let ys = Array(y.prefix(n))
+        let mx = xs.reduce(0, +) / Double(n)
+        let my = ys.reduce(0, +) / Double(n)
+        var num = 0.0
+        var denX = 0.0
+        var denY = 0.0
+        for i in 0..<n {
+            let dx = xs[i] - mx
+            let dy = ys[i] - my
+            num += dx * dy
+            denX += dx * dx
+            denY += dy * dy
+        }
+        guard denX > 0.000001, denY > 0.000001 else { return 0.0 }
+        return num / sqrt(denX * denY)
+    }
+
+    private func median(_ values: [Double]) -> Double {
+        guard !values.isEmpty else { return 0.0 }
+        let sorted = values.sorted()
+        let mid = sorted.count / 2
+        if sorted.count % 2 == 0 {
+            return (sorted[mid - 1] + sorted[mid]) / 2.0
+        }
+        return sorted[mid]
     }
 
     private func smooth(_ values: [Double]) -> [Double] {

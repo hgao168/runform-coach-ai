@@ -46,12 +46,30 @@ class PoseMetricsInput(BaseModel):
     shoulder_elevation_status: str = "Not measurable"
     arm_swing_score: float = 0.0
     arm_swing_status: str = "Not measurable"
+    arm_crossing_score: float = 0.0
+    arm_crossing_status: str = "Not measurable"
+    arm_crossing_direction: str = "Not measurable"
+    backward_elbow_drive_score: float = 0.0
+    backward_elbow_drive_status: str = "Not measurable"
+    backward_elbow_drive_angle_degrees: float = 0.0
+    elbow_angle_score: float = 0.0
+    elbow_angle_status: str = "Not measurable"
+    elbow_angle_degrees: float = 0.0
+    shoulder_arm_independence_score: float = 0.0
+    shoulder_arm_independence_status: str = "Not measurable"
     pelvic_drop_score: float = 0.0
     pelvic_drop_status: str = "Not measurable"
     step_symmetry_score: float = 0.0
     step_symmetry_status: str = "Not measurable"
     head_forward_score: float = 0.0
     head_forward_status: str = "Not measurable"
+    posture_score: float = 0.0
+    efficiency_score: float = 0.0
+    stability_score: float = 0.0
+    propulsion_score: float = 0.0
+    arm_mechanics_score: float = 0.0
+    symmetry_score: float = 0.0
+    injury_risk_score: float = 0.0
     frame_count: int
     video_duration_seconds: float
     notes: List[str] = []
@@ -79,6 +97,8 @@ class TrainingPlanInput(BaseModel):
     recent_analysis_confidence: Optional[float] = None
     previous_week_summary: Optional[str] = None
     language: str = "en"
+    marathon_major: Optional[str] = None
+    marathon_plan_weeks: Optional[int] = None
 
 class PlannedWorkout(BaseModel):
     day: str
@@ -92,6 +112,23 @@ class PlannedWorkout(BaseModel):
     coaching_focus: Optional[str] = None
 
 
+class MarathonPlanWeek(BaseModel):
+    week: int
+    phase: str
+    target_km: float
+    long_run_km: float
+    key_workout: str
+    terrain_focus: str
+
+
+class MarathonPlanBlock(BaseModel):
+    race: str
+    total_weeks: int
+    course_profile: str
+    elevation_note: str
+    weeks: List[MarathonPlanWeek]
+
+
 class TrainingPlanResponse(BaseModel):
     summary: str
     target: str
@@ -102,6 +139,7 @@ class TrainingPlanResponse(BaseModel):
     workouts: List[PlannedWorkout]
     notes: List[str] = []
     connected_analysis_used: bool = False
+    marathon_plan: Optional[MarathonPlanBlock] = None
 
 
 # ── Elite athlete comparison ────────────────────────────────────────────────

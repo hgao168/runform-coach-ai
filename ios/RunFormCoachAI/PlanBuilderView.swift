@@ -6,6 +6,8 @@ struct PlanBuilderView: View {
     @State private var weeklyKmEditedByUser = false
     @State private var suppressWeeklyKmTracking = false
     @State private var target: TrainingTarget = .generalFitness
+    @State private var marathonMajor: MarathonMajor = .berlin
+    @State private var marathonPlanWeeks: Int = 16
     @State private var selectedRunDays: Set<Int> = [0, 2, 4]  // Mon Wed Fri default
     @State private var injuryFlag = false
 
@@ -168,6 +170,37 @@ struct PlanBuilderView: View {
                     }
                     .pickerStyle(.menu)
                     .tint(AppTheme.mint)
+                }
+
+                if target == .marathon {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("World Major")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.6))
+                        Picker("Marathon major", selection: $marathonMajor) {
+                            ForEach(MarathonMajor.allCases) { major in
+                                Text(major.rawValue).tag(major)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(AppTheme.mint)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Block length")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.6))
+                        Picker("Marathon plan weeks", selection: $marathonPlanWeeks) {
+                            Text("12 weeks").tag(12)
+                            Text("16 weeks").tag(16)
+                        }
+                        .pickerStyle(.segmented)
+                        .tint(AppTheme.mint)
+                    }
+
+                    Label("Marathon block is only used when goal is Marathon.", systemImage: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.62))
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -378,7 +411,9 @@ struct PlanBuilderView: View {
             recentAnalysisSummary: appStore.latestAnalysisSummary,
             recentAnalysisConfidence: appStore.latestAnalysisConfidence,
             previousWeekSummary: previousWeekSummary,
-            language: Bundle.main.preferredLocalizations.first ?? "en"
+            language: Bundle.main.preferredLocalizations.first ?? "en",
+            marathonMajor: target == .marathon ? marathonMajor.rawValue : nil,
+            marathonPlanWeeks: target == .marathon ? marathonPlanWeeks : nil
         )
 
         do {
@@ -580,9 +615,121 @@ struct TrainingPlanResultView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             summaryCard
+            if let marathonPlan = plan.marathonPlan {
+                marathonPlanCard(marathonPlan)
+            }
             workoutList
             notesCard
         }
+    }
+
+    private func marathonPlanCard(_ marathonPlan: MarathonPlanBlock) -> some View {
+        let boundaries = marathonPhaseBoundaries(marathonPlan.weeks)
+        DarkCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Marathon Block")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text("\(marathonPlan.race) • \(marathonPlan.totalWeeks) weeks")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(AppTheme.mint)
+                Text(marathonPlan.courseProfile)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.72))
+                Label(marathonPlan.elevationNote, systemImage: "mountain.2")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.68))
+
+                if !boundaries.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Phase boundaries")
+                            .font(.caption.bold())
+                            .foregroundStyle(AppTheme.mint)
+                        ForEach(boundaries, id: \.id) { boundary in
+                            HStack(spacing: 8) {
+                                Text(boundary.label)
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.black)
+                                    .padding(.horizontal, 9)
+                                    .padding(.vertical, 4)
+                                    .background(AppTheme.actionGradient)
+                                    .clipShape(Capsule())
+                                Text("W\(boundary.startWeek)-W\(boundary.endWeek)")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.75))
+                            }
+                        }
+                    }
+                }
+
+                ForEach(boundaries, id: \.id) { boundary in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("\(boundary.label) summary")
+                                .font(.caption.bold())
+                                .foregroundStyle(AppTheme.mint)
+                            Spacer()
+                            Text("W\(boundary.startWeek)-W\(boundary.endWeek)")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.70))
+                        }
+                        Text("Volume: \(boundary.startTargetKm, specifier: "%.1f") -> \(boundary.endTargetKm, specifier: "%.1f") km/week")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.72))
+                        Text("Long run: \(boundary.startLongRunKm, specifier: "%.1f") -> \(boundary.endLongRunKm, specifier: "%.1f") km")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.62))
+                        Text(boundary.sampleKeyWorkout)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.78))
+                    }
+                    .padding(8)
+                    .background(.white.opacity(0.05))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+            }
+        }
+    }
+
+    private func marathonPhaseBoundaries(_ weeks: [MarathonPlanWeek]) -> [MarathonPhaseBoundary] {
+        let sorted = weeks.sorted { $0.week < $1.week }
+        guard let first = sorted.first else { return [] }
+
+        var grouped: [[MarathonPlanWeek]] = [[first]]
+        for week in sorted.dropFirst() {
+            if grouped[grouped.count - 1][0].phase == week.phase {
+                grouped[grouped.count - 1].append(week)
+            } else {
+                grouped.append([week])
+            }
+        }
+
+        return grouped.compactMap { group in
+            guard let start = group.first, let end = group.last else { return nil }
+            return MarathonPhaseBoundary(
+                id: "\(start.phase)-\(start.week)-\(end.week)",
+                label: start.phase,
+                startWeek: start.week,
+                endWeek: end.week,
+                startTargetKm: start.targetKm,
+                endTargetKm: end.targetKm,
+                startLongRunKm: start.longRunKm,
+                endLongRunKm: end.longRunKm,
+                sampleKeyWorkout: start.keyWorkout
+            )
+        }
+    }
+
+    private struct MarathonPhaseBoundary {
+        let id: String
+        let label: String
+        let startWeek: Int
+        let endWeek: Int
+        let startTargetKm: Double
+        let endTargetKm: Double
+        let startLongRunKm: Double
+        let endLongRunKm: Double
+        let sampleKeyWorkout: String
     }
 
     private var summaryCard: some View {

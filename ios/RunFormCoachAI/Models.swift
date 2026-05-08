@@ -68,12 +68,30 @@ struct PoseMetrics: Codable {
     let shoulderElevationStatus: String
     let armSwingScore: Double
     let armSwingStatus: String
+    let armCrossingScore: Double
+    let armCrossingStatus: String
+    let armCrossingDirection: String
+    let backwardElbowDriveScore: Double
+    let backwardElbowDriveStatus: String
+    let backwardElbowDriveAngleDegrees: Double
+    let elbowAngleScore: Double
+    let elbowAngleStatus: String
+    let elbowAngleDegrees: Double
+    let shoulderArmIndependenceScore: Double
+    let shoulderArmIndependenceStatus: String
     let pelvicDropScore: Double
     let pelvicDropStatus: String
     let stepSymmetryScore: Double
     let stepSymmetryStatus: String
     let headForwardScore: Double
     let headForwardStatus: String
+    let postureScore: Double
+    let efficiencyScore: Double
+    let stabilityScore: Double
+    let propulsionScore: Double
+    let armMechanicsScore: Double
+    let symmetryScore: Double
+    let injuryRiskScore: Double
     let frameCount: Int
     let videoDurationSeconds: Double
     let notes: [String]
@@ -100,12 +118,30 @@ struct PoseMetrics: Codable {
         case shoulderElevationStatus = "shoulder_elevation_status"
         case armSwingScore = "arm_swing_score"
         case armSwingStatus = "arm_swing_status"
+        case armCrossingScore = "arm_crossing_score"
+        case armCrossingStatus = "arm_crossing_status"
+        case armCrossingDirection = "arm_crossing_direction"
+        case backwardElbowDriveScore = "backward_elbow_drive_score"
+        case backwardElbowDriveStatus = "backward_elbow_drive_status"
+        case backwardElbowDriveAngleDegrees = "backward_elbow_drive_angle_degrees"
+        case elbowAngleScore = "elbow_angle_score"
+        case elbowAngleStatus = "elbow_angle_status"
+        case elbowAngleDegrees = "elbow_angle_degrees"
+        case shoulderArmIndependenceScore = "shoulder_arm_independence_score"
+        case shoulderArmIndependenceStatus = "shoulder_arm_independence_status"
         case pelvicDropScore = "pelvic_drop_score"
         case pelvicDropStatus = "pelvic_drop_status"
         case stepSymmetryScore = "step_symmetry_score"
         case stepSymmetryStatus = "step_symmetry_status"
         case headForwardScore = "head_forward_score"
         case headForwardStatus = "head_forward_status"
+        case postureScore = "posture_score"
+        case efficiencyScore = "efficiency_score"
+        case stabilityScore = "stability_score"
+        case propulsionScore = "propulsion_score"
+        case armMechanicsScore = "arm_mechanics_score"
+        case symmetryScore = "symmetry_score"
+        case injuryRiskScore = "injury_risk_score"
         case frameCount = "frame_count"
         case videoDurationSeconds = "video_duration_seconds"
         case notes
@@ -237,6 +273,18 @@ enum TrainingTarget: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
 }
 
+enum MarathonMajor: String, CaseIterable, Codable, Identifiable {
+    case tokyo = "Tokyo"
+    case boston = "Boston"
+    case london = "London"
+    case berlin = "Berlin"
+    case chicago = "Chicago"
+    case newYorkCity = "New York City"
+    case sydney = "Sydney"
+
+    var id: String { rawValue }
+}
+
 struct FormIssueContext: Codable, Identifiable, Equatable {
     var id: String { title + severity }
     let title: String
@@ -263,6 +311,8 @@ struct TrainingPlanInput: Codable {
     let recentAnalysisConfidence: Double?
     let previousWeekSummary: String?
     let language: String
+    let marathonMajor: String?
+    let marathonPlanWeeks: Int?
 
     init(
         currentWeeklyKm: Double,
@@ -274,7 +324,9 @@ struct TrainingPlanInput: Codable {
         recentAnalysisSummary: String? = nil,
         recentAnalysisConfidence: Double? = nil,
         previousWeekSummary: String? = nil,
-        language: String = "en"
+        language: String = "en",
+        marathonMajor: String? = nil,
+        marathonPlanWeeks: Int? = nil
     ) {
         self.currentWeeklyKm = currentWeeklyKm
         self.target = target
@@ -286,6 +338,8 @@ struct TrainingPlanInput: Codable {
         self.recentAnalysisConfidence = recentAnalysisConfidence
         self.previousWeekSummary = previousWeekSummary
         self.language = language
+        self.marathonMajor = marathonMajor
+        self.marathonPlanWeeks = marathonPlanWeeks
     }
 
     enum CodingKeys: String, CodingKey {
@@ -299,6 +353,8 @@ struct TrainingPlanInput: Codable {
         case recentAnalysisConfidence = "recent_analysis_confidence"
         case previousWeekSummary = "previous_week_summary"
         case language
+        case marathonMajor = "marathon_major"
+        case marathonPlanWeeks = "marathon_plan_weeks"
     }
 }
 
@@ -329,6 +385,7 @@ struct TrainingPlanResponse: Codable, Equatable {
     let workouts: [PlannedWorkout]
     let notes: [String]
     let connectedAnalysisUsed: Bool
+    let marathonPlan: MarathonPlanBlock?
 
     enum CodingKeys: String, CodingKey {
         case summary
@@ -337,6 +394,41 @@ struct TrainingPlanResponse: Codable, Equatable {
         case workouts
         case notes
         case connectedAnalysisUsed = "connected_analysis_used"
+        case marathonPlan = "marathon_plan"
+    }
+}
+
+struct MarathonPlanWeek: Codable, Equatable, Identifiable {
+    var id: Int { week }
+    let week: Int
+    let phase: String
+    let targetKm: Double
+    let longRunKm: Double
+    let keyWorkout: String
+    let terrainFocus: String
+
+    enum CodingKeys: String, CodingKey {
+        case week, phase
+        case targetKm = "target_km"
+        case longRunKm = "long_run_km"
+        case keyWorkout = "key_workout"
+        case terrainFocus = "terrain_focus"
+    }
+}
+
+struct MarathonPlanBlock: Codable, Equatable {
+    let race: String
+    let totalWeeks: Int
+    let courseProfile: String
+    let elevationNote: String
+    let weeks: [MarathonPlanWeek]
+
+    enum CodingKeys: String, CodingKey {
+        case race
+        case totalWeeks = "total_weeks"
+        case courseProfile = "course_profile"
+        case elevationNote = "elevation_note"
+        case weeks
     }
 }
 
