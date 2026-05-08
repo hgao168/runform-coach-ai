@@ -69,7 +69,10 @@ def _resolve_run_days(inp: TrainingPlanInput) -> list[str]:
 
 
 def _closest_am_profile(weekly_km: float) -> int:
-    return 55 if abs(weekly_km - 55.0) <= abs(weekly_km - 70.0) else 70
+    # Advanced Marathoning profiles are mile plans:
+    # AM55 ~= 55 mi/week (~88 km), AM70 ~= 70 mi/week (~112 km)
+    # Above AM55 ceiling, default to AM70 profile.
+    return 70 if weekly_km > 88.0 else 55
 
 
 def _key_workout_for_phase(phase: str, week: int, injury_flag: bool) -> str:
@@ -231,12 +234,14 @@ def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonP
     profile_label = f"AM {am_profile_km}"
 
     start_km = max(16.0, weekly_km)
+    cap_km = 112.0 if am_profile_km == 70 else 88.0
+
     if am_profile_km == 70:
-        peak_km = min(78.0, max(64.0, start_km * 1.38))
+        peak_km = min(cap_km, max(min(start_km, cap_km), start_km * 1.38))
     else:
-        peak_km = min(62.0, max(52.0, start_km * 1.35))
+        peak_km = min(cap_km, max(min(start_km, cap_km), start_km * 1.35))
     if inp.injury_flag:
-        peak_km = _round_half(max(start_km, peak_km * 0.90))
+        peak_km = _round_half(min(cap_km, max(min(start_km, cap_km), peak_km * 0.90)))
 
     taper_weeks = 2 if requested_weeks == 12 else 3
     taper_start = requested_weeks - taper_weeks + 1
@@ -286,7 +291,10 @@ def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonP
             target_km = _round_half(max(24.0, peak_km * taper_factors[min(taper_index, len(taper_factors) - 1)]))
             long_run = _round_half(taper_longs[min(taper_index, len(taper_longs) - 1)])
         if week == 1:
-            target_km = _round_half(start_km)
+            target_km = _round_half(min(start_km, cap_km))
+
+        target_km = _round_half(min(target_km, cap_km))
+        long_run = _round_half(min(long_run, target_km))
 
         key = _key_workout_for_phase(phase, week, inp.injury_flag)
         if race == "Boston":
