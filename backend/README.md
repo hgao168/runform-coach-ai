@@ -61,3 +61,32 @@ Create a new migration later:
 alembic revision -m "describe_change"
 alembic upgrade head
 ```
+
+## Strava OAuth endpoints (Phase 3)
+
+Required environment variables:
+
+- `DATABASE_URL`
+- `STRAVA_CLIENT_ID`
+- `STRAVA_CLIENT_SECRET`
+- `STRAVA_REDIRECT_URI` (must match Strava app settings)
+- `STRAVA_TOKEN_ENCRYPTION_KEY` (Fernet key)
+
+Optional environment variables:
+
+- `STRAVA_SCOPES` (default: `read,activity:read_all`)
+- `STRAVA_STATE_SECRET` (defaults to `STRAVA_CLIENT_SECRET`)
+- `STRAVA_APP_CALLBACK_URL` (if set, callback redirects to app URL)
+
+Endpoints:
+
+- `GET /integrations/strava/connect?ios_user_id=<id>`
+- `GET /integrations/strava/callback?code=...&state=...`
+- `GET /integrations/strava/status?ios_user_id=<id>`
+- `POST /integrations/strava/disconnect` with body `{ "ios_user_id": "..." }`
+
+Generate a Fernet key example:
+
+```powershell
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```

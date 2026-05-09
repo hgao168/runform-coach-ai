@@ -159,6 +159,30 @@ class TrainingPlanResponse(BaseModel):
     marathon_plan: Optional[MarathonPlanBlock] = None
 
 
+class StravaConnectResponse(BaseModel):
+    authorize_url: str
+    state: str
+
+
+class StravaStatusResponse(BaseModel):
+    connected: bool
+    provider: str = "strava"
+    provider_athlete_id: Optional[str] = None
+    scope: Optional[str] = None
+    expires_at: Optional[str] = None
+    last_refresh_at: Optional[str] = None
+
+
+class StravaDisconnectRequest(BaseModel):
+    ios_user_id: str
+
+
+class StravaCallbackResponse(BaseModel):
+    connected: bool
+    ios_user_id: str
+    provider_athlete_id: str
+
+
 # ── Elite athlete comparison ────────────────────────────────────────────────
 
 class AthleteListItem(BaseModel):
