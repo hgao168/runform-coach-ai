@@ -3,12 +3,13 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import cv2
 from openai import OpenAI
 
 from .planner import generate_training_plan
-from .schemas import AnalysisResponse, Exercise, Issue, Metric, PoseMetricsInput, TrainingPlanInput, TrainingPlanResponse
+from .schemas import AnalyzeProfileContext, AnalysisResponse, Exercise, Issue, Metric, PoseMetricsInput, TrainingPlanInput, TrainingPlanResponse
 
 _SYSTEM_PROMPT = """You are an expert running coach and sports biomechanics analyst. Analyze the provided video frames of a person running and give a detailed biomechanical assessment.
 Return ONLY valid JSON with this exact structure: { "summary": "<1-2 sentence overall assessment>", "confidence": 0.0, "metrics": [ { "name": "", "score": 0.0, "status": "", "explanation": "" } ], "issues": [ { "title": "", "severity": "", "explanation": "", "recommended_exercises": [ { "name": "", "category": "", "sets": 0, "reps": "", "frequency_per_week": 0, "reason": "" } ] } ] }
@@ -20,6 +21,7 @@ Return ONLY valid JSON with this exact structure: { "summary": "<1-2 sentence ov
 Rules:
 - Only generate issues for metrics with status "Needs work" or "Moderate". Skip "Good" metrics unless all metrics are Good.
 - If video_quality_score < 0.65, lower confidence and explicitly say the report is approximate.
+- If runner profile context is provided (gender, shoe, leg length), use it only to personalize cueing and load advice. Do not override biomechanical evidence.
 - Provide 2 recommended exercises per issue.
 - Maximum 3 issues."""
 
@@ -28,6 +30,47 @@ _LANGUAGE_NAMES: dict[str, str] = {
     "zh": "Simplified Chinese (简体中文)",
     "nl": "Dutch (Nederlands)",
 }
+
+
+def _build_video_prompt(language: str, profile_context: Optional[AnalyzeProfileContext]) -> str:
+    prompt = _SYSTEM_PROMPT
+    lang_name = _LANGUAGE_NAMES.get(language)
+    if lang_name:
+        prompt += (
+            f"\n\nIMPORTANT: Return ALL coaching text in {lang_name}. "
+            "This includes summary, metric explanations, issue titles, explanations, and exercise reasons."
+        )
+    if profile_context:
+        prompt += (
+            "\n\nYou may receive runner profile context from self-reported user data. "
+            "Use it only to personalize explanation and cueing, not to override visible biomechanical evidence. "
+            "If profile factors are missing, proceed normally."
+        )
+    return prompt
+
+
+def _build_profile_context_text(profile_context: Optional[AnalyzeProfileContext]) -> str:
+    if not profile_context:
+        return ""
+    parts = []
+    if profile_context.gender and profile_context.gender != "unspecified":
+        parts.append(f"Gender: {profile_context.gender}")
+    if profile_context.shoe_size:
+        parts.append(f"Shoe size: {profile_context.shoe_size}")
+    if profile_context.leg_length_cm is not None:
+        parts.append(f"Leg length: {profile_context.leg_length_cm:.1f} cm")
+    if profile_context.shoe_brand_model:
+        parts.append(f"Shoe brand/model: {profile_context.shoe_brand_model}")
+    if profile_context.weekly_mileage_km is not None:
+        parts.append(f"Weekly mileage: {profile_context.weekly_mileage_km:.1f} km")
+    if profile_context.running_days_per_week is not None:
+        parts.append(f"Running days per week: {profile_context.running_days_per_week}")
+    if profile_context.injury_note:
+        parts.append(f"Injury note: {profile_context.injury_note}")
+
+    if not parts:
+        return ""
+    return "\nRunner profile context (self-reported):\n- " + "\n- ".join(parts)
 
 
 def _build_metrics_prompt(language: str) -> str:
@@ -71,7 +114,12 @@ def _parse_issues(data: dict) -> list[Issue]:
     ]
 
 
-def analyze_running_video(video_bytes: bytes, filename: str) -> AnalysisResponse:
+def analyze_running_video(
+    video_bytes: bytes,
+    filename: str,
+    language: str = "en",
+    profile_context: Optional[AnalyzeProfileContext] = None,
+) -> AnalysisResponse:
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
@@ -86,14 +134,18 @@ def analyze_running_video(video_bytes: bytes, filename: str) -> AnalysisResponse
     if not frames_b64:
         raise ValueError("Could not extract frames from the uploaded video.")
 
-    content: list[dict] = [{"type": "text", "text": "Analyze the running form shown in these video frames:"}]
+    profile_text = _build_profile_context_text(profile_context)
+    content: list[dict] = [{"type": "text", "text": "Analyze the running form shown in these video frames:" + profile_text}]
     for b64 in frames_b64:
         content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}", "detail": "low"}})
 
     client = OpenAI(api_key=api_key)
     response = client.chat.completions.create(
         model="gpt-4o",
-        messages=[{"role": "system", "content": _SYSTEM_PROMPT}, {"role": "user", "content": content}],
+        messages=[
+            {"role": "system", "content": _build_video_prompt(language, profile_context)},
+            {"role": "user", "content": content},
+        ],
         max_tokens=2000,
         temperature=0.2,
         response_format={"type": "json_object"},
@@ -169,6 +221,16 @@ def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
     step_symmetry_line = f"\n- Step symmetry: score {pose_input.step_symmetry_score:.2f} | {pose_input.step_symmetry_status}" if pose_input.step_symmetry_status != "Not measurable" else ""
     head_forward_line = f"\n- Head forward position: score {pose_input.head_forward_score:.2f} | {pose_input.head_forward_status}" if pose_input.head_forward_status != "Not measurable" else ""
     composite_scores_line = f"\n- Composite scores (0-100): posture {pose_input.posture_score * 100:.0f}, efficiency {pose_input.efficiency_score * 100:.0f}, stability {pose_input.stability_score * 100:.0f}, propulsion {pose_input.propulsion_score * 100:.0f}, arm mechanics {pose_input.arm_mechanics_score * 100:.0f}, symmetry {pose_input.symmetry_score * 100:.0f}, injury risk {pose_input.injury_risk_score * 100:.0f}"
+    profile_lines: list[str] = []
+    if pose_input.gender:
+        profile_lines.append(f"- Gender: {pose_input.gender}")
+    if pose_input.shoe_size:
+        profile_lines.append(f"- Shoe size: {pose_input.shoe_size}")
+    if pose_input.leg_length_cm is not None:
+        profile_lines.append(f"- Leg length: {pose_input.leg_length_cm:.1f} cm")
+    if pose_input.shoe_brand_model:
+        profile_lines.append(f"- Shoe brand/model: {pose_input.shoe_brand_model}")
+    profile_context_block = "\nRunner profile context (self-reported):\n" + "\n".join(profile_lines) if profile_lines else ""
     user_message = f"""Running form metrics from on-device Apple Vision pose detection:
 - Capture mode: {pose_input.video_mode}
 - Video quality: {quality_pct}% | pose detection rate {pose_input.pose_detection_rate:.2f}
@@ -177,6 +239,7 @@ def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
 - Trunk lean: {pose_input.trunk_lean_degrees:.1f}° | score {pose_input.trunk_lean_score:.2f} | {pose_input.trunk_lean_status}
 - Knee valgus / hip stability: score {pose_input.knee_valgus_risk_score:.2f} | {pose_input.knee_valgus_status}{vert_osc_line}{shoulder_line}{arm_swing_line}{arm_cross_line}{elbow_drive_line}{elbow_angle_line}{shoulder_arm_line}{pelvic_drop_line}{step_symmetry_line}{head_forward_line}{composite_scores_line}
 - Frames analyzed: {pose_input.frame_count} over {pose_input.video_duration_seconds:.1f}s{notes_str}
+{profile_context_block}
 Generate targeted coaching issues and exercise recommendations based on these measurements."""
 
     client = OpenAI(api_key=api_key)

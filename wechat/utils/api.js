@@ -32,15 +32,32 @@ function request(method, path, data) {
  * WeChat mini programs use wx.uploadFile for multipart uploads.
  * @param {string} filePath - temp file path from wx.chooseMedia
  * @param {string} language - 'zh-Hans' | 'en'
+ * @param {object} [profile] - optional profile context for analysis
  * @param {function} [onProgress] - progress callback (percent: number)
  */
-function analyzeVideo(filePath, language, onProgress) {
+function analyzeVideo(filePath, language, profile, onProgress) {
+  let profileContext = ''
+  if (profile) {
+    profileContext = JSON.stringify({
+      gender: profile.gender || 'unspecified',
+      shoe_size: profile.shoeSize || '',
+      leg_length_cm: profile.legLengthCm || '',
+      shoe_brand_model: profile.shoeBrandModel || '',
+      weekly_mileage_km: profile.weeklyMileageKm || '',
+      running_days_per_week: profile.runningDaysPerWeek || '',
+      injury_note: profile.injuryNote || '',
+    })
+  }
+
   return new Promise((resolve, reject) => {
     const task = wx.uploadFile({
       url: `${BASE_URL}/analyze`,
       filePath,
       name: 'video',
-      formData: { language: language || 'zh-Hans' },
+      formData: {
+        language: language || 'zh-Hans',
+        profile_context: profileContext,
+      },
       timeout: 120000,
       success(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {

@@ -4,3 +4,26 @@ local.properties
 build/
 app/build/
 *.iml
+
+# Gradle wrapper jars (binary, not needed in repo)
+gradle/wrapper/gradle-wrapper.jar
+
+# Generated/compiled outputs
+**/*.class
+**/*.dex
+**/*.apk
+**/*.aab
+**/*.ap_
+
+# Signing keystores
+*.jks
+*.keystore
+
+# Android Studio navigation editor temp files
+.navigation/
+
+# Android profiling
+*.hprof
+
+# Test coverage
+*.exec

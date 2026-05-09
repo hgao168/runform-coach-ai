@@ -1,11 +1,13 @@
 import os
+import json
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
 from .athletes import compare_with_athlete, get_all_athletes
 from .schemas import (
+    AnalyzeProfileContext,
     AnalysisResponse,
     AthleteListItem,
     CompareRequest,
@@ -56,12 +58,29 @@ async def analyze_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
 
 
 @app.post("/analyze", response_model=AnalysisResponse)
-async def analyze(video: UploadFile = File(...)) -> AnalysisResponse:
+async def analyze(
+    video: UploadFile = File(...),
+    language: str = Form("en"),
+    profile_context: str = Form(""),
+) -> AnalysisResponse:
     """Legacy fallback: upload raw video for frame-based GPT-4o Vision analysis."""
     if not video.content_type or not video.content_type.startswith("video/"):
         raise HTTPException(status_code=400, detail="Please upload a valid video file.")
+
+    parsed_profile: AnalyzeProfileContext | None = None
+    if profile_context:
+        try:
+            parsed_profile = AnalyzeProfileContext(**json.loads(profile_context))
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid profile_context JSON: {exc}") from exc
+
     video_bytes = await video.read()
-    return analyze_running_video(video_bytes, video.filename or "running-video.mp4")
+    return analyze_running_video(
+        video_bytes,
+        video.filename or "running-video.mp4",
+        language=language,
+        profile_context=parsed_profile,
+    )
 
 
 @app.get("/athletes", response_model=list[AthleteListItem])

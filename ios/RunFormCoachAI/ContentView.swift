@@ -319,6 +319,11 @@ struct ContentView: View {
             var poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL, expectedVideoMode: videoMode.rawValue)
             poseMetrics.videoMode = videoMode.rawValue
             poseMetrics.language = Bundle.main.preferredLocalizations.first ?? "en"
+            let profile = appStore.profile
+            poseMetrics.gender = profile.gender.rawValue
+            poseMetrics.shoeSize = profile.shoeSize.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : profile.shoeSize
+            poseMetrics.legLengthCm = profile.legLengthCm
+            poseMetrics.shoeBrandModel = profile.shoeBrandModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : profile.shoeBrandModel
             lastPoseMetrics = poseMetrics
             if poseMetrics.videoQualityScore < 0.40 {
                 let topIssue = poseMetrics.qualityNotes.first ?? "Video quality is too low for reliable form analysis."

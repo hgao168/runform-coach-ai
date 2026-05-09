@@ -72,6 +72,33 @@
       </view>
     </view>
 
+    <view class="field-row">
+      <text class="field-label">{{i.genderLabel}}</text>
+      <view class="target-chips">
+        <view
+          wx:for="{{genderOptions}}" wx:key="key"
+          class="chip {{form.gender === item.key ? 'chip-active' : ''}}"
+          bindtap="selectGender"
+          data-key="{{item.key}}"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="field-row">
+      <text class="field-label">{{i.shoeSizeLabel}}</text>
+      <input class="input-field" value="{{form.shoeSize}}" placeholder="EU 42 / US 9" bindinput="onInput" data-key="shoeSize" />
+    </view>
+
+    <view class="field-row">
+      <text class="field-label">{{i.legLengthLabel}}</text>
+      <input class="input-field" type="number" value="{{form.legLengthCm}}" placeholder="85" bindinput="onInput" data-key="legLengthCm" />
+    </view>
+
+    <view class="field-row">
+      <text class="field-label">{{i.shoeBrandModelLabel}}</text>
+      <input class="input-field" value="{{form.shoeBrandModel}}" placeholder="ASICS Nimbus 27" bindinput="onInput" data-key="shoeBrandModel" />
+    </view>
+
     <view class="field-row" style="flex-direction: column; align-items: flex-start;">
       <text class="field-label" style="margin-bottom: 12rpx;">{{i.injuryNote}}</text>
       <textarea

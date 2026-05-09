@@ -7,6 +7,7 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
@@ -17,18 +18,21 @@ interface RunFormApi {
     @Multipart
     @POST("analyze")
     suspend fun analyzeVideo(
-        @Part video: MultipartBody.Part
+        @Part video: MultipartBody.Part,
+        @Part mode: MultipartBody.Part
     ): AnalysisResponse
+
+    @POST("training-plan")
+    suspend fun generatePlan(@Body request: TrainingPlanRequest): TrainingPlanResponse
 }
 
 object ApiClient {
-    // For emulator use 10.0.2.2 (maps to host machine localhost).
-    // For physical Android device use your computer LAN IP e.g. 192.168.1.20
-    private const val BASE_URL = "http://10.0.2.2:8000/"
+    private const val BASE_URL = "https://runform-coach-ai-staging.up.railway.app/"
 
     private val okhttp = OkHttpClient.Builder()
-        .connectTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(120, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS)
+        .writeTimeout(120, TimeUnit.SECONDS)
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
         })
@@ -45,4 +49,8 @@ object ApiClient {
         val requestBody = file.asRequestBody("video/mp4".toMediaType())
         return MultipartBody.Part.createFormData("video", file.name, requestBody)
     }
+
+    fun buildModePart(mode: String): MultipartBody.Part =
+        MultipartBody.Part.createFormData("mode", mode)
 }
+

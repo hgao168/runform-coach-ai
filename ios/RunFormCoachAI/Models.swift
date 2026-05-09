@@ -100,6 +100,10 @@ struct PoseMetrics: Codable {
     let qualityNotes: [String]
     var videoMode: String = "side"
     var language: String = "en"
+    var gender: String? = nil
+    var shoeSize: String? = nil
+    var legLengthCm: Double? = nil
+    var shoeBrandModel: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case cadenceEstimateSPM = "cadence_estimate_spm"
@@ -150,6 +154,10 @@ struct PoseMetrics: Codable {
         case qualityNotes = "quality_notes"
         case videoMode = "video_mode"
         case language
+        case gender
+        case shoeSize = "shoe_size"
+        case legLengthCm = "leg_length_cm"
+        case shoeBrandModel = "shoe_brand_model"
     }
 }
 
@@ -157,6 +165,15 @@ enum RunnerLevel: String, Codable, CaseIterable, Identifiable {
     case beginner = "Beginner"
     case intermediate = "Intermediate"
     case advanced = "Advanced"
+    var id: String { rawValue }
+}
+
+enum ProfileGender: String, Codable, CaseIterable, Identifiable {
+    case male = "male"
+    case female = "female"
+    case other = "other"
+    case unspecified = "unspecified"
+
     var id: String { rawValue }
 }
 
@@ -173,6 +190,85 @@ struct TesterProfile: Codable, Equatable {
     var injuryNote: String = ""
     var dateOfBirth: Date? = nil
     var weeklyExerciseHours: Double = 5
+    var gender: ProfileGender = .unspecified
+    var shoeSize: String = ""
+    var legLengthCm: Double? = nil
+    var shoeBrandModel: String = ""
+
+    enum CodingKeys: String, CodingKey {
+        case firstName
+        case lastName
+        case nickname
+        case level
+        case weeklyMileageKm
+        case runningDaysPerWeek
+        case heightCm
+        case weightKg
+        case target
+        case injuryNote
+        case dateOfBirth
+        case weeklyExerciseHours
+        case gender
+        case shoeSize
+        case legLengthCm
+        case shoeBrandModel
+    }
+
+    init(
+        firstName: String = "",
+        lastName: String = "",
+        nickname: String = "",
+        level: RunnerLevel = .beginner,
+        weeklyMileageKm: Double = 15,
+        runningDaysPerWeek: Int = 3,
+        heightCm: Double = 170,
+        weightKg: Double = 70,
+        target: String = "General Fitness",
+        injuryNote: String = "",
+        dateOfBirth: Date? = nil,
+        weeklyExerciseHours: Double = 5,
+        gender: ProfileGender = .unspecified,
+        shoeSize: String = "",
+        legLengthCm: Double? = nil,
+        shoeBrandModel: String = ""
+    ) {
+        self.firstName = firstName
+        self.lastName = lastName
+        self.nickname = nickname
+        self.level = level
+        self.weeklyMileageKm = weeklyMileageKm
+        self.runningDaysPerWeek = runningDaysPerWeek
+        self.heightCm = heightCm
+        self.weightKg = weightKg
+        self.target = target
+        self.injuryNote = injuryNote
+        self.dateOfBirth = dateOfBirth
+        self.weeklyExerciseHours = weeklyExerciseHours
+        self.gender = gender
+        self.shoeSize = shoeSize
+        self.legLengthCm = legLengthCm
+        self.shoeBrandModel = shoeBrandModel
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        firstName = try c.decodeIfPresent(String.self, forKey: .firstName) ?? ""
+        lastName = try c.decodeIfPresent(String.self, forKey: .lastName) ?? ""
+        nickname = try c.decodeIfPresent(String.self, forKey: .nickname) ?? ""
+        level = try c.decodeIfPresent(RunnerLevel.self, forKey: .level) ?? .beginner
+        weeklyMileageKm = try c.decodeIfPresent(Double.self, forKey: .weeklyMileageKm) ?? 15
+        runningDaysPerWeek = try c.decodeIfPresent(Int.self, forKey: .runningDaysPerWeek) ?? 3
+        heightCm = try c.decodeIfPresent(Double.self, forKey: .heightCm) ?? 170
+        weightKg = try c.decodeIfPresent(Double.self, forKey: .weightKg) ?? 70
+        target = try c.decodeIfPresent(String.self, forKey: .target) ?? "General Fitness"
+        injuryNote = try c.decodeIfPresent(String.self, forKey: .injuryNote) ?? ""
+        dateOfBirth = try c.decodeIfPresent(Date.self, forKey: .dateOfBirth)
+        weeklyExerciseHours = try c.decodeIfPresent(Double.self, forKey: .weeklyExerciseHours) ?? 5
+        gender = try c.decodeIfPresent(ProfileGender.self, forKey: .gender) ?? .unspecified
+        shoeSize = try c.decodeIfPresent(String.self, forKey: .shoeSize) ?? ""
+        legLengthCm = try c.decodeIfPresent(Double.self, forKey: .legLengthCm)
+        shoeBrandModel = try c.decodeIfPresent(String.self, forKey: .shoeBrandModel) ?? ""
+    }
 }
 
 enum FeedbackRating: String, Codable, CaseIterable, Identifiable {

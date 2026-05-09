@@ -1,5 +1,5 @@
 {
-  "appid": "YOUR_APPID_HERE",
+  "appid": "wxcd3db7c949a3c608",
   "projectname": "runform-coach-ai",
   "description": "RunForm Coach AI - 跑步姿态分析小程序",
   "compileType": "miniprogram",
@@ -37,9 +37,21 @@
     "packNpmManually": false,
     "packNpmRelationList": [],
     "minifyWXSS": true,
-    "disableUseStrict": false
+    "disableUseStrict": false,
+    "compileWorklet": false,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "useCompilerPlugins": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true
   },
   "simulatorType": "wechat",
   "simulatorPluginLibVersion": {},
-  "condition": {}
+  "condition": {},
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "editorSetting": {}
 }

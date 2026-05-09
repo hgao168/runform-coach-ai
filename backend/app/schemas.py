@@ -1,6 +1,16 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
+
+class AnalyzeProfileContext(BaseModel):
+    gender: str = "unspecified"
+    shoe_size: str = ""
+    leg_length_cm: Optional[float] = None
+    shoe_brand_model: str = ""
+    weekly_mileage_km: Optional[float] = None
+    running_days_per_week: Optional[int] = None
+    injury_note: str = ""
+
 class Metric(BaseModel):
     name: str
     score: float
@@ -78,6 +88,10 @@ class PoseMetricsInput(BaseModel):
     quality_notes: List[str] = []
     video_mode: str = "side"
     language: str = "en"
+    gender: Optional[str] = None
+    shoe_size: Optional[str] = None
+    leg_length_cm: Optional[float] = None
+    shoe_brand_model: Optional[str] = None
 
 class FormIssueContext(BaseModel):
     title: str

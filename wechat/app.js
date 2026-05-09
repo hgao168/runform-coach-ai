@@ -47,6 +47,10 @@ App({
       runningDaysPerWeek: 3,
       target: 'General Fitness',
       injuryNote: '',
+      gender: 'unspecified',
+      shoeSize: '',
+      legLengthCm: '',
+      shoeBrandModel: '',
     }
   },
 })

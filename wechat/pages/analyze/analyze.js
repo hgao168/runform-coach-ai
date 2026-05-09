@@ -71,6 +71,7 @@ Page({
     api.analyzeVideo(
       this.data.videoPath,
       backendLang,
+      storage.getProfile(),
       (progress) => {
         this.setData({ uploadProgress: progress })
       },

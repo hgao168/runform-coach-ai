@@ -16,6 +16,13 @@ const GOAL_OPTIONS = [
   { key: 'general_fitness', label: isZh ? '健身' : 'Fitness' },
 ]
 
+const GENDER_OPTIONS = [
+  { key: 'male', label: t('genderMale') },
+  { key: 'female', label: t('genderFemale') },
+  { key: 'other', label: t('genderOther') },
+  { key: 'unspecified', label: t('genderUnspecified') },
+]
+
 const LEVEL_LABELS = {
   beginner: isZh ? '初级' : 'Beginner',
   intermediate: isZh ? '中级' : 'Intermediate',
@@ -32,6 +39,10 @@ Page({
       runDaysPerWeek: t('runDaysPerWeek'),
       targetLabel: t('targetLabel'),
       injuryNote: t('injuryNote'),
+      genderLabel: t('genderLabel'),
+      shoeSizeLabel: t('shoeSizeLabel'),
+      legLengthLabel: t('legLengthLabel'),
+      shoeBrandModelLabel: t('shoeBrandModelLabel'),
       saveProfile: t('saveProfile'),
     },
 
@@ -43,6 +54,10 @@ Page({
       runningDaysPerWeek: 3,
       target: 'general_fitness',
       injuryNote: '',
+      gender: 'unspecified',
+      shoeSize: '',
+      legLengthCm: '',
+      shoeBrandModel: '',
     },
 
     avatarInitial: '?',
@@ -51,6 +66,7 @@ Page({
 
     levelOptions: LEVEL_OPTIONS,
     goalOptions: GOAL_OPTIONS,
+    genderOptions: GENDER_OPTIONS,
   },
 
   onLoad() {
@@ -62,7 +78,7 @@ Page({
   },
 
   onInput(e) {
-    const key = e.currentTarget.dataset.key
+    const { key } = e.currentTarget.dataset
     const form = { ...this.data.form, [key]: e.detail.value }
     this.setData({ form })
     this._updateDisplay()
@@ -73,13 +89,17 @@ Page({
   },
 
   selectLevel(e) {
-    const key = e.currentTarget.dataset.key
+    const { key } = e.currentTarget.dataset
     this.setData({ 'form.level': key })
     this._updateDisplay()
   },
 
   selectTarget(e) {
     this.setData({ 'form.target': e.currentTarget.dataset.key })
+  },
+
+  selectGender(e) {
+    this.setData({ 'form.gender': e.currentTarget.dataset.key })
   },
 
   decrementDays() {

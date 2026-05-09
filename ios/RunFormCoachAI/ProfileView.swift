@@ -12,6 +12,10 @@ struct ProfileView: View {
     @State private var weightKg: Double = 70
     @State private var target: TrainingTarget = .generalFitness
     @State private var injuryNote = ""
+    @State private var gender: ProfileGender = .unspecified
+    @State private var shoeSize = ""
+    @State private var legLengthCmText = ""
+    @State private var shoeBrandModel = ""
     @State private var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
     @State private var weeklyExerciseHours: Double = 5
     @State private var savedMessage: String?
@@ -216,6 +220,60 @@ struct ProfileView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
+                    Text("Gender")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.62))
+                    Picker("Gender", selection: $gender) {
+                        Text("Male").tag(ProfileGender.male)
+                        Text("Female").tag(ProfileGender.female)
+                        Text("Other").tag(ProfileGender.other)
+                        Text("Prefer not to say").tag(ProfileGender.unspecified)
+                    }
+                    .pickerStyle(.menu)
+                    .tint(AppTheme.mint)
+                }
+
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Shoe size")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.62))
+                        TextField("EU 42 / US 9", text: $shoeSize)
+                            .focused($fieldFocused)
+                            .padding(13)
+                            .background(.black.opacity(0.20))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .foregroundStyle(.white)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Leg length (cm)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.62))
+                        TextField("85", text: $legLengthCmText)
+                            .keyboardType(.decimalPad)
+                            .focused($fieldFocused)
+                            .padding(13)
+                            .background(.black.opacity(0.20))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Shoe brand/model")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.62))
+                    TextField("ASICS Nimbus 27", text: $shoeBrandModel)
+                        .textInputAutocapitalization(.words)
+                        .focused($fieldFocused)
+                        .padding(13)
+                        .background(.black.opacity(0.20))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Injury note")
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.62))
@@ -272,6 +330,14 @@ struct ProfileView: View {
             target = .generalFitness
         }
         injuryNote = profile.injuryNote
+        gender = profile.gender
+        shoeSize = profile.shoeSize
+        shoeBrandModel = profile.shoeBrandModel
+        if let legLength = profile.legLengthCm {
+            legLengthCmText = String(format: "%.1f", legLength)
+        } else {
+            legLengthCmText = ""
+        }
         dateOfBirth = profile.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
         weeklyExerciseHours = profile.weeklyExerciseHours
     }
@@ -291,7 +357,11 @@ struct ProfileView: View {
             target: target.rawValue,
             injuryNote: injuryNote,
             dateOfBirth: dateOfBirth,
-            weeklyExerciseHours: weeklyExerciseHours
+            weeklyExerciseHours: weeklyExerciseHours,
+            gender: gender,
+            shoeSize: shoeSize,
+            legLengthCm: Double(legLengthCmText.replacingOccurrences(of: ",", with: ".")),
+            shoeBrandModel: shoeBrandModel
         )
         savedMessage = String(localized: "profile.saved")
     }
