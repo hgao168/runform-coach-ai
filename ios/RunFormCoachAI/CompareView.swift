@@ -9,32 +9,47 @@ struct CompareView: View {
     @State private var athletes: [AthleteListItem] = []
     @State private var isLoadingAthletes = true
     @State private var loadError: String?
+    @State private var selectedTab: CompareTab = .elite
+    @State private var showVideoPicker = false
+    @State private var isAnalyzingCustomAthlete = false
+    @State private var customAthleteMetrics: PoseMetrics?
+    @State private var customAthleteAnalysis: AnalysisResponse?
+    @State private var customAthleteError: String?
+
+    enum CompareTab {
+        case elite
+        case custom
+    }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 AppBackground()
                 Group {
-                    if isLoadingAthletes {
-                        ProgressView()
-                            .tint(AppTheme.mint)
-                            .scaleEffect(1.4)
-                    } else if let error = loadError {
-                        VStack(spacing: 14) {
-                            Image(systemName: "wifi.exclamationmark")
-                                .font(.system(size: 40))
-                                .foregroundStyle(AppTheme.orange)
-                            Text("Couldn't Load Athletes")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                            Text(error)
-                                .font(.callout)
-                                .foregroundStyle(.white.opacity(0.62))
-                                .multilineTextAlignment(.center)
+                    if selectedTab == .elite {
+                        if isLoadingAthletes {
+                            ProgressView()
+                                .tint(AppTheme.mint)
+                                .scaleEffect(1.4)
+                        } else if let error = loadError {
+                            VStack(spacing: 14) {
+                                Image(systemName: "wifi.exclamationmark")
+                                    .font(.system(size: 40))
+                                    .foregroundStyle(AppTheme.orange)
+                                Text("Couldn't Load Athletes")
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                Text(error)
+                                    .font(.callout)
+                                    .foregroundStyle(.white.opacity(0.62))
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding(32)
+                        } else {
+                            athleteList
                         }
-                        .padding(32)
                     } else {
-                        athleteList
+                        customAthleteView
                     }
                 }
             }
@@ -42,14 +57,128 @@ struct CompareView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 0) {
+                        Button(action: { selectedTab = .elite }) {
+                            Text("Elite Athletes")
+                                .font(.headline)
+                                .foregroundStyle(selectedTab == .elite ? AppTheme.mint : .white.opacity(0.50))
+                                .frame(maxWidth: .infinity)
+                        }
+                        Divider()
+                            .frame(height: 20)
+                            .background(.white.opacity(0.20))
+                        Button(action: { selectedTab = .custom }) {
+                            Text("Add Any Athlete")
+                                .font(.headline)
+                                .foregroundStyle(selectedTab == .custom ? AppTheme.mint : .white.opacity(0.50))
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
                         .foregroundStyle(AppTheme.mint)
                 }
             }
         }
+        .sheet(isPresented: $showVideoPicker) {
+            VideoPicker { url in
+                Task {
+                    await analyzeCustomAthleteVideo(url)
+                }
+            }
+        }
         .task { await loadAthletes() }
         .preferredColorScheme(.dark)
+    }
+
+    private var customAthleteView: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Upload an athlete's video and compare your biomechanics against theirs.")
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.70))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 14)
+
+                if isAnalyzingCustomAthlete {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .tint(AppTheme.mint)
+                            .scaleEffect(1.4)
+                        Text("Analyzing athlete video...")
+                            .font(.callout)
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 18)
+                } else if let error = customAthleteError {
+                    VStack(spacing: 14) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 40))
+                            .foregroundStyle(AppTheme.orange)
+                        Text("Analysis Failed")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text(error)
+                            .font(.callout)
+                            .foregroundStyle(.white.opacity(0.62))
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(32)
+                    .frame(maxWidth: .infinity)
+                } else if customAthleteMetrics != nil {
+                    NavigationLink {
+                        CustomCompareResultView(
+                            poseMetrics: poseMetrics,
+                            athleteAnalysis: customAthleteAnalysis!
+                        )
+                    } label: {
+                        HStack {
+                            Image(systemName: "play.circle.fill")
+                                .font(.headline)
+                            Text("View Comparison Results")
+                                .font(.headline)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(16)
+                        .background(AppTheme.actionGradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .padding(.horizontal, 18)
+                }
+
+                Button(action: { showVideoPicker = true }) {
+                    VStack(spacing: 12) {
+                        Image(systemName: "video.badge.plus")
+                            .font(.system(size: 32))
+                            .foregroundStyle(AppTheme.mint)
+                        Text("Upload Athlete Video")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("MP4 or MOV format")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(24)
+                    .background(.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(.white.opacity(0.10), lineWidth: 1)
+                    )
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 28)
+            }
+        }
     }
 
     private var athleteList: some View {
@@ -100,6 +229,69 @@ struct CompareView: View {
             loadError = error.localizedDescription
         }
         isLoadingAthletes = false
+    }
+
+    private func analyzeCustomAthleteVideo(_ videoURL: URL) async {
+        isAnalyzingCustomAthlete = true
+        customAthleteError = nil
+        customAthleteMetrics = nil
+        customAthleteAnalysis = nil
+        do {
+            customAthleteAnalysis = try await APIClient.shared.analyzeVideo(fileURL: videoURL)
+            customAthleteMetrics = PoseMetrics(
+                cadenceEstimateSPM: 170,
+                cadenceScore: 0.8,
+                cadenceStatus: "good",
+                overstrideRiskScore: 0.6,
+                overstrideStatus: "warning",
+                trunkLeanDegrees: 5,
+                trunkLeanScore: 0.75,
+                trunkLeanStatus: "good",
+                kneeValgusRiskScore: 0.4,
+                kneeValgusStatus: "good",
+                verticalOscillationScore: 0.7,
+                verticalOscillationStatus: "good",
+                shoulderElevationScore: 0.8,
+                shoulderElevationStatus: "good",
+                armSwingScore: 0.75,
+                armSwingStatus: "good",
+                armCrossingScore: 0.65,
+                armCrossingStatus: "warning",
+                armCrossingDirection: "center",
+                backwardElbowDriveScore: 0.78,
+                backwardElbowDriveStatus: "good",
+                backwardElbowDriveAngleDegrees: 85,
+                elbowAngleScore: 0.72,
+                elbowAngleStatus: "good",
+                elbowAngleDegrees: 92,
+                shoulderArmIndependenceScore: 0.76,
+                shoulderArmIndependenceStatus: "good",
+                pelvicDropScore: 0.68,
+                pelvicDropStatus: "warning",
+                stepSymmetryScore: 0.82,
+                stepSymmetryStatus: "excellent",
+                headForwardScore: 0.74,
+                headForwardStatus: "good",
+                postureScore: 0.79,
+                efficiencyScore: 0.77,
+                stabilityScore: 0.73,
+                propulsionScore: 0.75,
+                armMechanicsScore: 0.74,
+                symmetryScore: 0.80,
+                injuryRiskScore: 0.35,
+                frameCount: 300,
+                videoDurationSeconds: 10.0,
+                notes: [],
+                videoQualityScore: 0.85,
+                poseDetectionRate: 0.95,
+                qualityNotes: []
+            )
+        } catch {
+            customAthleteError = error.localizedDescription
+            customAthleteMetrics = nil
+            customAthleteAnalysis = nil
+        }
+        isAnalyzingCustomAthlete = false
     }
 }
 
@@ -448,5 +640,183 @@ struct MetricComparisonRow: View {
         .padding(15)
         .background(.white.opacity(0.07))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+}
+
+// ── Custom Athlete Comparison ──────────────────────────────────────────────────
+
+struct CustomCompareResultView: View {
+    let poseMetrics: PoseMetrics
+    let athleteAnalysis: AnalysisResponse
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    similarityCard
+                    summaryCard
+                    metricsComparisonSection
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 10)
+                .padding(.bottom, 28)
+            }
+        }
+        .navigationTitle("Athlete Comparison")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+
+    private var similarityCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Your Form")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("Confidence Score")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+                    Spacer()
+                    ZStack {
+                        Circle()
+                            .stroke(.white.opacity(0.12), lineWidth: 6)
+                            .frame(width: 60, height: 60)
+                        Circle()
+                            .trim(from: 0, to: poseMetrics.efficiencyScore)
+                            .stroke(AppTheme.actionGradient, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                            .frame(width: 60, height: 60)
+                            .rotationEffect(.degrees(-90))
+                        Text("\(Int(poseMetrics.efficiencyScore * 100))")
+                            .font(.headline.bold())
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                Divider()
+                    .background(.white.opacity(0.10))
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Athlete's Form")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("Confidence Score")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+                    Spacer()
+                    ZStack {
+                        Circle()
+                            .stroke(.white.opacity(0.12), lineWidth: 6)
+                            .frame(width: 60, height: 60)
+                        Circle()
+                            .trim(from: 0, to: athleteAnalysis.confidence)
+                            .stroke(AppTheme.warmGradient, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                            .frame(width: 60, height: 60)
+                            .rotationEffect(.degrees(-90))
+                        Text("\(Int(athleteAnalysis.confidence * 100))")
+                            .font(.headline.bold())
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+        }
+    }
+
+    private var summaryCard: some View {
+        DarkCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Athlete Analysis", systemImage: "doc.text")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.mint)
+                Text(athleteAnalysis.summary)
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.82))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var metricsComparisonSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Metrics Detected")
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            if athleteAnalysis.metrics.isEmpty {
+                Text("No metrics detected in athlete's video")
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.62))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(20)
+            } else {
+                ForEach(athleteAnalysis.metrics.prefix(8)) { metric in
+                    athleteMetricRow(metric: metric)
+                }
+            }
+        }
+    }
+
+    private func athleteMetricRow(metric: Metric) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: statusIcon(for: metric.status))
+                    .foregroundStyle(statusColor(for: metric.status))
+                    .font(.caption.weight(.bold))
+                Text(metric.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("\(Int(metric.score * 100))")
+                    .font(.caption.bold())
+                    .foregroundStyle(AppTheme.orange)
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(.white.opacity(0.08))
+                        .frame(height: 8)
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(AppTheme.actionGradient)
+                        .frame(
+                            width: geo.size.width * max(0, min(1, metric.score)),
+                            height: 8
+                        )
+                }
+            }
+            .frame(height: 8)
+
+            if !metric.explanation.isEmpty {
+                Text(metric.explanation)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.58))
+            }
+        }
+        .padding(15)
+        .background(.white.opacity(0.07))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func statusIcon(for status: String) -> String {
+        switch status.lowercased() {
+        case "excellent", "great": return "checkmark.circle.fill"
+        case "good", "fair": return "checkmark.circle.fill"
+        case "warning", "poor": return "exclamationmark.circle.fill"
+        default: return "info.circle.fill"
+        }
+    }
+
+    private func statusColor(for status: String) -> Color {
+        switch status.lowercased() {
+        case "excellent", "great": return AppTheme.mint
+        case "good", "fair": return AppTheme.cyan
+        case "warning", "poor": return AppTheme.orange
+        default: return .white.opacity(0.62)
+        }
     }
 }

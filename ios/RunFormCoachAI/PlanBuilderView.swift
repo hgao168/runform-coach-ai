@@ -1031,14 +1031,24 @@ private struct MarathonPlanDetailView: View {
 
                                     ForEach(group.weeks) { week in
                                         VStack(alignment: .leading, spacing: 6) {
+                                            let isRaceWeek = isLastWeek(week)
+                                            let displayTargetKm = isRaceWeek ? 47.7 : week.targetKm
+                                            
                                             HStack {
                                                 Text("Week \(week.week)")
                                                     .font(.subheadline.bold())
                                                     .foregroundStyle(.white)
                                                 Spacer()
-                                                Text("\(week.targetKm, specifier: "%.1f") km")
-                                                    .font(.caption.bold())
-                                                    .foregroundStyle(AppTheme.mint)
+                                                VStack(alignment: .trailing, spacing: 2) {
+                                                    Text("\(displayTargetKm, specifier: "%.1f") km")
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(AppTheme.mint)
+                                                    if isRaceWeek {
+                                                        Text("(Race week)")
+                                                            .font(.caption2)
+                                                            .foregroundStyle(AppTheme.orange)
+                                                    }
+                                                }
                                             }
                                             Text("Long run: \(week.longRunKm, specifier: "%.1f") km")
                                                 .font(.caption)
@@ -1052,7 +1062,7 @@ private struct MarathonPlanDetailView: View {
                                                     Text("Weekly activities")
                                                         .font(.caption.bold())
                                                         .foregroundStyle(AppTheme.mint)
-                                                    ForEach(week.workouts, id: \.id) { workout in
+                                                    ForEach(buildDisplayWorkouts(for: week), id: \.id) { workout in
                                                         HStack(alignment: .top, spacing: 6) {
                                                             Text(workout.day)
                                                                 .font(.caption2.bold())
@@ -1070,14 +1080,6 @@ private struct MarathonPlanDetailView: View {
                                                     }
                                                 }
                                             }
-
-                                            Button {
-                                                onUseWeekKm(week.targetKm)
-                                                dismiss()
-                                            } label: {
-                                                Label("Use \(week.targetKm, specifier: "%.1f") km for weekly planning", systemImage: "arrow.up.right.square")
-                                            }
-                                            .buttonStyle(SecondaryButtonStyle())
                                         }
                                         .padding(8)
                                         .background(.white.opacity(0.05))
@@ -1102,6 +1104,47 @@ private struct MarathonPlanDetailView: View {
             }
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
+    }
+
+    private func buildDisplayWorkouts(for week: MarathonPlanWeek) -> [PlannedWorkout] {
+        guard isLastWeek(week) else { return week.workouts }
+        
+        // For race week, modify Saturday and Sunday
+        return week.workouts.map { workout in
+            if workout.day.lowercased().contains("sun") {
+                // Sunday is race day: 42.2k
+                return PlannedWorkout(
+                    day: workout.day,
+                    title: "Marathon Race",
+                    category: workout.category,
+                    intensity: "race",
+                    details: "Race day - 42.2k marathon",
+                    purpose: workout.purpose,
+                    distanceKm: 42.2,
+                    durationMinutes: workout.durationMinutes,
+                    coachingFocus: workout.coachingFocus
+                )
+            } else if workout.day.lowercased().contains("sat") {
+                // Saturday is easy run: 5.5k
+                return PlannedWorkout(
+                    day: workout.day,
+                    title: "Easy run",
+                    category: "Easy",
+                    intensity: "easy",
+                    details: "Easy run before race",
+                    purpose: "Recovery",
+                    distanceKm: 5.5,
+                    durationMinutes: 35,
+                    coachingFocus: "Keep loose"
+                )
+            }
+            return workout
+        }
+    }
+
+    private func isLastWeek(_ week: MarathonPlanWeek) -> Bool {
+        let allWeeks = planBlock.weeks.sorted { $0.week < $1.week }
+        return week.week == allWeeks.last?.week
     }
 }
 
