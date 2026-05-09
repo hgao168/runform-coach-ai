@@ -34,3 +34,30 @@ Example expected health payload:
 	}
 }
 ```
+
+## SQLAlchemy + Alembic (Phase 2)
+
+This repo now includes SQLAlchemy models for Strava integration tables and Alembic migration scaffolding.
+
+### Tables added
+
+- `users`
+- `oauth_connections`
+- `strava_runs`
+- `strava_weekly_stats`
+
+### Run migrations
+
+From `backend/`:
+
+```powershell
+set DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<db>
+alembic upgrade head
+```
+
+Create a new migration later:
+
+```powershell
+alembic revision -m "describe_change"
+alembic upgrade head
+```
