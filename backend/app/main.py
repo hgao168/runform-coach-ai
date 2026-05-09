@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
 from .athletes import compare_with_athlete, get_all_athletes
+from .db import check_database
 from .schemas import (
     AnalyzeProfileContext,
     AnalysisResponse,
@@ -32,7 +33,15 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "runform-coach-ai", "version": "0.5.0", "environment": ENVIRONMENT}
+    db_status = check_database()
+    overall_status = "ok" if db_status.get("status") in {"ok", "not_configured"} else "degraded"
+    return {
+        "status": overall_status,
+        "service": "runform-coach-ai",
+        "version": "0.5.0",
+        "environment": ENVIRONMENT,
+        "db": db_status,
+    }
 
 
 @app.post("/training-plan", response_model=TrainingPlanResponse)
