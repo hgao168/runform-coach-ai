@@ -514,7 +514,7 @@ struct ProfileView: View {
                 }
             }
         }
-        session.presentationContextProvider = StravaPresentationContextProvider()
+        session.presentationContextProvider = StravaPresentationContextProvider.shared
         session.prefersEphemeralWebBrowserSession = true
         stravaAuthSession = session
 
@@ -557,6 +557,8 @@ struct ProfileView: View {
 }
 
 private final class StravaPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+    static let shared = StravaPresentationContextProvider()
+
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         #if canImport(UIKit)
         let scenes = UIApplication.shared.connectedScenes
