@@ -367,6 +367,14 @@ struct ProfileView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(GradientButtonStyle())
+
+                    Button(role: .destructive) {
+                        disconnectStrava()
+                    } label: {
+                        Label("Disconnect Strava", systemImage: "link.slash")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(GradientButtonStyle())
                 } else {
                     Text("Connect Strava to bring your weekly load into future plan suggestions.")
                         .font(.callout)
@@ -381,6 +389,10 @@ struct ProfileView: View {
                     .buttonStyle(GradientButtonStyle())
                     .disabled(isConnectingStrava)
                 }
+
+                Text("Strava data is used only for your coaching and plan generation. It is not used to train AI models.")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.54))
 
                 if isLoadingStravaStatus {
                     HStack(spacing: 10) {
@@ -465,6 +477,34 @@ struct ProfileView: View {
                         stravaMessage = "Strava sign-in failed: \(message)"
                     } else {
                         stravaMessage = "Unable to start Strava sign-in: \(error.localizedDescription)"
+                    }
+                }
+            }
+        }
+    }
+
+    private func disconnectStrava() {
+        guard !isConnectingStrava else { return }
+        isConnectingStrava = true
+        stravaMessage = nil
+
+        Task {
+            do {
+                let response = try await APIClient.shared.disconnectStrava(iosUserID: appStore.appUserID)
+                await MainActor.run {
+                    appStore.updateStravaStatus(nil)
+                    isConnectingStrava = false
+                    stravaMessage = response.message
+                }
+            } catch {
+                await MainActor.run {
+                    isConnectingStrava = false
+                    if let apiError = error as? APIError,
+                       let message = apiError.errorDescription,
+                       !message.isEmpty {
+                        stravaMessage = "Strava disconnect failed: \(message)"
+                    } else {
+                        stravaMessage = "Unable to disconnect Strava: \(error.localizedDescription)"
                     }
                 }
             }

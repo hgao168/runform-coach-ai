@@ -177,6 +177,16 @@ class StravaDisconnectRequest(BaseModel):
     ios_user_id: str
 
 
+class StravaDisconnectResponse(BaseModel):
+    disconnected: bool = True
+    provider: str = "strava"
+    ios_user_id: str
+    revoked: bool = False
+    deleted_run_count: int = 0
+    deleted_weekly_stat_count: int = 0
+    message: str
+
+
 class StravaSyncRequest(BaseModel):
     ios_user_id: str
 
