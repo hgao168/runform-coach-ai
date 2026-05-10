@@ -201,6 +201,22 @@ class StravaSyncResponse(BaseModel):
     weekly_stats: List[StravaWeeklySummaryItem] = []
 
 
+class StravaSummaryResponse(BaseModel):
+    connected: bool = True
+    ios_user_id: str
+    weeks: int
+    weekly_stats: List[StravaWeeklySummaryItem] = []
+    total_distance_km: float
+    average_weekly_km: float
+    run_count: int
+    longest_run_km: float
+    avg_pace_s_per_km: Optional[float] = None
+    intensity_estimate: Optional[float] = None
+    load_trend: str
+    trend_delta_pct: Optional[float] = None
+    last_sync_at: Optional[str] = None
+
+
 class StravaCallbackResponse(BaseModel):
     connected: bool
     ios_user_id: str

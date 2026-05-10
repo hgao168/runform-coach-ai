@@ -21,6 +21,7 @@ from .schemas import (
     StravaCallbackResponse,
     StravaConnectResponse,
     StravaDisconnectRequest,
+    StravaSummaryResponse,
     StravaSyncRequest,
     StravaSyncResponse,
     StravaStatusResponse,
@@ -28,6 +29,7 @@ from .schemas import (
     TrainingPlanResponse,
 )
 from .strava_sync import sync_strava_runs_for_user
+from .strava_summary import build_strava_summary
 from .strava_oauth import (
     StravaOAuthConfigError,
     StravaOAuthError,
@@ -241,6 +243,39 @@ async def strava_sync(payload: StravaSyncRequest) -> StravaSyncResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to sync Strava: {exc}") from exc
+
+
+@app.get("/integrations/strava/summary", response_model=StravaSummaryResponse)
+def strava_summary(
+    ios_user_id: str = Query(..., min_length=3),
+    weeks: int = Query(8, ge=1, le=12),
+) -> StravaSummaryResponse:
+    """Return the Strava training summary used by the plan page."""
+    try:
+        with get_db_session() as session:
+            result = build_strava_summary(session, ios_user_id=ios_user_id, weeks=weeks)
+
+        return StravaSummaryResponse(
+            connected=True,
+            ios_user_id=result["ios_user_id"],
+            weeks=result["weeks"],
+            weekly_stats=result["weekly_stats"],
+            total_distance_km=result["total_distance_km"],
+            average_weekly_km=result["average_weekly_km"],
+            run_count=result["run_count"],
+            longest_run_km=result["longest_run_km"],
+            avg_pace_s_per_km=result["avg_pace_s_per_km"],
+            intensity_estimate=result["intensity_estimate"],
+            load_trend=result["load_trend"],
+            trend_delta_pct=result["trend_delta_pct"],
+            last_sync_at=result["last_sync_at"],
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to get Strava summary: {exc}") from exc
 
 
 @app.post("/integrations/strava/disconnect")
