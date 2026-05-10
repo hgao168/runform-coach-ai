@@ -5,6 +5,10 @@ struct PlanBuilderView: View {
     @State private var currentWeeklyKmText = "20"
     @State private var weeklyKmEditedByUser = false
     @State private var suppressWeeklyKmTracking = false
+    @State private var weeklyKmSourceLabel = "Profile baseline"
+    @State private var weeklyKmSourceDetail = "Using your saved profile weekly mileage."
+    @State private var stravaSummary: StravaSummaryResponse?
+    @State private var isLoadingStravaBaseline = false
     @State private var target: TrainingTarget = .generalFitness
     @State private var marathonMajor: MarathonMajor = .berlin
     @State private var marathonPlanWeeks: Int = 16
@@ -77,16 +81,25 @@ struct PlanBuilderView: View {
                     plan = saved.plan
                     setWeeklyKmText(saved.weeklyKm)
                     weeklyKmEditedByUser = false
+                    weeklyKmSourceLabel = "Saved plan"
+                    weeklyKmSourceDetail = "Using the weekly mileage from your last saved plan."
                     if let t = TrainingTarget(rawValue: saved.target) { target = t }
                 } else if !weeklyKmEditedByUser {
                     setWeeklyKmText(appStore.profile.weeklyMileageKm)
                     selectedRunDays = Self.defaultRunDays(appStore.profile.runningDaysPerWeek)
                     if let t = TrainingTarget(rawValue: appStore.profile.target) { target = t }
+                    weeklyKmSourceLabel = "Profile baseline"
+                    weeklyKmSourceDetail = "Using your saved profile weekly mileage."
                 }
+            }
+            .task {
+                await refreshWeeklyKmBaseline()
             }
             .onChange(of: appStore.profile.weeklyMileageKm) { mileage in
                 if !weeklyKmEditedByUser {
                     setWeeklyKmText(mileage)
+                    weeklyKmSourceLabel = "Profile baseline"
+                    weeklyKmSourceDetail = "Using your saved profile weekly mileage."
                 }
             }
             .onChange(of: appStore.profile.runningDaysPerWeek) { days in
@@ -299,8 +312,28 @@ struct PlanBuilderView: View {
                         .onChange(of: currentWeeklyKmText) { _ in
                             if !suppressWeeklyKmTracking {
                                 weeklyKmEditedByUser = true
+                                weeklyKmSourceLabel = "Manual input"
+                                weeklyKmSourceDetail = "You adjusted the weekly mileage by hand."
                             }
                         }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        StatusBadge(text: weeklyKmSourceLabel)
+                        if isLoadingStravaBaseline {
+                            ProgressView()
+                                .tint(AppTheme.mint)
+                        }
+                    }
+                    Text(weeklyKmSourceDetail)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.56))
+                    if let stravaSummary {
+                        Text("Strava average: \(stravaSummary.averageWeeklyKm, specifier: \"%.1f\") km/week • \(stravaSummary.loadTrend)")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.mint.opacity(0.88))
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -587,6 +620,35 @@ struct PlanBuilderView: View {
             appStore.setNextWeekPlan(result, target: target.rawValue, weeklyKm: adaptedKm)
         } catch {
             errorMessage = String(localized: "error.plan_failed")
+        }
+    }
+
+    @MainActor
+    private func refreshWeeklyKmBaseline() async {
+        guard !weeklyKmEditedByUser else { return }
+
+        isLoadingStravaBaseline = true
+        defer { isLoadingStravaBaseline = false }
+
+        do {
+            let summary = try await APIClient.shared.fetchStravaSummary(iosUserID: appStore.appUserID, weeks: 4)
+            stravaSummary = summary
+
+            if summary.averageWeeklyKm > 0 {
+                setWeeklyKmText(summary.averageWeeklyKm)
+                weeklyKmEditedByUser = false
+                weeklyKmSourceLabel = "Strava baseline"
+                weeklyKmSourceDetail = "Using synced Strava weekly mileage from the last 4 weeks."
+                return
+            }
+        } catch {
+            stravaSummary = nil
+        }
+
+        if !weeklyKmEditedByUser {
+            setWeeklyKmText(appStore.profile.weeklyMileageKm)
+            weeklyKmSourceLabel = "Profile baseline"
+            weeklyKmSourceDetail = "Using your saved profile weekly mileage."
         }
     }
 
