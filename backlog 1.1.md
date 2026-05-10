@@ -13,7 +13,7 @@ Important: do not use Strava data to train AI models. Strava’s API policy chan
 
 ## RunForm Strava Backlog 1.1
 
-This file is the current checkpoint for the Strava integration work.
+This file is the completed checkpoint for the Strava integration work.
 
 ## Done
 
@@ -41,27 +41,15 @@ This file is the current checkpoint for the Strava integration work.
 
 ## Current Goal
 
-Make Strava useful in the product flow, not just connectable.
+All planned Strava integration work in this checkpoint is complete.
 
 ## What’s Left
 
-### 1. iOS Plan integration
-
-- Prefill the Plan page with Strava baseline when connected.
-- Fall back to profile weekly mileage when Strava is not connected or not synced.
-- Show the source clearly in the UI.
-
-### 2. Data deletion and disconnect behavior
-
-- Done.
-
-### 3. Privacy wording
-
-- Done.
+All items in this checkpoint are done.
 
 ## Recommended Next Step
 
-Wire the Plan page to prefer the synced Strava baseline when available.
+No remaining checkpoint items.
 
 ## MVP Scope
 
