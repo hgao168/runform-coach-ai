@@ -6,11 +6,12 @@ from urllib.parse import urlencode
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from sqlalchemy import delete, select
 
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
 from .athletes import compare_with_athlete, get_all_athletes
 from .db import check_database, get_db_session
-from .db_models import OAuthConnection
+from .db_models import OAuthConnection, StravaRun, StravaWeeklyStat, User
 from .schemas import (
     AnalyzeProfileContext,
     AnalysisResponse,
@@ -21,6 +22,7 @@ from .schemas import (
     StravaCallbackResponse,
     StravaConnectResponse,
     StravaDisconnectRequest,
+    StravaDisconnectResponse,
     StravaSummaryResponse,
     StravaSyncRequest,
     StravaSyncResponse,
@@ -278,21 +280,51 @@ def strava_summary(
         raise HTTPException(status_code=500, detail=f"Failed to get Strava summary: {exc}") from exc
 
 
-@app.post("/integrations/strava/disconnect")
-async def strava_disconnect(payload: StravaDisconnectRequest) -> dict:
-    """Disconnect Strava by deauthorizing and deleting stored OAuth credentials."""
+@app.post("/integrations/strava/disconnect", response_model=StravaDisconnectResponse)
+async def strava_disconnect(payload: StravaDisconnectRequest) -> StravaDisconnectResponse:
+    """Disconnect Strava, revoke access when possible, and delete imported Strava data."""
     try:
         with get_db_session() as session:
             conn: OAuthConnection | None = get_strava_connection(session, ios_user_id=payload.ios_user_id)
-            if conn is None:
-                return {"disconnected": True, "provider": "strava", "message": "No active connection."}
+            user = session.scalar(select(User).where(User.ios_user_id == payload.ios_user_id))
 
-            access_token = decrypt_secret(conn.access_token_encrypted)
-            await deauthorize_access_token(access_token)
-            session.delete(conn)
+            revoked = False
+            revoke_error: str | None = None
+            if conn is not None:
+                access_token = decrypt_secret(conn.access_token_encrypted)
+                try:
+                    await deauthorize_access_token(access_token)
+                    revoked = True
+                except StravaOAuthError as exc:
+                    revoke_error = str(exc)
+
+            deleted_run_count = 0
+            deleted_weekly_stat_count = 0
+            if user is not None:
+                deleted_run_count = session.execute(delete(StravaRun).where(StravaRun.user_id == user.id)).rowcount or 0
+                deleted_weekly_stat_count = (
+                    session.execute(delete(StravaWeeklyStat).where(StravaWeeklyStat.user_id == user.id)).rowcount or 0
+                )
+
+            if conn is not None:
+                session.delete(conn)
+
             session.commit()
 
-        return {"disconnected": True, "provider": "strava"}
+        if revoke_error:
+            message = f"Strava data deleted. Token revocation failed: {revoke_error}"
+        elif conn is None:
+            message = "Strava data deleted. No active connection was found."
+        else:
+            message = "Strava disconnected and imported data deleted."
+
+        return StravaDisconnectResponse(
+            ios_user_id=payload.ios_user_id,
+            revoked=revoked,
+            deleted_run_count=deleted_run_count,
+            deleted_weekly_stat_count=deleted_weekly_stat_count,
+            message=message,
+        )
     except StravaOAuthConfigError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except StravaOAuthError as exc:

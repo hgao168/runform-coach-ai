@@ -486,6 +486,26 @@ struct StravaStatusResponse: Codable, Equatable {
     }
 }
 
+struct StravaDisconnectResponse: Codable, Equatable {
+    let disconnected: Bool
+    let provider: String
+    let iosUserID: String
+    let revoked: Bool
+    let deletedRunCount: Int
+    let deletedWeeklyStatCount: Int
+    let message: String
+
+    enum CodingKeys: String, CodingKey {
+        case disconnected
+        case provider
+        case iosUserID = "ios_user_id"
+        case revoked
+        case deletedRunCount = "deleted_run_count"
+        case deletedWeeklyStatCount = "deleted_weekly_stat_count"
+        case message
+    }
+}
+
 struct StravaWeeklySummaryItem: Codable, Equatable, Identifiable {
     var id: String { weekStart }
     let weekStart: String
