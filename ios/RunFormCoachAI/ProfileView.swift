@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 struct ProfileView: View {
     @EnvironmentObject private var appStore: AppStore
@@ -19,6 +20,10 @@ struct ProfileView: View {
     @State private var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
     @State private var weeklyExerciseHours: Double = 5
     @State private var savedMessage: String?
+    @State private var stravaMessage: String?
+    @State private var isLoadingStravaStatus = false
+    @State private var isConnectingStrava = false
+    @State private var stravaAuthSession: ASWebAuthenticationSession?
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
@@ -30,6 +35,7 @@ struct ProfileView: View {
                         profileHero
                         formCard
                         whyCard
+                        stravaCard
                     }
                     .padding(18)
                 }
@@ -51,6 +57,9 @@ struct ProfileView: View {
             }
             .onAppear {
                 loadDraftFromStore()
+            }
+            .task {
+                await refreshStravaStatus()
             }
         }
     }
@@ -314,6 +323,84 @@ struct ProfileView: View {
         }
     }
 
+    private var stravaCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionTitle("Connect Strava", subtitle: "Bring weekly load into future plans", systemImage: "link.circle.fill")
+
+                if let status = appStore.stravaStatus, status.connected {
+                    HStack(spacing: 12) {
+                        StatusBadge(text: "Connected")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Connected with Strava")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            if let athleteID = status.providerAthleteId {
+                                Text("Athlete ID: \(athleteID)")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.58))
+                            }
+                        }
+                        Spacer()
+                    }
+
+                    if let scope = status.scope, !scope.isEmpty {
+                        Text("Scopes: \(scope)")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.54))
+                    }
+
+                    if let lastRefreshAt = status.lastRefreshAt, !lastRefreshAt.isEmpty {
+                        Text("Last refresh: \(lastRefreshAt)")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.54))
+                    } else {
+                        Text("Last refresh: not available yet")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.54))
+                    }
+
+                    Button {
+                        Task { await refreshStravaStatus() }
+                    } label: {
+                        Label("Refresh status", systemImage: "arrow.clockwise")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(GradientButtonStyle())
+                } else {
+                    Text("Connect Strava to bring your weekly load into future plan suggestions.")
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.66))
+
+                    Button {
+                        connectStrava()
+                    } label: {
+                        Label(isConnectingStrava ? "Connecting…" : "Connect Strava", systemImage: "link")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(GradientButtonStyle())
+                    .disabled(isConnectingStrava)
+                }
+
+                if isLoadingStravaStatus {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .tint(AppTheme.mint)
+                        Text("Checking Strava connection…")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                }
+
+                if let stravaMessage {
+                    Text(stravaMessage)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mint)
+                }
+            }
+        }
+    }
+
     private func loadDraftFromStore() {
         let profile = appStore.profile
         firstName = profile.firstName
@@ -340,6 +427,96 @@ struct ProfileView: View {
         }
         dateOfBirth = profile.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
         weeklyExerciseHours = profile.weeklyExerciseHours
+    }
+
+    @MainActor
+    private func refreshStravaStatus() async {
+        isLoadingStravaStatus = true
+        defer { isLoadingStravaStatus = false }
+
+        do {
+            let status = try await APIClient.shared.fetchStravaStatus(iosUserID: appStore.appUserID)
+            appStore.updateStravaStatus(status)
+            stravaMessage = status.connected ? "Strava connection synced." : nil
+        } catch {
+            if appStore.stravaStatus == nil {
+                stravaMessage = nil
+            }
+        }
+    }
+
+    private func connectStrava() {
+        guard !isConnectingStrava else { return }
+        isConnectingStrava = true
+        stravaMessage = nil
+
+        Task {
+            do {
+                let response = try await APIClient.shared.fetchStravaConnectResponse(iosUserID: appStore.appUserID)
+                await MainActor.run {
+                    startStravaSession(authorizeURL: response.authorizeURL)
+                }
+            } catch {
+                await MainActor.run {
+                    isConnectingStrava = false
+                    stravaMessage = "Unable to start Strava sign-in."
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func startStravaSession(authorizeURL: URL) {
+        let session = ASWebAuthenticationSession(
+            url: authorizeURL,
+            callbackURLScheme: "runformcoachai"
+        ) { callbackURL, error in
+            Task { @MainActor in
+                self.isConnectingStrava = false
+                self.stravaAuthSession = nil
+
+                if let error = error as? ASWebAuthenticationSessionError,
+                   error.code == .canceledLogin {
+                    self.stravaMessage = "Strava connection canceled."
+                    return
+                }
+
+                if let error {
+                    self.stravaMessage = error.localizedDescription
+                    return
+                }
+
+                guard let callbackURL else {
+                    self.stravaMessage = "Strava connection finished without a callback."
+                    return
+                }
+
+                let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)
+                let queryItems = components?.queryItems ?? []
+                let status = queryItems.first(where: { $0.name == "status" })?.value
+                let athleteID = queryItems.first(where: { $0.name == "provider_athlete_id" })?.value
+
+                if status == "connected" {
+                    if let athleteID {
+                        self.stravaMessage = "Strava connected for athlete \(athleteID)."
+                    } else {
+                        self.stravaMessage = "Strava connected."
+                    }
+                    await self.refreshStravaStatus()
+                } else {
+                    self.stravaMessage = "Strava flow completed."
+                }
+            }
+        }
+        session.presentationContextProvider = StravaPresentationContextProvider()
+        session.prefersEphemeralWebBrowserSession = true
+        stravaAuthSession = session
+
+        if !session.start() {
+            isConnectingStrava = false
+            stravaMessage = "Unable to start Strava sign-in."
+            stravaAuthSession = nil
+        }
     }
 
     private func saveProfile() {
@@ -369,6 +546,20 @@ struct ProfileView: View {
     private func dismissKeyboard() {
         #if canImport(UIKit)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
+    }
+}
+
+private final class StravaPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        #if canImport(UIKit)
+        return UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first(where: { $0.activationState == .foregroundActive })?
+            .windows
+            .first(where: { $0.isKeyWindow }) ?? ASPresentationAnchor()
+        #else
+        return ASPresentationAnchor()
         #endif
     }
 }

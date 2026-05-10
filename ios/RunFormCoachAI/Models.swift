@@ -458,6 +458,34 @@ struct TrainingPlanInput: Codable {
     }
 }
 
+struct StravaConnectResponse: Codable, Equatable {
+    let authorizeURL: URL
+    let state: String
+
+    enum CodingKeys: String, CodingKey {
+        case authorizeURL = "authorize_url"
+        case state
+    }
+}
+
+struct StravaStatusResponse: Codable, Equatable {
+    let connected: Bool
+    let provider: String
+    let providerAthleteId: String?
+    let scope: String?
+    let expiresAt: String?
+    let lastRefreshAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case connected
+        case provider
+        case providerAthleteId = "provider_athlete_id"
+        case scope
+        case expiresAt = "expires_at"
+        case lastRefreshAt = "last_refresh_at"
+    }
+}
+
 struct PlannedWorkout: Codable, Identifiable, Equatable {
     var id: String { day + title }
     let day: String

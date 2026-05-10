@@ -31,6 +31,34 @@ final class APIClient {
         return try JSONDecoder().decode(AnalysisResponse.self, from: data)
     }
 
+    func fetchStravaConnectResponse(iosUserID: String) async throws -> StravaConnectResponse {
+        let endpoint = stravaEndpoint(path: "connect", iosUserID: iosUserID)
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+            throw APIError.server(message)
+        }
+        return try JSONDecoder().decode(StravaConnectResponse.self, from: data)
+    }
+
+    func fetchStravaStatus(iosUserID: String) async throws -> StravaStatusResponse {
+        let endpoint = stravaEndpoint(path: "status", iosUserID: iosUserID)
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+            throw APIError.server(message)
+        }
+        return try JSONDecoder().decode(StravaStatusResponse.self, from: data)
+    }
+
     // Backward-compatible fallback only. Prefer analyzeMetrics(_:), because it sends numeric pose metrics instead of the raw video.
     func analyzeVideo(fileURL: URL) async throws -> AnalysisResponse {
         let endpoint = baseURL.appendingPathComponent("analyze")
@@ -75,6 +103,15 @@ final class APIClient {
         body.append(data)
         body.append("\r\n--\(boundary)--\r\n")
         return body
+    }
+
+    private func stravaEndpoint(path: String, iosUserID: String) -> URL {
+        var components = URLComponents(url: baseURL.appendingPathComponent("integrations/strava").appendingPathComponent(path), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "ios_user_id", value: iosUserID)]
+        guard let url = components?.url else {
+            fatalError("Failed to build Strava API URL for path: \(path)")
+        }
+        return url
     }
 
     func generateTrainingPlan(input: TrainingPlanInput) async throws -> TrainingPlanResponse {
