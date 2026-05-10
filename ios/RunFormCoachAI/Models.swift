@@ -486,6 +486,57 @@ struct StravaStatusResponse: Codable, Equatable {
     }
 }
 
+struct StravaWeeklySummaryItem: Codable, Equatable, Identifiable {
+    var id: String { weekStart }
+    let weekStart: String
+    let totalDistanceKm: Double
+    let runCount: Int
+    let longestRunKm: Double
+    let avgPaceSPerKm: Double?
+    let intensityScore: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case weekStart = "week_start"
+        case totalDistanceKm = "total_distance_km"
+        case runCount = "run_count"
+        case longestRunKm = "longest_run_km"
+        case avgPaceSPerKm = "avg_pace_s_per_km"
+        case intensityScore = "intensity_score"
+    }
+}
+
+struct StravaSummaryResponse: Codable, Equatable {
+    let connected: Bool
+    let iosUserID: String
+    let weeks: Int
+    let weeklyStats: [StravaWeeklySummaryItem]
+    let totalDistanceKm: Double
+    let averageWeeklyKm: Double
+    let runCount: Int
+    let longestRunKm: Double
+    let avgPaceSPerKm: Double?
+    let intensityEstimate: Double?
+    let loadTrend: String
+    let trendDeltaPct: Double?
+    let lastSyncAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case connected
+        case iosUserID = "ios_user_id"
+        case weeks
+        case weeklyStats = "weekly_stats"
+        case totalDistanceKm = "total_distance_km"
+        case averageWeeklyKm = "average_weekly_km"
+        case runCount = "run_count"
+        case longestRunKm = "longest_run_km"
+        case avgPaceSPerKm = "avg_pace_s_per_km"
+        case intensityEstimate = "intensity_estimate"
+        case loadTrend = "load_trend"
+        case trendDeltaPct = "trend_delta_pct"
+        case lastSyncAt = "last_sync_at"
+    }
+}
+
 struct PlannedWorkout: Codable, Identifiable, Equatable {
     var id: String { day + title }
     let day: String

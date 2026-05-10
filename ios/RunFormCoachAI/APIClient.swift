@@ -101,6 +101,28 @@ final class APIClient {
         throw lastError ?? APIError.server("Unable to load Strava status from available backends.")
     }
 
+    func fetchStravaSummary(iosUserID: String, weeks: Int = 4) async throws -> StravaSummaryResponse {
+        var components = URLComponents(url: baseURL.appendingPathComponent("integrations/strava/summary"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "ios_user_id", value: iosUserID),
+            URLQueryItem(name: "weeks", value: String(weeks))
+        ]
+        guard let endpoint = components?.url else {
+            fatalError("Failed to build Strava summary URL.")
+        }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+            throw APIError.server(message)
+        }
+        return try JSONDecoder().decode(StravaSummaryResponse.self, from: data)
+    }
+
     // Backward-compatible fallback only. Prefer analyzeMetrics(_:), because it sends numeric pose metrics instead of the raw video.
     func analyzeVideo(fileURL: URL) async throws -> AnalysisResponse {
         let endpoint = baseURL.appendingPathComponent("analyze")
