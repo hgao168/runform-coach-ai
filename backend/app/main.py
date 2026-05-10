@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
@@ -20,10 +21,13 @@ from .schemas import (
     StravaCallbackResponse,
     StravaConnectResponse,
     StravaDisconnectRequest,
+    StravaSyncRequest,
+    StravaSyncResponse,
     StravaStatusResponse,
     TrainingPlanInput,
     TrainingPlanResponse,
 )
+from .strava_sync import sync_strava_runs_for_user
 from .strava_oauth import (
     StravaOAuthConfigError,
     StravaOAuthError,
@@ -38,6 +42,10 @@ from .strava_oauth import (
 )
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 app = FastAPI(title="RunForm Coach AI API", version="0.5.0")
 
@@ -153,23 +161,25 @@ async def strava_callback(code: str | None = None, state: str | None = None, err
     try:
         ios_user_id = verify_state(state)
         token_payload = await exchange_code_for_token(code)
+        provider_athlete_id = None
         with get_db_session() as session:
             connection = upsert_strava_connection(session, ios_user_id=ios_user_id, token_payload=token_payload)
             session.commit()
+            provider_athlete_id = connection.provider_athlete_id
 
         if app_url := app_callback_url():
             query = urlencode({
                 "status": "connected",
                 "ios_user_id": ios_user_id,
                 "provider": "strava",
-                "provider_athlete_id": connection.provider_athlete_id,
+                "provider_athlete_id": provider_athlete_id,
             })
             return RedirectResponse(url=f"{app_url}?{query}")
 
         return StravaCallbackResponse(
             connected=True,
             ios_user_id=ios_user_id,
-            provider_athlete_id=connection.provider_athlete_id,
+            provider_athlete_id=provider_athlete_id,
         )
     except StravaOAuthConfigError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -201,6 +211,36 @@ def strava_status(ios_user_id: str = Query(..., min_length=3)) -> StravaStatusRe
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to get Strava status: {exc}") from exc
+
+
+@app.post("/integrations/strava/sync", response_model=StravaSyncResponse)
+async def strava_sync(payload: StravaSyncRequest) -> StravaSyncResponse:
+    """Import recent Strava runs and refresh weekly aggregates for plan generation."""
+    try:
+        with get_db_session() as session:
+            result = await sync_strava_runs_for_user(session, ios_user_id=payload.ios_user_id)
+            session.commit()
+
+        return StravaSyncResponse(
+            connected=True,
+            ios_user_id=result["ios_user_id"],
+            lookback_days=result["lookback_days"],
+            scanned_activity_count=result["scanned_activity_count"],
+            synced_run_count=result["synced_run_count"],
+            week_count=result["week_count"],
+            synced_at=_utc_now_iso(),
+            weekly_stats=result["weekly_stats"],
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except StravaOAuthConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except StravaOAuthError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to sync Strava: {exc}") from exc
 
 
 @app.post("/integrations/strava/disconnect")
