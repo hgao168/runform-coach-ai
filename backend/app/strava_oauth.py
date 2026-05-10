@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 import base64
 import hashlib
 import hmac
@@ -145,6 +146,24 @@ async def exchange_code_for_token(code: str) -> dict[str, Any]:
     return response.json()
 
 
+async def refresh_access_token(refresh_token: str) -> dict[str, Any]:
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.post(
+            STRAVA_TOKEN_URL,
+            data={
+                "client_id": _client_id(),
+                "client_secret": _client_secret(),
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token",
+            },
+        )
+
+    if response.status_code >= 400:
+        raise StravaOAuthError(f"Strava token refresh failed: {response.text}")
+
+    return response.json()
+
+
 async def deauthorize_access_token(access_token: str) -> None:
     async with httpx.AsyncClient(timeout=20) as client:
         response = await client.post(STRAVA_DEAUTHORIZE_URL, data={"access_token": access_token})
@@ -198,6 +217,28 @@ def get_strava_connection(session: Session, ios_user_id: str) -> OAuthConnection
     if user is None:
         return None
     return session.scalar(select(OAuthConnection).where(OAuthConnection.user_id == user.id, OAuthConnection.provider == "strava"))
+
+
+async def get_valid_access_token(session: Session, conn: OAuthConnection) -> str:
+    now = datetime.now(timezone.utc)
+    if conn.expires_at > now + timedelta(seconds=60):
+        return decrypt_secret(conn.access_token_encrypted)
+
+    refresh_token = decrypt_secret(conn.refresh_token_encrypted)
+    token_payload = await refresh_access_token(refresh_token)
+    access_token = token_payload.get("access_token")
+    expires_at_epoch = token_payload.get("expires_at")
+    if not access_token or not expires_at_epoch:
+        raise StravaOAuthError("Incomplete refresh payload returned by Strava.")
+
+    new_refresh_token = token_payload.get("refresh_token") or refresh_token
+    conn.access_token_encrypted = encrypt_secret(access_token)
+    conn.refresh_token_encrypted = encrypt_secret(new_refresh_token)
+    conn.expires_at = time_to_utc_datetime(int(expires_at_epoch))
+    conn.scope = token_payload.get("scope") or conn.scope
+    conn.last_refresh_at = now
+    session.flush()
+    return access_token
 
 
 def time_to_utc_datetime(epoch_seconds: int):

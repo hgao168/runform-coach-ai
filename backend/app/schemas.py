@@ -177,6 +177,30 @@ class StravaDisconnectRequest(BaseModel):
     ios_user_id: str
 
 
+class StravaSyncRequest(BaseModel):
+    ios_user_id: str
+
+
+class StravaWeeklySummaryItem(BaseModel):
+    week_start: str
+    total_distance_km: float
+    run_count: int
+    longest_run_km: float
+    avg_pace_s_per_km: Optional[float] = None
+    intensity_score: Optional[float] = None
+
+
+class StravaSyncResponse(BaseModel):
+    connected: bool = True
+    ios_user_id: str
+    lookback_days: int
+    scanned_activity_count: int
+    synced_run_count: int
+    week_count: int
+    synced_at: str
+    weekly_stats: List[StravaWeeklySummaryItem] = []
+
+
 class StravaCallbackResponse(BaseModel):
     connected: bool
     ios_user_id: str
