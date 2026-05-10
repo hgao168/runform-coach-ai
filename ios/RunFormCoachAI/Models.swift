@@ -525,6 +525,28 @@ struct StravaWeeklySummaryItem: Codable, Equatable, Identifiable {
     }
 }
 
+struct StravaSyncResponse: Codable, Equatable {
+    let connected: Bool
+    let iosUserID: String
+    let lookbackDays: Int
+    let scannedActivityCount: Int
+    let syncedRunCount: Int
+    let weekCount: Int
+    let syncedAt: String
+    let weeklyStats: [StravaWeeklySummaryItem]
+
+    enum CodingKeys: String, CodingKey {
+        case connected
+        case iosUserID = "ios_user_id"
+        case lookbackDays = "lookback_days"
+        case scannedActivityCount = "scanned_activity_count"
+        case syncedRunCount = "synced_run_count"
+        case weekCount = "week_count"
+        case syncedAt = "synced_at"
+        case weeklyStats = "weekly_stats"
+    }
+}
+
 struct StravaSummaryResponse: Codable, Equatable {
     let connected: Bool
     let iosUserID: String
