@@ -118,6 +118,8 @@ class TrainingPlanInput(BaseModel):
     strava_longest_run_km: Optional[float] = None
     strava_avg_pace_s_per_km: Optional[float] = None
     strava_load_trend: Optional[str] = None
+    training_level: Optional[str] = None
+    plan_duration_weeks: Optional[int] = None
 
 class PlannedWorkout(BaseModel):
     day: str

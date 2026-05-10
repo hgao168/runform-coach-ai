@@ -55,6 +55,19 @@ def _planned_weekly_km(inp: TrainingPlanInput) -> float:
     return _round_half(max(planned, 1.0))
 
 
+def _apply_level_scaling(base_weekly_km: float, training_level: str | None) -> float:
+    """Scale base weekly km based on training level (Beginner/Intermediate/Advanced)."""
+    if not training_level:
+        return base_weekly_km
+    level_lower = training_level.lower()
+    if level_lower == "beginner":
+        return _round_half(base_weekly_km * 0.88)
+    elif level_lower == "advanced":
+        return _round_half(base_weekly_km * 1.08)
+    return base_weekly_km
+
+
+
 def _apply_strava_load_signals(inp: TrainingPlanInput, base_weekly_km: float, running_days: int) -> tuple[float, list[str]]:
     if (
         inp.strava_run_count is None
@@ -396,6 +409,7 @@ def generate_training_plan(inp: TrainingPlanInput) -> TrainingPlanResponse:
     running_days = len(run_days)
     weekly_km = _planned_weekly_km(inp)
     weekly_km, strava_notes = _apply_strava_load_signals(inp, weekly_km, running_days)
+    weekly_km = _apply_level_scaling(weekly_km, inp.training_level)
     marathon_block = _build_marathon_block(inp, weekly_km)
 
     notes: list[str] = [

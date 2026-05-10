@@ -10,17 +10,19 @@ struct PlanBuilderView: View {
     @State private var stravaSummary: StravaSummaryResponse?
     @State private var isLoadingStravaBaseline = false
     @State private var target: TrainingTarget = .generalFitness
+    @State private var trainingLevel: TrainingLevel = .intermediate
     @State private var marathonMajor: MarathonMajor = .berlin
     @State private var marathonPlanWeeks: Int = 16
     @State private var selectedRunDays: Set<Int> = [0, 2, 4]  // Mon Wed Fri default
     @State private var injuryFlag = false
+    @State private var planDurationWeeks: Int? = nil
 
     private var availableRunningDays: Int { selectedRunDays.count }
 
     private static func defaultRunDays(_ count: Int) -> Set<Int> {
         Set((0..<min(max(count, 1), 7)).map { $0 })
     }
-    @State private var isGenerating = false
+    @State private var generatingKind: GenerationKind?
     @State private var plan: TrainingPlanResponse?
     @State private var errorMessage: String?
     @State private var showSavedPlans = false
@@ -349,6 +351,34 @@ struct PlanBuilderView: View {
                     .tint(AppTheme.mint)
                 }
 
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Training Level")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.6))
+                    Picker("Training level", selection: $trainingLevel) {
+                        ForEach(TrainingLevel.allCases) { level in
+                            Text(level.rawValue).tag(level)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(AppTheme.mint)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Plan Duration")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.6))
+                    let durationOptions = _getDurationOptionsForTarget(target, level: trainingLevel)
+                    Picker("Plan duration", selection: $planDurationWeeks) {
+                        Text("Auto").tag(Int?.none)
+                        ForEach(durationOptions, id: \.self) { weeks in
+                            Text("\(weeks) weeks").tag(Int?(weeks))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(AppTheme.mint)
+                }
+
                 if target == .marathon {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("World Major")
@@ -614,7 +644,7 @@ struct PlanBuilderView: View {
                 dismissKeyboard()
                 Task { await generatePlan(kind: .weekly) }
             } label: {
-                if isGenerating {
+                if generatingKind == .weekly {
                     ProgressView().frame(maxWidth: .infinity)
                 } else {
                     Label("Weekly Plan", systemImage: "calendar.badge.plus")
@@ -622,7 +652,7 @@ struct PlanBuilderView: View {
                 }
             }
             .buttonStyle(GradientButtonStyle())
-            .disabled(isGenerating)
+            .disabled(generatingKind != nil)
 
             if target == .marathon {
                 Button {
@@ -630,11 +660,15 @@ struct PlanBuilderView: View {
                     dismissKeyboard()
                     Task { await generatePlan(kind: .marathon) }
                 } label: {
-                    Label("Marathon Plan", systemImage: "flag.pattern.checkered")
-                        .frame(maxWidth: .infinity)
+                    if generatingKind == .marathon {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else {
+                        Label("Marathon Plan", systemImage: "flag.pattern.checkered")
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 .buttonStyle(GradientButtonStyle())
-                .disabled(isGenerating)
+                .disabled(generatingKind != nil)
             }
         }
     }
@@ -679,9 +713,9 @@ struct PlanBuilderView: View {
             previousWeekSummary = summary
         }
 
-        isGenerating = true
+        generatingKind = kind
         errorMessage = nil
-        defer { isGenerating = false }
+        defer { generatingKind = nil }
 
         let dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         let selectedDayNames = selectedRunDays.sorted().compactMap { i in
@@ -705,7 +739,9 @@ struct PlanBuilderView: View {
             stravaRunCount: stravaSummary?.runCount,
             stravaLongestRunKm: stravaSummary?.longestRunKm,
             stravaAvgPaceSPerKm: stravaSummary?.avgPaceSPerKm,
-            stravaLoadTrend: stravaSummary?.loadTrend
+            stravaLoadTrend: stravaSummary?.loadTrend,
+            trainingLevel: trainingLevel.rawValue,
+            planDurationWeeks: planDurationWeeks
         )
 
         do {
@@ -743,6 +779,29 @@ struct PlanBuilderView: View {
             setWeeklyKmText(appStore.profile.weeklyMileageKm)
             weeklyKmSourceLabel = "Profile baseline"
             weeklyKmSourceDetail = "Using your saved profile weekly mileage."
+        }
+    }
+
+    private func _getDurationOptionsForTarget(_ target: TrainingTarget, level: TrainingLevel) -> [Int] {
+        // Based on backlog durations: General Fitness (4-8 weeks / ongoing / ongoing),
+        // 5K (8/10/12), 10K (10/12/12), Half (12/14/16), Marathon (12/16/user-choice)
+        switch target {
+        case .generalFitness:
+            return [4, 6, 8]
+        case .fiveK:
+            if level == .beginner { return [8] }
+            if level == .intermediate { return [10] }
+            return [12]
+        case .tenK:
+            if level == .beginner { return [10] }
+            if level == .intermediate { return [12] }
+            return [12]
+        case .halfMarathon:
+            if level == .beginner { return [12] }
+            if level == .intermediate { return [14] }
+            return [16]
+        case .marathon:
+            return [12, 16]
         }
     }
 
