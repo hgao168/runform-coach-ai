@@ -552,7 +552,7 @@ struct PlanBuilderView: View {
                         SectionTitle(
                             "Connected coaching",
                             subtitle: hasStrava
-                                ? "Generate an analysis to combine form coaching with your Strava data."
+                                ? "Using your latest form analysis and Strava data to adjust the plan."
                                 : "Generate an analysis first to personalise your plan.",
                             systemImage: hasStrava ? "link.circle.fill" : "link.circle"
                         )

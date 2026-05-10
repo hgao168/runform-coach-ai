@@ -105,6 +105,7 @@ def save_profile(payload: ProfileSaveRequest) -> ProfileSaveResponse:
 
 
 
+@app.post("/training-plan", response_model=TrainingPlanResponse)
 async def training_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
     """Generate a personalised one-week training plan. planned_weekly_km mirrors current_weekly_km."""
     try:
