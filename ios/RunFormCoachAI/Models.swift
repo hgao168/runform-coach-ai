@@ -410,6 +410,10 @@ struct TrainingPlanInput: Codable {
     let marathonMajor: String?
     let marathonPlanWeeks: Int?
     let includeMarathonBlock: Bool
+    let stravaRunCount: Int?
+    let stravaLongestRunKm: Double?
+    let stravaAvgPaceSPerKm: Double?
+    let stravaLoadTrend: String?
 
     init(
         currentWeeklyKm: Double,
@@ -424,7 +428,11 @@ struct TrainingPlanInput: Codable {
         language: String = "en",
         marathonMajor: String? = nil,
         marathonPlanWeeks: Int? = nil,
-        includeMarathonBlock: Bool = true
+        includeMarathonBlock: Bool = true,
+        stravaRunCount: Int? = nil,
+        stravaLongestRunKm: Double? = nil,
+        stravaAvgPaceSPerKm: Double? = nil,
+        stravaLoadTrend: String? = nil
     ) {
         self.currentWeeklyKm = currentWeeklyKm
         self.target = target
@@ -439,6 +447,10 @@ struct TrainingPlanInput: Codable {
         self.marathonMajor = marathonMajor
         self.marathonPlanWeeks = marathonPlanWeeks
         self.includeMarathonBlock = includeMarathonBlock
+        self.stravaRunCount = stravaRunCount
+        self.stravaLongestRunKm = stravaLongestRunKm
+        self.stravaAvgPaceSPerKm = stravaAvgPaceSPerKm
+        self.stravaLoadTrend = stravaLoadTrend
     }
 
     enum CodingKeys: String, CodingKey {
@@ -455,6 +467,10 @@ struct TrainingPlanInput: Codable {
         case marathonMajor = "marathon_major"
         case marathonPlanWeeks = "marathon_plan_weeks"
         case includeMarathonBlock = "include_marathon_block"
+        case stravaRunCount = "strava_run_count"
+        case stravaLongestRunKm = "strava_longest_run_km"
+        case stravaAvgPaceSPerKm = "strava_avg_pace_s_per_km"
+        case stravaLoadTrend = "strava_load_trend"
     }
 }
 

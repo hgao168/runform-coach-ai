@@ -55,6 +55,61 @@ def _planned_weekly_km(inp: TrainingPlanInput) -> float:
     return _round_half(max(planned, 1.0))
 
 
+def _apply_strava_load_signals(inp: TrainingPlanInput, base_weekly_km: float, running_days: int) -> tuple[float, list[str]]:
+    if (
+        inp.strava_run_count is None
+        and inp.strava_longest_run_km is None
+        and inp.strava_avg_pace_s_per_km is None
+        and inp.strava_load_trend is None
+    ):
+        return base_weekly_km, []
+
+    load_factor = 1.0
+    notes: list[str] = []
+
+    if inp.strava_run_count is not None and running_days > 0:
+        expected_runs = max(1, running_days)
+        frequency_ratio = inp.strava_run_count / expected_runs
+        if frequency_ratio < 0.8:
+            load_factor *= 0.94
+            notes.append("Strava run frequency is below your selected running days; weekly volume was reduced slightly.")
+        elif frequency_ratio > 1.3:
+            load_factor *= 1.04
+            notes.append("Strava run frequency is above your selected running days; weekly volume was increased slightly.")
+
+    if inp.strava_longest_run_km is not None:
+        expected_long_run = max(5.0, base_weekly_km * 0.35)
+        if inp.strava_longest_run_km < expected_long_run * 0.75:
+            load_factor *= 0.95
+            notes.append("Strava longest run suggests lower endurance than your baseline; long-run progression is kept conservative.")
+        elif inp.strava_longest_run_km > expected_long_run * 1.20:
+            load_factor *= 1.03
+            notes.append("Strava longest run supports a slightly stronger endurance load this week.")
+
+    if inp.strava_avg_pace_s_per_km is not None:
+        pace = inp.strava_avg_pace_s_per_km
+        if pace <= 330:
+            load_factor *= 1.02
+            notes.append("Strava pace trend is strong; moderate quality load was preserved.")
+        elif pace >= 390:
+            load_factor *= 0.97
+            notes.append("Strava pace trend is slower; quality load was softened to protect consistency.")
+
+    if inp.strava_load_trend:
+        trend = inp.strava_load_trend.lower()
+        if trend == "up":
+            load_factor *= 0.97
+            notes.append("Strava training load trend is rising; this plan trims volume to avoid overreaching.")
+        elif trend == "down":
+            load_factor *= 1.03
+            notes.append("Strava training load trend is declining; this plan rebuilds volume carefully.")
+
+    min_factor, max_factor = (0.85, 1.10) if inp.injury_flag else (0.88, 1.14)
+    clamped_factor = min(max_factor, max(min_factor, load_factor))
+    adjusted = _round_half(max(1.0, base_weekly_km * clamped_factor))
+    return adjusted, notes
+
+
 def _resolve_run_days(inp: TrainingPlanInput) -> list[str]:
     """Return the sorted list of days the user wants to run on."""
     day_order = {day: idx for idx, day in enumerate(DAYS)}
@@ -340,6 +395,7 @@ def generate_training_plan(inp: TrainingPlanInput) -> TrainingPlanResponse:
     run_days = _resolve_run_days(inp)
     running_days = len(run_days)
     weekly_km = _planned_weekly_km(inp)
+    weekly_km, strava_notes = _apply_strava_load_signals(inp, weekly_km, running_days)
     marathon_block = _build_marathon_block(inp, weekly_km)
 
     notes: list[str] = [
@@ -354,6 +410,8 @@ def generate_training_plan(inp: TrainingPlanInput) -> TrainingPlanResponse:
         notes.insert(0, "Method: Advanced Marathoning philosophy (periodized mesocycles, medium-long runs, LT/VO2/MP progression, cutback rhythm, taper).")
         notes.insert(0, f"Marathon major selected: {marathon_block.race}. {marathon_block.elevation_note}")
         notes.insert(1, f"{marathon_block.total_weeks}-week race block generated for marathon-only progression.")
+    if strava_notes:
+        notes = strava_notes + notes
 
     workouts: list[PlannedWorkout] = []
     strength_days = 3 if inp.injury_flag else 2

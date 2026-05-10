@@ -611,7 +611,11 @@ struct PlanBuilderView: View {
             language: Bundle.main.preferredLocalizations.first ?? "en",
             marathonMajor: target == .marathon ? marathonMajor.rawValue : nil,
             marathonPlanWeeks: target == .marathon ? marathonPlanWeeks : nil,
-            includeMarathonBlock: kind == .marathon
+            includeMarathonBlock: kind == .marathon,
+            stravaRunCount: stravaSummary?.runCount,
+            stravaLongestRunKm: stravaSummary?.longestRunKm,
+            stravaAvgPaceSPerKm: stravaSummary?.avgPaceSPerKm,
+            stravaLoadTrend: stravaSummary?.loadTrend
         )
 
         do {

@@ -114,6 +114,10 @@ class TrainingPlanInput(BaseModel):
     marathon_major: Optional[str] = None
     marathon_plan_weeks: Optional[int] = None
     include_marathon_block: bool = True
+    strava_run_count: Optional[int] = None
+    strava_longest_run_km: Optional[float] = None
+    strava_avg_pace_s_per_km: Optional[float] = None
+    strava_load_trend: Optional[str] = None
 
 class PlannedWorkout(BaseModel):
     day: str
