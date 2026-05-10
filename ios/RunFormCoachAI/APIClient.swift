@@ -15,6 +15,23 @@ final class APIClient {
         return url
     }()
 
+    private let stravaBaseURL: URL = {
+        if let urlString = Bundle.main.object(forInfoDictionaryKey: "STRAVA_BACKEND_BASE_URL") as? String,
+           !urlString.isEmpty,
+           let url = URL(string: urlString) {
+            return url
+        }
+
+        guard
+            let fallback = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
+            !fallback.isEmpty,
+            let fallbackURL = URL(string: fallback)
+        else {
+            fatalError("BACKEND_BASE_URL is not configured. Check project.yml build settings.")
+        }
+        return fallbackURL
+    }()
+
     func analyzeMetrics(_ metrics: PoseMetrics) async throws -> AnalysisResponse {
         let endpoint = baseURL.appendingPathComponent("analyze-metrics")
         var request = URLRequest(url: endpoint)
@@ -106,7 +123,7 @@ final class APIClient {
     }
 
     private func stravaEndpoint(path: String, iosUserID: String) -> URL {
-        var components = URLComponents(url: baseURL.appendingPathComponent("integrations/strava").appendingPathComponent(path), resolvingAgainstBaseURL: false)
+        var components = URLComponents(url: stravaBaseURL.appendingPathComponent("integrations/strava").appendingPathComponent(path), resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "ios_user_id", value: iosUserID)]
         guard let url = components?.url else {
             fatalError("Failed to build Strava API URL for path: \(path)")

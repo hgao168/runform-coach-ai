@@ -19,6 +19,8 @@
     </array>
     <key>BACKEND_BASE_URL</key>
     <string>$(BACKEND_BASE_URL)</string>
+    <key>STRAVA_BACKEND_BASE_URL</key>
+    <string>$(STRAVA_BACKEND_BASE_URL)</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
 </dict>
