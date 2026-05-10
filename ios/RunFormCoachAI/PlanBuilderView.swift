@@ -29,11 +29,13 @@ struct PlanBuilderView: View {
     @State private var showManualPlanEditor = false
     @State private var showWeeklyPlanDetails = false
     @State private var showMarathonPlanDetails = false
+    @State private var showRacePlanDetails = false
     @FocusState private var kmFieldFocused: Bool
 
     private enum GenerationKind {
         case weekly
         case marathon
+        case race
     }
 
     var body: some View {
@@ -154,6 +156,14 @@ struct PlanBuilderView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showRacePlanDetails) {
+                if let racePlan = plan?.racePlan {
+                    RacePlanDetailView(planBlock: racePlan) { selectedWeekKm in
+                        setWeeklyKmText(selectedWeekKm)
+                        weeklyKmEditedByUser = false
+                    }
+                }
+            }
         }
     }
 
@@ -179,6 +189,48 @@ struct PlanBuilderView: View {
                         }
                     }
                     .buttonStyle(SecondaryButtonStyle())
+                }
+            }
+
+            if let racePlan = plan.racePlan {
+                let boundaries = racePlanPhaseLinks(from: racePlan.weeks)
+                DarkCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("2) Specific \(racePlan.target) Training Plan")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("\(racePlan.level) • \(racePlan.totalWeeks)-week block")
+                            .font(.caption.bold())
+                            .foregroundStyle(AppTheme.mint)
+                        Text("View details for all weeks and apply any week target km to weekly planning.")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.68))
+
+                        Button {
+                            showRacePlanDetails = true
+                        } label: {
+                            HStack {
+                                Label("View \(racePlan.target) plan details", systemImage: "link")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                            }
+                        }
+                        .buttonStyle(SecondaryButtonStyle())
+
+                        if !boundaries.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Phase subsections")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(AppTheme.mint)
+                                ForEach(boundaries) { boundary in
+                                    Text("• \(boundary.label) W\(boundary.startWeek)-W\(boundary.endWeek)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.white.opacity(0.72))
+                                }
+                            }
+                            .padding(.top, 2)
+                        }
+                    }
                 }
             }
 
@@ -223,6 +275,33 @@ struct PlanBuilderView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func racePlanPhaseLinks(from weeks: [RacePlanWeek]) -> [MarathonPhaseLink] {
+        let sorted = weeks.sorted { $0.week < $1.week }
+        guard let first = sorted.first else { return [] }
+        var groups: [[RacePlanWeek]] = [[first]]
+        for week in sorted.dropFirst() {
+            if groups[groups.count - 1][0].phase == week.phase {
+                groups[groups.count - 1].append(week)
+            } else {
+                groups.append([week])
+            }
+        }
+        return groups.compactMap { group in
+            guard let start = group.first, let end = group.last else { return nil }
+            return MarathonPhaseLink(
+                id: "\(start.phase)-\(start.week)-\(end.week)",
+                label: start.phase,
+                startWeek: start.week,
+                endWeek: end.week,
+                startTargetKm: start.targetKm,
+                endTargetKm: end.targetKm,
+                startLongRunKm: start.longRunKm,
+                endLongRunKm: end.longRunKm,
+                weeks: []
+            )
         }
     }
 
@@ -393,19 +472,7 @@ struct PlanBuilderView: View {
                         .tint(AppTheme.mint)
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Block length")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.6))
-                        Picker("Marathon plan weeks", selection: $marathonPlanWeeks) {
-                            Text("12 weeks").tag(12)
-                            Text("16 weeks").tag(16)
-                        }
-                        .pickerStyle(.segmented)
-                        .tint(AppTheme.mint)
-                    }
-
-                    Label("Marathon block is only used when goal is Marathon.", systemImage: "info.circle")
+                    Label("Marathon block uses your Plan Duration selection above.", systemImage: "info.circle")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.62))
                 }
@@ -637,6 +704,16 @@ struct PlanBuilderView: View {
         }
     }
 
+    private var raceBlockButtonLabel: String {
+        switch target {
+        case .fiveK: return "5K Plan"
+        case .tenK: return "10K Plan"
+        case .halfMarathon: return "Half Marathon Plan"
+        case .marathon: return "Marathon Plan"
+        default: return "Race Plan"
+        }
+    }
+
     private var generateButtons: some View {
         HStack(spacing: 10) {
             Button {
@@ -664,6 +741,21 @@ struct PlanBuilderView: View {
                         ProgressView().frame(maxWidth: .infinity)
                     } else {
                         Label("Marathon Plan", systemImage: "flag.pattern.checkered")
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .buttonStyle(GradientButtonStyle())
+                .disabled(generatingKind != nil)
+            } else if target == .fiveK || target == .tenK || target == .halfMarathon {
+                Button {
+                    kmFieldFocused = false
+                    dismissKeyboard()
+                    Task { await generatePlan(kind: .race) }
+                } label: {
+                    if generatingKind == .race {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else {
+                        Label(raceBlockButtonLabel, systemImage: "flag.checkered")
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -734,14 +826,15 @@ struct PlanBuilderView: View {
             previousWeekSummary: previousWeekSummary,
             language: Bundle.main.preferredLocalizations.first ?? "en",
             marathonMajor: target == .marathon ? marathonMajor.rawValue : nil,
-            marathonPlanWeeks: target == .marathon ? marathonPlanWeeks : nil,
+            marathonPlanWeeks: nil,
             includeMarathonBlock: kind == .marathon,
             stravaRunCount: stravaSummary?.runCount,
             stravaLongestRunKm: stravaSummary?.longestRunKm,
             stravaAvgPaceSPerKm: stravaSummary?.avgPaceSPerKm,
             stravaLoadTrend: stravaSummary?.loadTrend,
             trainingLevel: trainingLevel.rawValue,
-            planDurationWeeks: planDurationWeeks
+            planDurationWeeks: planDurationWeeks,
+            includeRaceBlock: kind == .race
         )
 
         do {
@@ -1360,6 +1453,153 @@ private struct MarathonPlanDetailView: View {
     private func isLastWeek(_ week: MarathonPlanWeek) -> Bool {
         let allWeeks = planBlock.weeks.sorted { $0.week < $1.week }
         return week.week == allWeeks.last?.week
+    }
+}
+
+private struct RacePlanDetailView: View {
+    let planBlock: RacePlanBlock
+    let onUseWeekKm: (Double) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private var raceDistanceKm: Double {
+        switch planBlock.target {
+        case "5K": return 5.0
+        case "10K": return 10.0
+        default: return 21.1  // Half Marathon
+        }
+    }
+
+    private var phaseGroups: [(phase: String, weeks: [RacePlanWeek])] {
+        let sorted = planBlock.weeks.sorted { $0.week < $1.week }
+        var result: [(phase: String, weeks: [RacePlanWeek])] = []
+        for week in sorted {
+            if let last = result.last, last.phase == week.phase {
+                result[result.count - 1].weeks.append(week)
+            } else {
+                result.append((phase: week.phase, weeks: [week]))
+            }
+        }
+        return result
+    }
+
+    private func isLastWeek(_ week: RacePlanWeek) -> Bool {
+        planBlock.weeks.sorted { $0.week < $1.week }.last?.week == week.week
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        DarkCard {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("\(planBlock.target) Training Block")
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                Text("\(planBlock.level) • \(planBlock.totalWeeks) weeks")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(AppTheme.mint)
+                                Text("Base → BuildUp → Peak → Taper periodization.")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.72))
+                            }
+                        }
+
+                        ForEach(phaseGroups, id: \.phase) { group in
+                            let startWeek = group.weeks.first?.week ?? 0
+                            let endWeek = group.weeks.last?.week ?? 0
+                            DarkCard {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("\(group.phase) W\(startWeek)-W\(endWeek)")
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+
+                                    ForEach(group.weeks) { week in
+                                        let isRace = isLastWeek(week)
+                                        let displayTargetKm = isRace ? raceDistanceKm : week.targetKm
+
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            HStack {
+                                                Text("Week \(week.week)")
+                                                    .font(.subheadline.bold())
+                                                    .foregroundStyle(.white)
+                                                Spacer()
+                                                VStack(alignment: .trailing, spacing: 2) {
+                                                    Text("\(displayTargetKm, specifier: "%.1f") km")
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(AppTheme.mint)
+                                                    if isRace {
+                                                        Text("(Race day)")
+                                                            .font(.caption2)
+                                                            .foregroundStyle(AppTheme.orange)
+                                                    }
+                                                }
+                                                Button {
+                                                    onUseWeekKm(week.targetKm)
+                                                    dismiss()
+                                                } label: {
+                                                    Label("Use", systemImage: "arrow.up.circle.fill")
+                                                        .font(.caption2)
+                                                        .foregroundStyle(AppTheme.mint)
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+
+                                            Text("Long run: \(week.longRunKm, specifier: "%.1f") km")
+                                                .font(.caption)
+                                                .foregroundStyle(.white.opacity(0.66))
+                                            Text(week.keyWorkout)
+                                                .font(.caption)
+                                                .foregroundStyle(.white.opacity(0.78))
+
+                                            if !week.workouts.isEmpty {
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text("Weekly activities")
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(AppTheme.mint)
+                                                    ForEach(week.workouts, id: \.id) { workout in
+                                                        HStack(alignment: .top, spacing: 6) {
+                                                            Text(workout.day)
+                                                                .font(.caption2.bold())
+                                                                .foregroundStyle(.white)
+                                                                .frame(width: 28, alignment: .leading)
+                                                            VStack(alignment: .leading, spacing: 2) {
+                                                                Text("\(workout.title) • \(workout.distanceKm ?? 0, specifier: "%.1f") km")
+                                                                    .font(.caption2.bold())
+                                                                    .foregroundStyle(.white.opacity(0.88))
+                                                                Text(workout.details)
+                                                                    .font(.caption2)
+                                                                    .foregroundStyle(.white.opacity(0.68))
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        .padding(8)
+                                        .background(.white.opacity(0.05))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 12)
+                    .padding(.bottom, 24)
+                }
+            }
+            .navigationTitle("\(planBlock.target) Plan Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(AppTheme.mint)
+                }
+            }
+            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
     }
 }
 

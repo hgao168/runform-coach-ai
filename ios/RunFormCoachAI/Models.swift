@@ -473,6 +473,7 @@ struct TrainingPlanInput: Codable {
     let stravaLoadTrend: String?
     let trainingLevel: String?
     let planDurationWeeks: Int?
+    let includeRaceBlock: Bool
 
     init(
         currentWeeklyKm: Double,
@@ -493,7 +494,8 @@ struct TrainingPlanInput: Codable {
         stravaAvgPaceSPerKm: Double? = nil,
         stravaLoadTrend: String? = nil,
         trainingLevel: String? = nil,
-        planDurationWeeks: Int? = nil
+        planDurationWeeks: Int? = nil,
+        includeRaceBlock: Bool = false
     ) {
         self.currentWeeklyKm = currentWeeklyKm
         self.target = target
@@ -514,6 +516,7 @@ struct TrainingPlanInput: Codable {
         self.stravaLoadTrend = stravaLoadTrend
         self.trainingLevel = trainingLevel
         self.planDurationWeeks = planDurationWeeks
+        self.includeRaceBlock = includeRaceBlock
     }
 
     enum CodingKeys: String, CodingKey {
@@ -536,6 +539,7 @@ struct TrainingPlanInput: Codable {
         case stravaLoadTrend = "strava_load_trend"
         case trainingLevel = "training_level"
         case planDurationWeeks = "plan_duration_weeks"
+        case includeRaceBlock = "include_race_block"
     }
 }
 
@@ -688,6 +692,7 @@ struct TrainingPlanResponse: Codable, Equatable {
     let notes: [String]
     let connectedAnalysisUsed: Bool
     let marathonPlan: MarathonPlanBlock?
+    let racePlan: RacePlanBlock?
 
     enum CodingKeys: String, CodingKey {
         case summary
@@ -697,6 +702,7 @@ struct TrainingPlanResponse: Codable, Equatable {
         case notes
         case connectedAnalysisUsed = "connected_analysis_used"
         case marathonPlan = "marathon_plan"
+        case racePlan = "race_plan"
     }
 }
 
@@ -734,6 +740,38 @@ struct MarathonPlanBlock: Codable, Equatable {
         case planProfile = "plan_profile"
         case courseProfile = "course_profile"
         case elevationNote = "elevation_note"
+        case weeks
+    }
+}
+
+struct RacePlanWeek: Codable, Equatable, Identifiable {
+    var id: Int { week }
+    let week: Int
+    let phase: String
+    let targetKm: Double
+    let longRunKm: Double
+    let keyWorkout: String
+    let workouts: [PlannedWorkout]
+
+    enum CodingKeys: String, CodingKey {
+        case week, phase
+        case targetKm = "target_km"
+        case longRunKm = "long_run_km"
+        case keyWorkout = "key_workout"
+        case workouts
+    }
+}
+
+struct RacePlanBlock: Codable, Equatable {
+    let target: String
+    let totalWeeks: Int
+    let level: String
+    let weeks: [RacePlanWeek]
+
+    enum CodingKeys: String, CodingKey {
+        case target
+        case totalWeeks = "total_weeks"
+        case level
         case weeks
     }
 }

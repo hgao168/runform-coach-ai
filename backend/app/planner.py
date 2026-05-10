@@ -1,4 +1,4 @@
-from .schemas import MarathonPlanBlock, MarathonPlanWeek, PlannedWorkout, TrainingPlanInput, TrainingPlanResponse
+from .schemas import MarathonPlanBlock, MarathonPlanWeek, PlannedWorkout, RacePlanBlock, RacePlanWeek, TrainingPlanInput, TrainingPlanResponse
 
 
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -293,7 +293,13 @@ def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonP
     if inp.target != "Marathon" or not inp.include_marathon_block:
         return None
 
-    requested_weeks = inp.marathon_plan_weeks if inp.marathon_plan_weeks in {12, 16} else 16
+    # Use plan_duration_weeks if set, fall back to marathon_plan_weeks, default to 16
+    if inp.plan_duration_weeks in {12, 16}:
+        requested_weeks = inp.plan_duration_weeks
+    elif inp.marathon_plan_weeks in {12, 16}:
+        requested_weeks = inp.marathon_plan_weeks
+    else:
+        requested_weeks = 16
     race = inp.marathon_major or "Berlin"
     profile = MAJOR_MARATHON_PROFILES.get(race, MAJOR_MARATHON_PROFILES["Berlin"])
 
@@ -403,6 +409,153 @@ def _build_marathon_block(inp: TrainingPlanInput, weekly_km: float) -> MarathonP
     )
 
 
+def _key_workout_for_race_phase(target: str, phase: str, week: int, injury_flag: bool) -> str:
+    """Key workout descriptions for 5K/10K/Half Marathon phases."""
+    if injury_flag:
+        return "Controlled aerobic run with light strides only if pain-free. Stop if discomfort rises."
+
+    if target == "5K":
+        if phase == "Base":
+            return "Strides + easy fartlek: 8-10 × 30 sec fast / 60 sec easy within your run."
+        if phase == "BuildUp":
+            pool = [
+                "Track intervals: 6 × 400m at 5K effort with 90 sec jog recovery.",
+                "Hill reps: 8 × 45 sec uphill at effort; jog down as recovery.",
+            ]
+            return pool[(week - 1) % len(pool)]
+        if phase == "Peak":
+            return "Race simulation: 3 × 5 min at 5K race pace with 3 min easy float."
+        return "Taper sharpener: 4 × 200m at race effort; short and snappy, stay fresh."
+
+    if target == "10K":
+        if phase == "Base":
+            return "Progression run: 20-25 min comfortable, finish last 5 min comfortably hard."
+        if phase == "BuildUp":
+            pool = [
+                "Tempo reps: 3 × 8 min at lactate threshold with 90 sec jog recovery.",
+                "10K pace reps: 3 × 10 min at goal 10K pace with 3 min easy recovery.",
+            ]
+            return pool[(week - 1) % len(pool)]
+        if phase == "Peak":
+            return "Race-pace session: 4 × 10 min at 10K goal pace with 3 min easy recovery."
+        return "Taper tune-up: 2 × 5 min at 10K race pace; keep total volume light."
+
+    # Half Marathon
+    if phase == "Base":
+        return "Aerobic steady run: finish the long run with last 20 min at easy half marathon pace."
+    if phase == "BuildUp":
+        pool = [
+            "Half marathon tempo: 2 × 12 min at goal HM pace with 3 min easy jog.",
+            "LT reps: 3 × 10 min at comfortably hard effort with 2 min jog recovery.",
+        ]
+        return pool[(week - 1) % len(pool)]
+    if phase == "Peak":
+        return "Race-pace long run finish: final 8-12 km of long run at HM goal pace."
+    return "Taper sharpener: 3 × 5 min at HM pace; relax and stay sharp."
+
+
+def _build_race_block(inp: TrainingPlanInput, weekly_km: float) -> RacePlanBlock | None:
+    """Build a periodized training block for 5K, 10K, or Half Marathon."""
+    if inp.target not in {"5K", "10K", "Half Marathon"} or not inp.include_race_block:
+        return None
+
+    target = inp.target
+    run_days = _resolve_run_days(inp)
+    level = inp.training_level or "Intermediate"
+
+    # Duration defaults based on level if not explicitly set
+    default_durations: dict[str, dict[str, int]] = {
+        "5K":           {"Beginner": 8,  "Intermediate": 10, "Advanced": 12},
+        "10K":          {"Beginner": 10, "Intermediate": 12, "Advanced": 12},
+        "Half Marathon":{"Beginner": 12, "Intermediate": 14, "Advanced": 16},
+    }
+    default_weeks = default_durations.get(target, {}).get(level, 10)
+    total_weeks = inp.plan_duration_weeks if (inp.plan_duration_weeks and inp.plan_duration_weeks >= 4) else default_weeks
+    total_weeks = max(4, min(total_weeks, 24))
+
+    # Volume bounds per target
+    if target == "5K":
+        start_km = max(10.0, weekly_km)
+        peak_km = min(40.0, max(start_km, start_km * 1.12))
+        max_long, min_long = 14.0, 8.0
+        taper_weeks = 1
+    elif target == "10K":
+        start_km = max(15.0, weekly_km)
+        peak_km = min(55.0, max(start_km, start_km * 1.15))
+        max_long, min_long = 18.0, 10.0
+        taper_weeks = 2
+    else:  # Half Marathon
+        start_km = max(20.0, weekly_km)
+        peak_km = min(70.0, max(start_km, start_km * 1.20))
+        max_long, min_long = 21.0, 12.0
+        taper_weeks = 2
+
+    if inp.injury_flag:
+        peak_km = _round_half(peak_km * 0.90)
+
+    taper_start = total_weeks - taper_weeks + 1
+    base_end = max(1, total_weeks // 4)
+    buildup_end = max(base_end + 1, taper_start - max(1, total_weeks // 6))
+
+    weeks: list[RacePlanWeek] = []
+    for week in range(1, total_weeks + 1):
+        cutback = (week % 4 == 0) and week < taper_start
+        wave = 0.90 if cutback else 1.0
+
+        if week >= taper_start:
+            phase = "Taper"
+            taper_index = week - taper_start
+            taper_factors = [0.70, 0.55]
+            tf = taper_factors[min(taper_index, len(taper_factors) - 1)]
+            target_km = _round_half(max(start_km * 0.50, peak_km * tf))
+            long_run = _round_half(min(max_long * 0.60, target_km * 0.35))
+        elif week <= base_end:
+            phase = "Base"
+            progress = week / max(1, base_end)
+            target_km = _round_half((start_km + (peak_km - start_km) * 0.40 * progress) * wave)
+            long_run = _round_half(min(max_long * 0.65, max(min_long, target_km * 0.35)))
+        elif week <= buildup_end:
+            phase = "BuildUp"
+            progress = (week - base_end) / max(1, buildup_end - base_end)
+            target_km = _round_half((start_km + (peak_km - start_km) * (0.40 + 0.50 * progress)) * wave)
+            long_run = _round_half(min(max_long * 0.85, max(min_long, target_km * 0.38)))
+        else:
+            phase = "Peak"
+            target_km = _round_half(min(peak_km, peak_km * wave))
+            long_run = _round_half(min(max_long, max(min_long, target_km * 0.40)))
+
+        if week == 1:
+            target_km = _round_half(min(start_km, peak_km))
+        target_km = _round_half(min(target_km, peak_km))
+        long_run = _round_half(min(long_run, target_km))
+
+        key = _key_workout_for_race_phase(target, phase, week, inp.injury_flag)
+        week_workouts = _build_marathon_week_workouts(
+            run_days=run_days,
+            target_km=target_km,
+            long_run_km=long_run,
+            phase=phase,
+            week=week,
+            injury_flag=inp.injury_flag,
+        )
+
+        weeks.append(RacePlanWeek(
+            week=week,
+            phase=phase,
+            target_km=target_km,
+            long_run_km=long_run,
+            key_workout=key,
+            workouts=week_workouts,
+        ))
+
+    return RacePlanBlock(
+        target=target,
+        total_weeks=total_weeks,
+        level=level,
+        weeks=weeks,
+    )
+
+
 def generate_training_plan(inp: TrainingPlanInput) -> TrainingPlanResponse:
     day_order = {day: idx for idx, day in enumerate(DAYS)}
     run_days = _resolve_run_days(inp)
@@ -411,6 +564,7 @@ def generate_training_plan(inp: TrainingPlanInput) -> TrainingPlanResponse:
     weekly_km, strava_notes = _apply_strava_load_signals(inp, weekly_km, running_days)
     weekly_km = _apply_level_scaling(weekly_km, inp.training_level)
     marathon_block = _build_marathon_block(inp, weekly_km)
+    race_block = _build_race_block(inp, weekly_km)
 
     notes: list[str] = [
         "Keep easy runs conversational; do not race the easy days.",
@@ -424,6 +578,9 @@ def generate_training_plan(inp: TrainingPlanInput) -> TrainingPlanResponse:
         notes.insert(0, "Method: Advanced Marathoning philosophy (periodized mesocycles, medium-long runs, LT/VO2/MP progression, cutback rhythm, taper).")
         notes.insert(0, f"Marathon major selected: {marathon_block.race}. {marathon_block.elevation_note}")
         notes.insert(1, f"{marathon_block.total_weeks}-week race block generated for marathon-only progression.")
+    if race_block is not None:
+        target_label = race_block.target
+        notes.insert(0, f"{race_block.total_weeks}-week {target_label} training block generated with periodized phases (Base → BuildUp → Peak → Taper).")
     if strava_notes:
         notes = strava_notes + notes
 
@@ -550,4 +707,5 @@ def generate_training_plan(inp: TrainingPlanInput) -> TrainingPlanResponse:
         workouts=workouts,
         notes=notes,
         marathon_plan=marathon_block,
+        race_plan=race_block,
     )

@@ -120,6 +120,7 @@ class TrainingPlanInput(BaseModel):
     strava_load_trend: Optional[str] = None
     training_level: Optional[str] = None
     plan_duration_weeks: Optional[int] = None
+    include_race_block: bool = False
 
 class PlannedWorkout(BaseModel):
     day: str
@@ -152,6 +153,22 @@ class MarathonPlanBlock(BaseModel):
     weeks: List[MarathonPlanWeek]
 
 
+class RacePlanWeek(BaseModel):
+    week: int
+    phase: str
+    target_km: float
+    long_run_km: float
+    key_workout: str
+    workouts: List[PlannedWorkout] = []
+
+
+class RacePlanBlock(BaseModel):
+    target: str
+    total_weeks: int
+    level: str
+    weeks: List[RacePlanWeek]
+
+
 class TrainingPlanResponse(BaseModel):
     summary: str
     target: str
@@ -163,6 +180,7 @@ class TrainingPlanResponse(BaseModel):
     notes: List[str] = []
     connected_analysis_used: bool = False
     marathon_plan: Optional[MarathonPlanBlock] = None
+    race_plan: Optional[RacePlanBlock] = None
 
 
 class StravaConnectResponse(BaseModel):
