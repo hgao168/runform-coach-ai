@@ -559,19 +559,24 @@ struct ProfileView: View {
 private final class StravaPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         #if canImport(UIKit)
-        if let foregroundWindow = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first(where: { $0.activationState == .foregroundActive })?
-            .windows
-            .first(where: { $0.isKeyWindow }) {
-            return foregroundWindow
+        let scenes = UIApplication.shared.connectedScenes
+        for scene in scenes {
+            guard let windowScene = scene as? UIWindowScene,
+                  windowScene.activationState == .foregroundActive else {
+                continue
+            }
+            if let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
+                return keyWindow
+            }
         }
 
-        if let firstWindow = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .flatMap({ $0.windows })
-            .first {
-            return firstWindow
+        for scene in scenes {
+            guard let windowScene = scene as? UIWindowScene else {
+                continue
+            }
+            if let firstWindow = windowScene.windows.first {
+                return firstWindow
+            }
         }
 
         return ASPresentationAnchor()
