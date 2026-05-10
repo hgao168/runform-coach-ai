@@ -479,9 +479,12 @@ struct PlanBuilderView: View {
             if let latest = latestAnalysisItem {
                 DarkCard {
                     VStack(alignment: .leading, spacing: 10) {
+                        let hasStrava = stravaSummary != nil
                         SectionTitle(
                             "Connected coaching",
-                            subtitle: "Using your latest form analysis to adjust the plan.",
+                            subtitle: hasStrava
+                                ? "Using your latest form analysis and Strava data to adjust the plan."
+                                : "Using your latest form analysis to adjust the plan.",
                             systemImage: "link.circle.fill"
                         )
                         if latestFormIssues.isEmpty {
@@ -495,6 +498,48 @@ struct PlanBuilderView: View {
                                     .foregroundStyle(.white.opacity(0.78))
                             }
                         }
+                        if let strava = stravaSummary {
+                            Divider().background(.white.opacity(0.12))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Label("Strava data (last 4 weeks)", systemImage: "figure.outdoor.cycle")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(AppTheme.mint)
+                                HStack(spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Avg/week")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                        Text(String(format: "%.1f km", strava.averageWeeklyKm))
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Runs")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                        Text("\(strava.runCount)")
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Longest")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                        Text(String(format: "%.1f km", strava.longestRunKm))
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Trend")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                        Text(strava.loadTrend)
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                            }
+                        }
                         Text("Latest analysis: \(latest.createdAt, format: .dateTime.month().day().hour().minute())")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.42))
@@ -503,14 +548,59 @@ struct PlanBuilderView: View {
             } else {
                 DarkCard {
                     VStack(alignment: .leading, spacing: 8) {
+                        let hasStrava = stravaSummary != nil
                         SectionTitle(
                             "Connected coaching",
-                            subtitle: "Generate an analysis first to personalise your plan.",
-                            systemImage: "link.circle"
+                            subtitle: hasStrava
+                                ? "Generate an analysis to combine form coaching with your Strava data."
+                                : "Generate an analysis first to personalise your plan.",
+                            systemImage: hasStrava ? "link.circle.fill" : "link.circle"
                         )
-                        Text("Without an analysis, RunForm will create a plan from your weekly km, goal, days, and injury flag only.")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.62))
+                        if let strava = stravaSummary {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Label("Strava data is active for plan generation", systemImage: "checkmark.circle.fill")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(AppTheme.mint)
+                                HStack(spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Avg/week")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                        Text(String(format: "%.1f km", strava.averageWeeklyKm))
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Runs")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                        Text("\(strava.runCount)")
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Longest")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                        Text(String(format: "%.1f km", strava.longestRunKm))
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Trend")
+                                            .font(.caption2)
+                                            .foregroundStyle(.white.opacity(0.5))
+                                        Text(strava.loadTrend)
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                            }
+                        } else {
+                            Text("Without an analysis, RunForm will create a plan from your weekly km, goal, days, and injury flag only.")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.62))
+                        }
                     }
                 }
             }

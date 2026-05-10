@@ -193,6 +193,9 @@ async def sync_strava_runs_for_user(session: Session, ios_user_id: str, lookback
 
     session.flush()
 
+    # Record the sync timestamp so Profile UI can display it
+    connection.last_refresh_at = datetime.now(timezone.utc)
+
     return {
         "ios_user_id": ios_user_id,
         "lookback_days": lookback_days,

@@ -237,6 +237,31 @@ class StravaCallbackResponse(BaseModel):
     provider_athlete_id: str
 
 
+class ProfileSaveRequest(BaseModel):
+    ios_user_id: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    nickname: Optional[str] = None
+    level: Optional[str] = None
+    weekly_mileage_km: Optional[float] = None
+    running_days_per_week: Optional[int] = None
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
+    target: Optional[str] = None
+    injury_note: Optional[str] = None
+    gender: Optional[str] = None
+    shoe_size: Optional[str] = None
+    shoe_brand_model: Optional[str] = None
+    leg_length_cm: Optional[float] = None
+    date_of_birth: Optional[str] = None
+    weekly_exercise_hours: Optional[float] = None
+
+
+class ProfileSaveResponse(BaseModel):
+    saved: bool
+    ios_user_id: str
+
+
 # ── Elite athlete comparison ────────────────────────────────────────────────
 
 class AthleteListItem(BaseModel):

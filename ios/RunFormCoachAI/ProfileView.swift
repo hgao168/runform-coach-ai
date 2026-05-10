@@ -24,6 +24,7 @@ struct ProfileView: View {
     @State private var isLoadingStravaStatus = false
     @State private var isSyncingStravaRuns = false
     @State private var isConnectingStrava = false
+    @State private var lastSyncedAt: Date?
     @State private var stravaAuthSession: ASWebAuthenticationSession?
     @FocusState private var fieldFocused: Bool
 
@@ -351,7 +352,11 @@ struct ProfileView: View {
                             .foregroundStyle(.white.opacity(0.54))
                     }
 
-                    if let lastRefreshAt = status.lastRefreshAt, !lastRefreshAt.isEmpty {
+                    if let localSync = lastSyncedAt {
+                        Text("Last sync: \(localSync.formatted(.dateTime.month().day().hour().minute()))")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.54))
+                    } else if let lastRefreshAt = status.lastRefreshAt, !lastRefreshAt.isEmpty {
                         Text("Last refresh: \(lastRefreshAt)")
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.54))
@@ -523,6 +528,7 @@ struct ProfileView: View {
                 let result = try await APIClient.shared.syncStravaActivities(iosUserID: appStore.appUserID)
                 await MainActor.run {
                     isSyncingStravaRuns = false
+                    lastSyncedAt = Date()
                     let weekLabel = result.weekCount == 1 ? "week" : "weeks"
                     stravaMessage = "Synced \(result.syncedRunCount) runs across \(result.weekCount) \(weekLabel)."
                 }
@@ -598,7 +604,7 @@ struct ProfileView: View {
     private func saveProfile() {
         fieldFocused = false
         dismissKeyboard()
-        appStore.profile = TesterProfile(
+        let profile = TesterProfile(
             firstName: firstName,
             lastName: lastName,
             nickname: nickname,
@@ -616,7 +622,12 @@ struct ProfileView: View {
             legLengthCm: Double(legLengthCmText.replacingOccurrences(of: ",", with: ".")),
             shoeBrandModel: shoeBrandModel
         )
+        appStore.profile = profile
         savedMessage = String(localized: "profile.saved")
+
+        Task {
+            _ = try? await APIClient.shared.saveProfile(iosUserID: appStore.appUserID, profile: profile)
+        }
     }
 
     private func dismissKeyboard() {

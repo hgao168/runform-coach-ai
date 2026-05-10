@@ -302,6 +302,45 @@ final class APIClient {
         }
         return try JSONDecoder().decode(CompareResponse.self, from: data)
     }
+
+    func saveProfile(iosUserID: String, profile: TesterProfile) async throws -> ProfileSaveResponse {
+        let endpoint = baseURL.appendingPathComponent("profile")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 20
+
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withFullDate]
+
+        let payload = ProfileSaveRequest(
+            iosUserId: iosUserID,
+            firstName: profile.firstName.isEmpty ? nil : profile.firstName,
+            lastName: profile.lastName.isEmpty ? nil : profile.lastName,
+            nickname: profile.nickname.isEmpty ? nil : profile.nickname,
+            level: profile.level.rawValue,
+            weeklyMileageKm: profile.weeklyMileageKm,
+            runningDaysPerWeek: profile.runningDaysPerWeek,
+            heightCm: profile.heightCm,
+            weightKg: profile.weightKg,
+            target: profile.target,
+            injuryNote: profile.injuryNote.isEmpty ? nil : profile.injuryNote,
+            gender: profile.gender.rawValue,
+            shoeSize: profile.shoeSize.isEmpty ? nil : profile.shoeSize,
+            shoeBrandModel: profile.shoeBrandModel.isEmpty ? nil : profile.shoeBrandModel,
+            legLengthCm: profile.legLengthCm,
+            dateOfBirth: profile.dateOfBirth.map { dateFormatter.string(from: $0) },
+            weeklyExerciseHours: profile.weeklyExerciseHours
+        )
+        request.httpBody = try JSONEncoder().encode(payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+            throw APIError.server(message)
+        }
+        return try JSONDecoder().decode(ProfileSaveResponse.self, from: data)
+    }
 }
 
 enum APIError: LocalizedError {

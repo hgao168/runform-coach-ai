@@ -29,6 +29,8 @@ from .schemas import (
     StravaStatusResponse,
     TrainingPlanInput,
     TrainingPlanResponse,
+    ProfileSaveRequest,
+    ProfileSaveResponse,
 )
 from .strava_sync import sync_strava_runs_for_user
 from .strava_summary import build_strava_summary
@@ -46,6 +48,13 @@ from .strava_oauth import (
 )
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+
+_PROFILE_FIELDS = [
+    "first_name", "last_name", "nickname", "level", "weekly_mileage_km",
+    "running_days_per_week", "height_cm", "weight_kg", "target", "injury_note",
+    "gender", "shoe_size", "shoe_brand_model", "leg_length_cm", "date_of_birth",
+    "weekly_exercise_hours",
+]
 
 
 def _utc_now_iso() -> str:
@@ -75,7 +84,27 @@ def health() -> dict:
     }
 
 
-@app.post("/training-plan", response_model=TrainingPlanResponse)
+@app.put("/profile", response_model=ProfileSaveResponse)
+def save_profile(payload: ProfileSaveRequest) -> ProfileSaveResponse:
+    """Save or update user profile data."""
+    try:
+        with get_db_session() as session:
+            user = session.scalar(select(User).where(User.ios_user_id == payload.ios_user_id))
+            if user is None:
+                user = User(ios_user_id=payload.ios_user_id)
+                session.add(user)
+                session.flush()
+            for field in _PROFILE_FIELDS:
+                value = getattr(payload, field, None)
+                if value is not None:
+                    setattr(user, field, value)
+            session.commit()
+        return ProfileSaveResponse(saved=True, ios_user_id=payload.ios_user_id)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to save profile: {exc}") from exc
+
+
+
 async def training_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
     """Generate a personalised one-week training plan. planned_weekly_km mirrors current_weekly_km."""
     try:

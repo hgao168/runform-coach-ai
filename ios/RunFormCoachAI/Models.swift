@@ -271,6 +271,55 @@ struct TesterProfile: Codable, Equatable {
     }
 }
 
+struct ProfileSaveRequest: Encodable {
+    let iosUserId: String
+    let firstName: String?
+    let lastName: String?
+    let nickname: String?
+    let level: String?
+    let weeklyMileageKm: Double?
+    let runningDaysPerWeek: Int?
+    let heightCm: Double?
+    let weightKg: Double?
+    let target: String?
+    let injuryNote: String?
+    let gender: String?
+    let shoeSize: String?
+    let shoeBrandModel: String?
+    let legLengthCm: Double?
+    let dateOfBirth: String?
+    let weeklyExerciseHours: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case iosUserId = "ios_user_id"
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case nickname
+        case level
+        case weeklyMileageKm = "weekly_mileage_km"
+        case runningDaysPerWeek = "running_days_per_week"
+        case heightCm = "height_cm"
+        case weightKg = "weight_kg"
+        case target
+        case injuryNote = "injury_note"
+        case gender
+        case shoeSize = "shoe_size"
+        case shoeBrandModel = "shoe_brand_model"
+        case legLengthCm = "leg_length_cm"
+        case dateOfBirth = "date_of_birth"
+        case weeklyExerciseHours = "weekly_exercise_hours"
+    }
+}
+
+struct ProfileSaveResponse: Decodable {
+    let saved: Bool
+    let iosUserId: String
+    enum CodingKeys: String, CodingKey {
+        case saved
+        case iosUserId = "ios_user_id"
+    }
+}
+
 enum FeedbackRating: String, Codable, CaseIterable, Identifiable {
     case accurate = "Accurate"
     case partlyAccurate = "Partly accurate"
