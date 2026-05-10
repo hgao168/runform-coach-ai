@@ -330,7 +330,7 @@ struct PlanBuilderView: View {
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.56))
                     if let stravaSummary {
-                        Text("Strava average: \(stravaSummary.averageWeeklyKm, specifier: \"%.1f\") km/week • \(stravaSummary.loadTrend)")
+                        Text("Strava average: \(String(format: "%.1f", stravaSummary.averageWeeklyKm)) km/week • \(stravaSummary.loadTrend)")
                             .font(.caption2)
                             .foregroundStyle(AppTheme.mint.opacity(0.88))
                     }
