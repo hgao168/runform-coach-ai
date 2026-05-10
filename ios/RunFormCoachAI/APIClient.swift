@@ -129,6 +129,34 @@ final class APIClient {
         throw lastError ?? APIError.server("Unable to disconnect Strava from available backends.")
     }
 
+    func syncStravaActivities(iosUserID: String) async throws -> StravaSyncResponse {
+        var lastError: APIError?
+        for candidateBaseURL in stravaBaseURLCandidates() {
+            let endpoint = stravaEndpoint(path: "sync", iosUserID: iosUserID, baseURL: candidateBaseURL)
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.timeoutInterval = 30
+
+            let payload = ["ios_user_id": iosUserID]
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                continue
+            }
+            if (200..<300).contains(http.statusCode) {
+                return try JSONDecoder().decode(StravaSyncResponse.self, from: data)
+            }
+            if http.statusCode != 404 {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            lastError = .server(String(data: data, encoding: .utf8) ?? "Strava sync route not found")
+        }
+        throw lastError ?? APIError.server("Unable to sync Strava activities from available backends.")
+    }
+
     func fetchStravaSummary(iosUserID: String, weeks: Int = 4) async throws -> StravaSummaryResponse {
         var components = URLComponents(url: baseURL.appendingPathComponent("integrations/strava/summary"), resolvingAgainstBaseURL: false)
         components?.queryItems = [

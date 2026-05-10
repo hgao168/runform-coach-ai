@@ -330,7 +330,7 @@ struct PlanBuilderView: View {
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.56))
                     if let stravaSummary {
-                        Text("Strava average: \(stravaSummary.averageWeeklyKm, specifier: \"%.1f\") km/week • \(stravaSummary.loadTrend)")
+                        Text("Strava average: \(String(format: "%.1f", stravaSummary.averageWeeklyKm)) km/week • \(stravaSummary.loadTrend)")
                             .font(.caption2)
                             .foregroundStyle(AppTheme.mint.opacity(0.88))
                     }
@@ -611,7 +611,11 @@ struct PlanBuilderView: View {
             language: Bundle.main.preferredLocalizations.first ?? "en",
             marathonMajor: target == .marathon ? marathonMajor.rawValue : nil,
             marathonPlanWeeks: target == .marathon ? marathonPlanWeeks : nil,
-            includeMarathonBlock: kind == .marathon
+            includeMarathonBlock: kind == .marathon,
+            stravaRunCount: stravaSummary?.runCount,
+            stravaLongestRunKm: stravaSummary?.longestRunKm,
+            stravaAvgPaceSPerKm: stravaSummary?.avgPaceSPerKm,
+            stravaLoadTrend: stravaSummary?.loadTrend
         )
 
         do {

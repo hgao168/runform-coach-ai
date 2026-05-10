@@ -22,6 +22,7 @@ struct ProfileView: View {
     @State private var savedMessage: String?
     @State private var stravaMessage: String?
     @State private var isLoadingStravaStatus = false
+    @State private var isSyncingStravaRuns = false
     @State private var isConnectingStrava = false
     @State private var stravaAuthSession: ASWebAuthenticationSession?
     @FocusState private var fieldFocused: Bool
@@ -361,12 +362,13 @@ struct ProfileView: View {
                     }
 
                     Button {
-                        Task { await refreshStravaStatus() }
+                        syncStravaRuns()
                     } label: {
-                        Label("Refresh status", systemImage: "arrow.clockwise")
+                        Label(isSyncingStravaRuns ? "Syncing runs…" : "Sync runs from Strava", systemImage: "arrow.triangle.2.circlepath")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(GradientButtonStyle())
+                    .disabled(isSyncingStravaRuns || isConnectingStrava)
 
                     Button(role: .destructive) {
                         disconnectStrava()
@@ -505,6 +507,34 @@ struct ProfileView: View {
                         stravaMessage = "Strava disconnect failed: \(message)"
                     } else {
                         stravaMessage = "Unable to disconnect Strava: \(error.localizedDescription)"
+                    }
+                }
+            }
+        }
+    }
+
+    private func syncStravaRuns() {
+        guard !isSyncingStravaRuns else { return }
+        isSyncingStravaRuns = true
+        stravaMessage = nil
+
+        Task {
+            do {
+                let result = try await APIClient.shared.syncStravaActivities(iosUserID: appStore.appUserID)
+                await MainActor.run {
+                    isSyncingStravaRuns = false
+                    let weekLabel = result.weekCount == 1 ? "week" : "weeks"
+                    stravaMessage = "Synced \(result.syncedRunCount) runs across \(result.weekCount) \(weekLabel)."
+                }
+            } catch {
+                await MainActor.run {
+                    isSyncingStravaRuns = false
+                    if let apiError = error as? APIError,
+                       let message = apiError.errorDescription,
+                       !message.isEmpty {
+                        stravaMessage = "Strava sync failed: \(message)"
+                    } else {
+                        stravaMessage = "Unable to sync Strava runs: \(error.localizedDescription)"
                     }
                 }
             }
