@@ -459,7 +459,13 @@ struct ProfileView: View {
             } catch {
                 await MainActor.run {
                     isConnectingStrava = false
-                    stravaMessage = "Unable to start Strava sign-in."
+                    if let apiError = error as? APIError,
+                       let message = apiError.errorDescription,
+                       !message.isEmpty {
+                        stravaMessage = "Strava sign-in failed: \(message)"
+                    } else {
+                        stravaMessage = "Unable to start Strava sign-in: \(error.localizedDescription)"
+                    }
                 }
             }
         }
@@ -514,7 +520,7 @@ struct ProfileView: View {
 
         if !session.start() {
             isConnectingStrava = false
-            stravaMessage = "Unable to start Strava sign-in."
+            stravaMessage = "Unable to start Strava sign-in. Please close and reopen the Profile page, then try again."
             stravaAuthSession = nil
         }
     }
@@ -553,11 +559,22 @@ struct ProfileView: View {
 private final class StravaPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         #if canImport(UIKit)
-        return UIApplication.shared.connectedScenes
+        if let foregroundWindow = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first(where: { $0.activationState == .foregroundActive })?
             .windows
-            .first(where: { $0.isKeyWindow }) ?? ASPresentationAnchor()
+            .first(where: { $0.isKeyWindow }) {
+            return foregroundWindow
+        }
+
+        if let firstWindow = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap({ $0.windows })
+            .first {
+            return firstWindow
+        }
+
+        return ASPresentationAnchor()
         #else
         return ASPresentationAnchor()
         #endif
