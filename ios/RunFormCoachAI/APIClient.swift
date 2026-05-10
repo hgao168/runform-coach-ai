@@ -54,31 +54,51 @@ final class APIClient {
     }
 
     func fetchStravaConnectResponse(iosUserID: String) async throws -> StravaConnectResponse {
-        let endpoint = stravaEndpoint(path: "connect", iosUserID: iosUserID)
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 20
+        var lastError: APIError?
+        for candidateBaseURL in stravaBaseURLCandidates() {
+            let endpoint = stravaEndpoint(path: "connect", iosUserID: iosUserID, baseURL: candidateBaseURL)
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 20
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-            throw APIError.server(message)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                continue
+            }
+            if (200..<300).contains(http.statusCode) {
+                return try JSONDecoder().decode(StravaConnectResponse.self, from: data)
+            }
+            if http.statusCode != 404 {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            lastError = .server(String(data: data, encoding: .utf8) ?? "Strava connect route not found")
         }
-        return try JSONDecoder().decode(StravaConnectResponse.self, from: data)
+        throw lastError ?? APIError.server("Unable to load Strava connect URL from available backends.")
     }
 
     func fetchStravaStatus(iosUserID: String) async throws -> StravaStatusResponse {
-        let endpoint = stravaEndpoint(path: "status", iosUserID: iosUserID)
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 20
+        var lastError: APIError?
+        for candidateBaseURL in stravaBaseURLCandidates() {
+            let endpoint = stravaEndpoint(path: "status", iosUserID: iosUserID, baseURL: candidateBaseURL)
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 20
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-            throw APIError.server(message)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                continue
+            }
+            if (200..<300).contains(http.statusCode) {
+                return try JSONDecoder().decode(StravaStatusResponse.self, from: data)
+            }
+            if http.statusCode != 404 {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            lastError = .server(String(data: data, encoding: .utf8) ?? "Strava status route not found")
         }
-        return try JSONDecoder().decode(StravaStatusResponse.self, from: data)
+        throw lastError ?? APIError.server("Unable to load Strava status from available backends.")
     }
 
     // Backward-compatible fallback only. Prefer analyzeMetrics(_:), because it sends numeric pose metrics instead of the raw video.
@@ -127,13 +147,32 @@ final class APIClient {
         return body
     }
 
-    private func stravaEndpoint(path: String, iosUserID: String) -> URL {
-        var components = URLComponents(url: stravaBaseURL.appendingPathComponent("integrations/strava").appendingPathComponent(path), resolvingAgainstBaseURL: false)
+    private func stravaEndpoint(path: String, iosUserID: String, baseURL: URL? = nil) -> URL {
+        let resolvedBaseURL = baseURL ?? stravaBaseURL
+        var components = URLComponents(url: resolvedBaseURL.appendingPathComponent("integrations/strava").appendingPathComponent(path), resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "ios_user_id", value: iosUserID)]
         guard let url = components?.url else {
             fatalError("Failed to build Strava API URL for path: \(path)")
         }
         return url
+    }
+
+    private func stravaBaseURLCandidates() -> [URL] {
+        var candidates: [URL] = [stravaBaseURL]
+        if let productionURL = URL(string: APIClient.defaultStravaBackendBaseURL) {
+            candidates.append(productionURL)
+        }
+        candidates.append(baseURL)
+
+        var seen = Set<String>()
+        return candidates.filter { candidate in
+            let key = candidate.absoluteString.lowercased()
+            if seen.contains(key) {
+                return false
+            }
+            seen.insert(key)
+            return true
+        }
     }
 
     func generateTrainingPlan(input: TrainingPlanInput) async throws -> TrainingPlanResponse {
