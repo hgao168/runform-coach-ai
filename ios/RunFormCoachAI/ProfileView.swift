@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 struct ProfileView: View {
     @EnvironmentObject private var appStore: AppStore
@@ -12,7 +13,17 @@ struct ProfileView: View {
     @State private var weightKg: Double = 70
     @State private var target: TrainingTarget = .generalFitness
     @State private var injuryNote = ""
+    @State private var gender: ProfileGender = .unspecified
+    @State private var shoeSize = ""
+    @State private var legLengthCmText = ""
+    @State private var shoeBrandModel = ""
+    @State private var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
+    @State private var weeklyExerciseHours: Double = 5
     @State private var savedMessage: String?
+    @State private var stravaMessage: String?
+    @State private var isLoadingStravaStatus = false
+    @State private var isConnectingStrava = false
+    @State private var stravaAuthSession: ASWebAuthenticationSession?
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
@@ -24,6 +35,7 @@ struct ProfileView: View {
                         profileHero
                         formCard
                         whyCard
+                        stravaCard
                     }
                     .padding(18)
                 }
@@ -45,6 +57,9 @@ struct ProfileView: View {
             }
             .onAppear {
                 loadDraftFromStore()
+            }
+            .task {
+                await refreshStravaStatus()
             }
         }
     }
@@ -118,12 +133,22 @@ struct ProfileView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
+                    Text("Date of Birth")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.62))
+                    DatePicker("", selection: $dateOfBirth, displayedComponents: .date)
+                        .labelsHidden()
+                        .tint(AppTheme.mint)
+                        .colorScheme(.dark)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Running level")
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.62))
                     Picker("Running level", selection: $level) {
                         ForEach(RunnerLevel.allCases) { level in
-                            Text(level.rawValue).tag(level)
+                            Text(LocalizedStringKey(level.rawValue)).tag(level)
                         }
                     }
                     .pickerStyle(.menu)
@@ -147,6 +172,20 @@ struct ProfileView: View {
                 Stepper("Running days / week: \(runningDaysPerWeek)", value: $runningDaysPerWeek, in: 1...7)
                     .foregroundStyle(.white)
                     .font(.subheadline)
+
+                VStack(alignment: .leading, spacing: 9) {
+                    HStack {
+                        Label("Total exercise hours / week", systemImage: "clock.fill")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.72))
+                        Spacer()
+                        Text(String(format: "%.1f hrs", weeklyExerciseHours))
+                            .font(.headline.bold())
+                            .foregroundStyle(AppTheme.mint)
+                    }
+                    Slider(value: $weeklyExerciseHours, in: 0...30, step: 0.5)
+                        .tint(AppTheme.mint)
+                }
 
                 VStack(alignment: .leading, spacing: 9) {
                     HStack {
@@ -182,11 +221,65 @@ struct ProfileView: View {
                         .foregroundStyle(.white.opacity(0.62))
                     Picker("Goal", selection: $target) {
                         ForEach(TrainingTarget.allCases) { item in
-                            Text(item.rawValue).tag(item)
+                            Text(LocalizedStringKey(item.rawValue)).tag(item)
                         }
                     }
                     .pickerStyle(.menu)
                     .tint(AppTheme.mint)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Gender")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.62))
+                    Picker("Gender", selection: $gender) {
+                        Text("Male").tag(ProfileGender.male)
+                        Text("Female").tag(ProfileGender.female)
+                        Text("Other").tag(ProfileGender.other)
+                        Text("Prefer not to say").tag(ProfileGender.unspecified)
+                    }
+                    .pickerStyle(.menu)
+                    .tint(AppTheme.mint)
+                }
+
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Shoe size")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.62))
+                        TextField("EU 42 / US 9", text: $shoeSize)
+                            .focused($fieldFocused)
+                            .padding(13)
+                            .background(.black.opacity(0.20))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .foregroundStyle(.white)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Leg length (cm)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.62))
+                        TextField("85", text: $legLengthCmText)
+                            .keyboardType(.decimalPad)
+                            .focused($fieldFocused)
+                            .padding(13)
+                            .background(.black.opacity(0.20))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Shoe brand/model")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.62))
+                    TextField("ASICS Nimbus 27", text: $shoeBrandModel)
+                        .textInputAutocapitalization(.words)
+                        .focused($fieldFocused)
+                        .padding(13)
+                        .background(.black.opacity(0.20))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .foregroundStyle(.white)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -230,6 +323,84 @@ struct ProfileView: View {
         }
     }
 
+    private var stravaCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionTitle("Connect Strava", subtitle: "Bring weekly load into future plans", systemImage: "link.circle.fill")
+
+                if let status = appStore.stravaStatus, status.connected {
+                    HStack(spacing: 12) {
+                        StatusBadge(text: "Connected")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Connected with Strava")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            if let athleteID = status.providerAthleteId {
+                                Text("Athlete ID: \(athleteID)")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.58))
+                            }
+                        }
+                        Spacer()
+                    }
+
+                    if let scope = status.scope, !scope.isEmpty {
+                        Text("Scopes: \(scope)")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.54))
+                    }
+
+                    if let lastRefreshAt = status.lastRefreshAt, !lastRefreshAt.isEmpty {
+                        Text("Last refresh: \(lastRefreshAt)")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.54))
+                    } else {
+                        Text("Last refresh: not available yet")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.54))
+                    }
+
+                    Button {
+                        Task { await refreshStravaStatus() }
+                    } label: {
+                        Label("Refresh status", systemImage: "arrow.clockwise")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(GradientButtonStyle())
+                } else {
+                    Text("Connect Strava to bring your weekly load into future plan suggestions.")
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.66))
+
+                    Button {
+                        connectStrava()
+                    } label: {
+                        Label(isConnectingStrava ? "Connecting…" : "Connect Strava", systemImage: "link")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(GradientButtonStyle())
+                    .disabled(isConnectingStrava)
+                }
+
+                if isLoadingStravaStatus {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .tint(AppTheme.mint)
+                        Text("Checking Strava connection…")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                }
+
+                if let stravaMessage {
+                    Text(stravaMessage)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mint)
+                }
+            }
+        }
+    }
+
     private func loadDraftFromStore() {
         let profile = appStore.profile
         firstName = profile.firstName
@@ -246,6 +417,112 @@ struct ProfileView: View {
             target = .generalFitness
         }
         injuryNote = profile.injuryNote
+        gender = profile.gender
+        shoeSize = profile.shoeSize
+        shoeBrandModel = profile.shoeBrandModel
+        if let legLength = profile.legLengthCm {
+            legLengthCmText = String(format: "%.1f", legLength)
+        } else {
+            legLengthCmText = ""
+        }
+        dateOfBirth = profile.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
+        weeklyExerciseHours = profile.weeklyExerciseHours
+    }
+
+    @MainActor
+    private func refreshStravaStatus() async {
+        isLoadingStravaStatus = true
+        defer { isLoadingStravaStatus = false }
+
+        do {
+            let status = try await APIClient.shared.fetchStravaStatus(iosUserID: appStore.appUserID)
+            appStore.updateStravaStatus(status)
+            stravaMessage = status.connected ? "Strava connection synced." : nil
+        } catch {
+            if appStore.stravaStatus == nil {
+                stravaMessage = nil
+            }
+        }
+    }
+
+    private func connectStrava() {
+        guard !isConnectingStrava else { return }
+        isConnectingStrava = true
+        stravaMessage = nil
+
+        Task {
+            do {
+                let response = try await APIClient.shared.fetchStravaConnectResponse(iosUserID: appStore.appUserID)
+                await MainActor.run {
+                    startStravaSession(authorizeURL: response.authorizeURL)
+                }
+            } catch {
+                await MainActor.run {
+                    isConnectingStrava = false
+                    if let apiError = error as? APIError,
+                       let message = apiError.errorDescription,
+                       !message.isEmpty {
+                        stravaMessage = "Strava sign-in failed: \(message)"
+                    } else {
+                        stravaMessage = "Unable to start Strava sign-in: \(error.localizedDescription)"
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func startStravaSession(authorizeURL: URL) {
+        let session = ASWebAuthenticationSession(
+            url: authorizeURL,
+            callbackURLScheme: "runformcoachai"
+        ) { callbackURL, error in
+            Task { @MainActor in
+                self.isConnectingStrava = false
+                self.stravaAuthSession = nil
+
+                if let error = error as? ASWebAuthenticationSessionError,
+                   error.code == .canceledLogin {
+                    self.stravaMessage = "Strava connection canceled."
+                    return
+                }
+
+                if let error {
+                    self.stravaMessage = error.localizedDescription
+                    return
+                }
+
+                guard let callbackURL else {
+                    self.stravaMessage = "Strava connection finished without a callback."
+                    return
+                }
+
+                let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)
+                let queryItems = components?.queryItems ?? []
+                let status = queryItems.first(where: { $0.name == "status" })?.value
+                let athleteID = queryItems.first(where: { $0.name == "provider_athlete_id" })?.value
+
+                if status == "connected" {
+                    if let athleteID {
+                        self.stravaMessage = "Strava connected for athlete \(athleteID)."
+                    } else {
+                        self.stravaMessage = "Strava connected."
+                    }
+                    await self.refreshStravaStatus()
+                } else {
+                    self.stravaMessage = "Strava flow completed."
+                }
+            }
+        }
+        session.presentationContextProvider = StravaPresentationContextProvider.shared
+        session.prefersEphemeralWebBrowserSession = true
+        stravaAuthSession = session
+
+        if !session.start() {
+            isConnectingStrava = false
+            stravaMessage = "Unable to start Strava sign-in. Please close and reopen the Profile page, then try again."
+            stravaAuthSession = nil
+        }
     }
 
     private func saveProfile() {
@@ -261,14 +538,52 @@ struct ProfileView: View {
             heightCm: heightCm,
             weightKg: weightKg,
             target: target.rawValue,
-            injuryNote: injuryNote
+            injuryNote: injuryNote,
+            dateOfBirth: dateOfBirth,
+            weeklyExerciseHours: weeklyExerciseHours,
+            gender: gender,
+            shoeSize: shoeSize,
+            legLengthCm: Double(legLengthCmText.replacingOccurrences(of: ",", with: ".")),
+            shoeBrandModel: shoeBrandModel
         )
-        savedMessage = "Profile saved"
+        savedMessage = String(localized: "profile.saved")
     }
 
     private func dismissKeyboard() {
         #if canImport(UIKit)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
+    }
+}
+
+private final class StravaPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+    static let shared = StravaPresentationContextProvider()
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        #if canImport(UIKit)
+        let scenes = UIApplication.shared.connectedScenes
+        for scene in scenes {
+            guard let windowScene = scene as? UIWindowScene,
+                  windowScene.activationState == .foregroundActive else {
+                continue
+            }
+            if let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
+                return keyWindow
+            }
+        }
+
+        for scene in scenes {
+            guard let windowScene = scene as? UIWindowScene else {
+                continue
+            }
+            if let firstWindow = windowScene.windows.first {
+                return firstWindow
+            }
+        }
+
+        return ASPresentationAnchor()
+        #else
+        return ASPresentationAnchor()
         #endif
     }
 }

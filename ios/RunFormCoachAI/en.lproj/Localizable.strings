@@ -1,0 +1,234 @@
+/* Tab bar */
+"Analyze" = "Analyze";
+"History" = "History";
+"Plan" = "Plan";
+"Profile" = "Profile";
+
+/* Navigation titles */
+"RunForm" = "RunForm";
+"Training Plan" = "Training Plan";
+"Manual Week Plan" = "Manual Week Plan";
+"Saved Plans" = "Saved Plans";
+
+/* Analyze tab - hero */
+"AI Running Form Coach" = "AI Running Form Coach";
+"Unlock Your Speed with a Better Form" = "Unlock Your Speed with a Better Form";
+"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "Upload a short clip and get precision feedback, efficiency metrics, and targeted training.";
+
+/* Analyze tab - video card */
+"Running clip" = "Running clip";
+"Select camera angle" = "Select camera angle";
+"Choose a running video" = "Choose a running video";
+"10–20 seconds, full body visible, both feet in frame" = "10–20 seconds, full body visible, both feet in frame";
+"Selected" = "Selected";
+
+/* Analyze tab - capture guide */
+"Capture guide" = "Capture guide";
+"Side view tips" = "Side view tips";
+"Rear view tips" = "Rear view tips";
+"Front view tips" = "Front view tips";
+"Record 10–20 seconds at normal running pace" = "Record 10–20 seconds at normal running pace";
+"Side view: phone at hip height, parallel to your direction of travel" = "Side view: phone at hip height, parallel to your direction of travel";
+"Full body visible — both feet must stay in frame" = "Full body visible — both feet must stay in frame";
+"Rear view: phone centered behind you at waist height" = "Rear view: phone centered behind you at waist height";
+"Full body visible from head to heels, keep hips/knees in frame" = "Full body visible from head to heels, keep hips/knees in frame";
+"Front view: phone centered in front of you at waist height" = "Front view: phone centered in front of you at waist height";
+"Face the camera directly — full body visible from head to feet" = "Face the camera directly — full body visible from head to feet";
+"Use bright lighting and avoid motion blur" = "Use bright lighting and avoid motion blur";
+
+/* Analyze tab - actions */
+"Record Live" = "Record Live";
+"Pick Video" = "Pick Video";
+"Pick an existing video" = "Pick an existing video";
+"Analyzing" = "Analyzing";
+
+/* Analyze tab - ready card */
+"What you'll get" = "What you'll get";
+"Clear, runner-friendly coaching" = "Clear, runner-friendly coaching";
+"Movement metrics" = "Movement metrics";
+"Cadence, overstride, trunk lean, arm movement, arm swing" = "Cadence, overstride, trunk lean, arm movement, arm swing";
+"Strength focus" = "Strength focus";
+"Issue-based exercises with why each one helps" = "Issue-based exercises with why each one helps";
+"Quality check" = "Quality check";
+"If metrics are unreliable, RunForm asks for a better clip" = "If metrics are unreliable, RunForm asks for a better clip";
+
+/* Status / error messages */
+"status.extracting_pose" = "Extracting pose metrics on device...";
+"status.recording_captured" = "Recording captured with live guidance. Ready to analyze.";
+"status.video_selected" = "Video selected. RunForm will check pose quality before coaching.";
+"status.quality_usable" = "Pose quality looks usable. Generating coaching advice...";
+"status.analysis_saved" = "Analysis saved. Please add feedback after review.";
+"error.invalid_km" = "Please enter a valid weekly km number.";
+"error.plan_failed" = "Plan generation failed. Check your connection.";
+"profile.saved" = "Profile saved";
+
+/* Analysis result */
+"Form Report" = "Form Report";
+"Video Quality" = "Video Quality";
+"Clip quality is good enough for reliable on-device pose analysis." = "Clip quality is good enough for reliable on-device pose analysis.";
+"Movement Metrics" = "Movement Metrics";
+"Strength Focus" = "Strength Focus";
+
+/* History tab */
+"Progress" = "Progress";
+"Reports" = "Reports";
+"Form score" = "Form score";
+"Cadence" = "Cadence";
+"Hip stability" = "Hip stability";
+"Consistency" = "Consistency";
+"No sessions yet" = "No sessions yet";
+"Good start!" = "Good start!";
+"Building habit" = "Building habit";
+"Staying consistent" = "Staying consistent";
+"Great consistency!" = "Great consistency!";
+"days / 30d" = "days / 30d";
+"No analysis yet" = "No analysis yet";
+"Analyze your first running video. Results and tester feedback will appear here." = "Analyze your first running video. Results and tester feedback will appear here.";
+"No data yet" = "No data yet";
+"Saved Feedback" = "Saved Feedback";
+"Tester signal" = "Tester signal";
+"Clear" = "Clear";
+"Clear all local history?" = "Clear all local history?";
+"Clear History" = "Clear History";
+
+/* Plan tab - inputs */
+"Next Week Plan" = "Next Week Plan";
+"Set your goal, volume, and days. Get a smart weekly plan." = "Set your goal, volume, and days. Get a smart weekly plan.";
+"Edit next week (Mon-Sun)" = "Edit next week (Mon-Sun)";
+"Manual Week Preview" = "Manual Week Preview";
+"Monday to Sunday" = "Monday to Sunday";
+"Your inputs" = "Your inputs";
+"Current weekly km" = "Current weekly km";
+"Goal" = "Goal";
+"Running days: %lld" = "Running days: %lld";
+"Injury / pain flag" = "Injury / pain flag";
+"Progression will be reduced; hard sessions replaced with easy runs." = "Progression will be reduced; hard sessions replaced with easy runs.";
+"Connected coaching" = "Connected coaching";
+"Using your latest form analysis to adjust the plan." = "Using your latest form analysis to adjust the plan.";
+"Generate an analysis first to personalise your plan." = "Generate an analysis first to personalise your plan.";
+"Without an analysis, RunForm will create a plan from your weekly km, goal, days, and injury flag only." = "Without an analysis, RunForm will create a plan from your weekly km, goal, days, and injury flag only.";
+"No major form issue found in your latest analysis." = "No major form issue found in your latest analysis.";
+"Generate Plan" = "Generate Plan";
+
+/* Plan tab - saved plans */
+"No saved plans yet" = "No saved plans yet";
+"Generate a plan and tap \"Save Plan\" to keep it here." = "Generate a plan and tap \"Save Plan\" to keep it here.";
+"Cancel" = "Cancel";
+"Save" = "Save";
+"Fill all 7 days manually. Week starts Monday and ends Sunday." = "Fill all 7 days manually. Week starts Monday and ends Sunday.";
+
+/* Plan result */
+"Plan Summary" = "Plan Summary";
+"Adapted from your latest RunForm analysis" = "Adapted from your latest RunForm analysis";
+"Workouts" = "Workouts";
+"Coach Notes" = "Coach Notes";
+
+/* Workout status */
+"Done" = "Done";
+"Skipped" = "Skipped";
+"Too Hard" = "Too Hard";
+"Pain" = "Pain";
+
+/* Workout titles / categories from planner */
+"Easy Run" = "Easy Run";
+"Long Run" = "Long Run";
+"Tempo Run" = "Tempo Run";
+"5K Rhythm Session" = "5K Rhythm Session";
+"Controlled Easy Run" = "Controlled Easy Run";
+"Recovery Run" = "Recovery Run";
+"Optional Easy Run" = "Optional Easy Run";
+"Strength / Mobility" = "Strength / Mobility";
+"Light Quality Run" = "Light Quality Run";
+"Easy" = "Easy";
+"Long" = "Long";
+"Quality" = "Quality";
+"Recovery" = "Recovery";
+"Strength" = "Strength";
+
+/* Profile tab */
+"Runner setup" = "Runner setup";
+"Used to personalize TestFlight feedback" = "Used to personalize TestFlight feedback";
+"First name" = "First name";
+"Last name" = "Last name";
+"Nickname" = "Nickname";
+"Running level" = "Running level";
+"Weekly mileage" = "Weekly mileage";
+"Running days / week: %lld" = "Running days / week: %lld";
+"Height" = "Height";
+"Weight" = "Weight";
+"Injury note" = "Injury note";
+"Optional" = "Optional";
+"Save Profile" = "Save Profile";
+"Why this matters" = "Why this matters";
+"Better coaching needs context" = "Better coaching needs context";
+"RunForm stores this locally and uses it to understand tester feedback. Future versions can use it to personalize running plans and strength recommendations." = "RunForm stores this locally and uses it to understand tester feedback. Future versions can use it to personalize running plans and strength recommendations.";
+
+/* Feedback view */
+"Tester Feedback" = "Tester Feedback";
+"Help improve coaching quality" = "Help improve coaching quality";
+"Rating" = "Rating";
+"Optional comment: what was wrong or useful?" = "Optional comment: what was wrong or useful?";
+"Save Feedback" = "Save Feedback";
+"Feedback Saved" = "Feedback Saved";
+
+/* Live recorder */
+"Close" = "Close";
+"Ready" = "Ready";
+"Side View Guidance" = "Side View Guidance";
+"Rear View Guidance" = "Rear View Guidance";
+"Front View Guidance" = "Front View Guidance";
+"Great framing. Keep full body in the guide box." = "Great framing. Keep full body in the guide box.";
+"Record" = "Record";
+"Stop" = "Stop";
+"Use Library" = "Use Library";
+"Camera Access Needed" = "Camera Access Needed";
+"Allow camera access in iOS Settings to record a running clip with live guidance." = "Allow camera access in iOS Settings to record a running clip with live guidance.";
+"OK" = "OK";
+
+/* Enums - RunnerLevel */
+"Beginner" = "Beginner";
+"Intermediate" = "Intermediate";
+"Advanced" = "Advanced";
+
+/* Enums - TrainingTarget */
+"5K" = "5K";
+"10K" = "10K";
+"Half Marathon" = "Half Marathon";
+"Marathon" = "Marathon";
+"General Fitness" = "General Fitness";
+
+/* Enums - FeedbackRating */
+"Accurate" = "Accurate";
+"Partly accurate" = "Partly accurate";
+"Not accurate" = "Not accurate";
+"Confusing" = "Confusing";
+
+/* Video mode */
+"Side" = "Side";
+"Rear" = "Rear";
+"Front" = "Front";
+"cadence, overstride, trunk lean" = "cadence, overstride, trunk lean";
+"hip stability, knee tracking" = "hip stability, knee tracking";
+"knee valgus, hip symmetry" = "knee valgus, hip symmetry";
+
+/* Metric capability levels */
+"Overstride" = "Overstride";
+"Trunk lean" = "Trunk lean";
+"Knee valgus" = "Knee valgus";
+"Best" = "Best";
+"Good" = "Good";
+"Limited" = "Limited";
+
+/* Compare with Elite */
+"Compare with Elite" = "Compare with Elite";
+"Pick an athlete to compare your form against their elite biomechanical benchmarks." = "Pick an athlete to compare your form against their elite biomechanical benchmarks.";
+"Comparing your form..." = "Comparing your form...";
+"Coach's Take" = "Coach's Take";
+"Biggest Gaps" = "Biggest Gaps";
+"Metric Breakdown" = "Metric Breakdown";
+"match" = "match";
+"You" = "You";
+"Elite benchmark" = "Elite benchmark";
+"Close" = "Close";
+"Couldn't Load Athletes" = "Couldn't Load Athletes";
+"Comparison Failed" = "Comparison Failed";

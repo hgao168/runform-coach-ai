@@ -1,0 +1,40 @@
+<!-- pages/history/history.wxml -->
+<view class="page-container">
+
+  <!-- Header -->
+  <view class="history-header">
+    <text class="title">{{i.historyTitle}}</text>
+    <text wx:if="{{items.length > 0}}" class="clear-btn" bindtap="confirmClear">{{i.deleteHistory}}</text>
+  </view>
+
+  <!-- Empty state -->
+  <view wx:if="{{items.length === 0}}" class="empty-state">
+    <text style="font-size: 72rpx; margin-bottom: 20rpx;">🏃‍♂️</text>
+    <text class="empty-title">{{i.historyEmpty}}</text>
+    <text class="empty-sub">{{i.historyEmptySub}}</text>
+    <button class="btn-primary" style="margin-top: 40rpx; padding: 0 48rpx; height: 88rpx; font-size: 28rpx;" bindtap="goAnalyze">开始第一次分析</button>
+  </view>
+
+  <!-- History list -->
+  <view wx:else>
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="history-card"
+      bindtap="openItem"
+      data-index="{{index}}"
+    >
+      <view class="history-card-left">
+        <view class="score-circle" style="border-color: {{item.scoreColor}};">
+          <text class="score-text" style="color: {{item.scoreColor}};">{{item.scoreDisplay}}</text>
+        </view>
+      </view>
+      <view class="history-card-body">
+        <text class="history-date">{{item.dateDisplay}}</text>
+        <text class="history-summary">{{item.summary}}</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+  </view>
+
+</view>

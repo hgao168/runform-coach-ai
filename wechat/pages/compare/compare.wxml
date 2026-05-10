@@ -1,0 +1,101 @@
+<!-- pages/compare/compare.wxml -->
+<view class="page-container">
+
+  <!-- Header -->
+  <view class="card">
+    <view class="header-row">
+      <view class="icon-bubble">🏅</view>
+      <view class="header-text">
+        <text class="title">{{i.compareTitle}}</text>
+        <text class="subtitle">{{i.compareSubtitle}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Loading -->
+  <view wx:if="{{loading}}" class="loading-center">
+    <view class="loading-spinner"></view>
+    <text class="caption" style="margin-top: 16rpx;">{{i.loading}}</text>
+  </view>
+
+  <!-- Error -->
+  <view wx:elif="{{loadError}}" class="error-card">
+    <text class="body-text">{{loadError}}</text>
+    <button class="btn-secondary" style="margin-top: 20rpx; height: 80rpx;" bindtap="loadAthletes">{{i.retry}}</button>
+  </view>
+
+  <!-- Athletes list -->
+  <view wx:elif="{{!selectedAthlete}}">
+    <view
+      wx:for="{{athletes}}"
+      wx:key="id"
+      class="athlete-card"
+      bindtap="selectAthlete"
+      data-id="{{item.id}}"
+    >
+      <view class="athlete-avatar">
+        <text class="athlete-avatar-initial">{{item.initial}}</text>
+      </view>
+      <view class="athlete-info">
+        <text class="athlete-name">{{item.name}}</text>
+        <text class="athlete-meta">{{item.event}} · {{item.nationality}}</text>
+        <text class="athlete-achievement" wx:if="{{item.bestAchievement}}">🏆 {{item.bestAchievement}}</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+
+    <!-- iOS compare note -->
+    <view class="info-card">
+      <text class="info-icon">💡</text>
+      <text class="info-text">{{i.compareNote}}</text>
+    </view>
+  </view>
+
+  <!-- Athlete detail -->
+  <view wx:elif="{{selectedAthlete}}">
+
+    <button class="back-btn" bindtap="clearAthlete">‹ {{i.back}}</button>
+
+    <view class="detail-hero-card">
+      <view class="detail-avatar">
+        <text class="detail-avatar-initial">{{selectedAthlete.initial}}</text>
+      </view>
+      <text class="detail-name">{{selectedAthlete.name}}</text>
+      <text class="detail-meta">{{selectedAthlete.event}} · {{selectedAthlete.nationality}}</text>
+    </view>
+
+    <!-- Bio -->
+    <view class="card" wx:if="{{selectedAthlete.bio}}">
+      <text class="section-title">{{i.athleteBio}}</text>
+      <text class="body-text" style="margin-top: 12rpx;">{{selectedAthlete.bio}}</text>
+    </view>
+
+    <!-- Stats -->
+    <view class="card" wx:if="{{selectedAthlete.stats.length > 0}}">
+      <text class="section-title">📊 训练参数</text>
+      <view class="stats-grid">
+        <view wx:for="{{selectedAthlete.stats}}" wx:key="label" class="stat-item">
+          <text class="stat-value text-mint">{{item.value}}</text>
+          <text class="stat-label">{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Achievements -->
+    <view class="card" wx:if="{{selectedAthlete.achievements.length > 0}}">
+      <text class="section-title">🏆 {{i.achievement}}</text>
+      <view wx:for="{{selectedAthlete.achievements}}" wx:key="index" class="achievement-row">
+        <text class="achievement-dot">·</text>
+        <text class="achievement-text">{{item}}</text>
+      </view>
+    </view>
+
+    <!-- iOS-only note for full compare -->
+    <view class="info-card">
+      <text class="info-icon">📱</text>
+      <text class="info-text">{{i.compareNote}}</text>
+    </view>
+
+  </view>
+
+</view>

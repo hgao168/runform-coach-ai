@@ -1,0 +1,231 @@
+/* Tab bar */
+"Analyze" = "分析";
+"History" = "历史";
+"Plan" = "计划";
+"Profile" = "我的";
+
+/* Navigation titles */
+"RunForm" = "RunForm";
+"Training Plan" = "训练计划";
+"Manual Week Plan" = "手动周计划";
+"Saved Plans" = "已保存的计划";
+
+/* Analyze tab - hero */
+"AI Running Form Coach" = "AI 跑步姿态教练";
+"Unlock Your Speed with a Better Form" = "改善跑姿，提升速度";
+"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "上传短视频，获取精准反馈、效率指标和针对性训练建议。";
+
+/* Analyze tab - video card */
+"Running clip" = "跑步视频";
+"Select camera angle" = "选择拍摄角度";
+"Choose a running video" = "选择跑步视频";
+"Pick an existing video" = "选择已有视频";
+"10–20 seconds, full body visible, both feet in frame" = "10–20秒，全身可见，双脚在画面内";
+"Selected" = "已选择";
+
+/* Analyze tab - capture guide */
+"Capture guide" = "拍摄指南";
+"Side view tips" = "侧面拍摄技巧";
+"Rear view tips" = "后面拍摄技巧";
+"Front view tips" = "正面拍摄技巧";
+"Record 10–20 seconds at normal running pace" = "以正常跑步速度录制10–20秒";
+"Side view: phone at hip height, parallel to your direction of travel" = "侧面：手机置于臀部高度，与跑步方向平行";
+"Full body visible — both feet must stay in frame" = "全身可见——双脚必须在画面内";
+"Rear view: phone centered behind you at waist height" = "后面：手机置于腰部高度，正对身后中央";
+"Full body visible from head to heels, keep hips/knees in frame" = "从头到脚跟全身可见，保持臀部和膝盖在画面内";
+"Front view: phone centered in front of you at waist height" = "正面：手机置于腰部高度，正对前方中央";
+"Face the camera directly — full body visible from head to feet" = "正面朝向镜头——全身从头到脚可见";
+"Use bright lighting and avoid motion blur" = "使用明亮光线，避免运动模糊";
+
+/* Analyze tab - actions */
+"Record Live" = "实时录制";
+"Pick Video" = "选择视频";
+"Analyzing" = "分析中";
+
+/* Analyze tab - ready card */
+"What you'll get" = "你将获得什么";
+"Clear, runner-friendly coaching" = "清晰易懂的跑者建议";
+"Movement metrics" = "运动指标";
+"Cadence, overstride, trunk lean, arm movement, arm swing" = "步频、跨步、躯干倾斜、手臂运动、摆臂";
+"Strength focus" = "力量训练";
+"Issue-based exercises with why each one helps" = "针对问题的练习及其原因";
+"Quality check" = "质量检查";
+"If metrics are unreliable, RunForm asks for a better clip" = "如果指标不可靠，RunForm会要求重新录制";
+
+/* Status / error messages */
+"status.extracting_pose" = "正在提取姿态指标...";
+"status.recording_captured" = "实时指导视频录制完成，准备分析。";
+"status.video_selected" = "视频已选择。RunForm将检查姿态质量后开始指导。";
+"status.quality_usable" = "姿态质量可用，正在生成教练建议...";
+"status.analysis_saved" = "分析已保存，请在查看后提交反馈。";
+"error.invalid_km" = "请输入有效的每周里程数。";
+"error.plan_failed" = "计划生成失败，请检查网络连接。";
+"profile.saved" = "资料已保存";
+
+/* Analysis result */
+"Form Report" = "姿态报告";
+"Video Quality" = "视频质量";
+"Clip quality is good enough for reliable on-device pose analysis." = "视频质量足以进行可靠的姿态分析。";
+"Movement Metrics" = "运动指标";
+"Strength Focus" = "力量训练";
+
+/* History tab */
+"Progress" = "进步";
+"Reports" = "报告";
+"Form score" = "姿态分数";
+"Cadence" = "步频";
+"Hip stability" = "髋部稳定性";
+"Consistency" = "一致性";
+"No sessions yet" = "暂无记录";
+"Good start!" = "好的开始！";
+"Building habit" = "培养习惯中";
+"Staying consistent" = "保持稳定";
+"Great consistency!" = "非常稳定！";
+"days / 30d" = "天 / 30天";
+"No analysis yet" = "暂无分析";
+"Analyze your first running video. Results and tester feedback will appear here." = "分析你的第一个跑步视频，结果将显示在这里。";
+"No data yet" = "暂无数据";
+"Saved Feedback" = "已保存的反馈";
+"Tester signal" = "测试信号";
+"Clear" = "清除";
+"Clear all local history?" = "清除所有本地历史记录？";
+"Clear History" = "清除历史";
+
+/* Plan tab - inputs */
+"Next Week Plan" = "下周计划";
+"Set your goal, volume, and days. Get a smart weekly plan." = "设置目标、里程和天数，获取智能周计划。";
+"Edit next week (Mon-Sun)" = "编辑下周（周一至周日）";
+"Manual Week Preview" = "手动周预览";
+"Monday to Sunday" = "周一至周日";
+"Your inputs" = "你的输入";
+"Current weekly km" = "当前每周里程（千米）";
+"Goal" = "目标";
+"Running days: %lld" = "跑步天数：%lld";
+"Injury / pain flag" = "伤病标记";
+"Progression will be reduced; hard sessions replaced with easy runs." = "进展将减少，高强度训练将替换为轻松跑。";
+"Connected coaching" = "连接教练";
+"Using your latest form analysis to adjust the plan." = "使用最新姿态分析来调整计划。";
+"Generate an analysis first to personalise your plan." = "先生成分析以个性化你的计划。";
+"Without an analysis, RunForm will create a plan from your weekly km, goal, days, and injury flag only." = "没有分析，RunForm将仅根据每周里程、目标、天数和伤病标记生成计划。";
+"No major form issue found in your latest analysis." = "最新分析中未发现重大姿态问题。";
+"Generate Plan" = "生成计划";
+
+/* Plan tab - saved plans */
+"No saved plans yet" = "暂无已保存的计划";
+"Generate a plan and tap \"Save Plan\" to keep it here." = "生成计划并点击「保存计划」以保存在这里。";
+"Cancel" = "取消";
+"Save" = "保存";
+"Fill all 7 days manually. Week starts Monday and ends Sunday." = "手动填写全部7天，周从周一开始，周日结束。";
+
+/* Plan result */
+"Plan Summary" = "计划概要";
+"Adapted from your latest RunForm analysis" = "已根据最新RunForm分析调整";
+"Workouts" = "训练课";
+"Coach Notes" = "教练备注";
+
+/* Workout status */
+"Done" = "完成";
+"Skipped" = "跳过";
+"Too Hard" = "太难";
+"Pain" = "疼痛";
+
+/* Workout titles / categories from planner */
+"Easy Run" = "轻松跑";
+"Long Run" = "长距离跑";
+"Tempo Run" = "节奏跑";
+"5K Rhythm Session" = "5公里节奏训练";
+"Controlled Easy Run" = "控制性轻松跑";
+"Recovery Run" = "恢复跑";
+"Optional Easy Run" = "可选轻松跑";
+"Strength / Mobility" = "力量与柔韧";
+"Light Quality Run" = "轻量质量跑";
+"Easy" = "轻松";
+"Long" = "长跑";
+"Quality" = "质量";
+"Recovery" = "恢复";
+"Strength" = "力量";
+
+/* Profile tab */
+"Runner setup" = "跑者设置";
+"Used to personalize TestFlight feedback" = "用于个性化TestFlight反馈";
+"First name" = "名字";
+"Last name" = "姓氏";
+"Nickname" = "昵称";
+"Running level" = "跑步水平";
+"Weekly mileage" = "每周里程";
+"Running days / week: %lld" = "每周跑步天数：%lld";
+"Height" = "身高";
+"Weight" = "体重";
+"Injury note" = "伤病备注";
+"Optional" = "可选";
+"Save Profile" = "保存资料";
+"Why this matters" = "为什么这很重要";
+"Better coaching needs context" = "更好的指导需要背景信息";
+"RunForm stores this locally and uses it to understand tester feedback. Future versions can use it to personalize running plans and strength recommendations." = "RunForm将这些信息本地存储，用于理解测试反馈。未来版本可用于个性化训练计划和力量建议。";
+
+/* Feedback view */
+"Tester Feedback" = "测试者反馈";
+"Help improve coaching quality" = "帮助改善教练质量";
+"Rating" = "评分";
+"Optional comment: what was wrong or useful?" = "可选备注：哪里不对或有用？";
+"Save Feedback" = "保存反馈";
+"Feedback Saved" = "反馈已保存";
+
+/* Live recorder */
+"Close" = "关闭";
+"Ready" = "就绪";
+"Side View Guidance" = "侧面视图指导";
+"Rear View Guidance" = "后面视图指导";
+"Front View Guidance" = "正面视图指导";
+"Great framing. Keep full body in the guide box." = "取景良好，保持全身在指导框内。";
+"Record" = "录制";
+"Stop" = "停止";
+"Use Library" = "使用相册";
+"Camera Access Needed" = "需要摄像头权限";
+"Allow camera access in iOS Settings to record a running clip with live guidance." = "在iOS设置中允许摄像头访问，以录制带实时指导的跑步视频。";
+"OK" = "好的";
+
+/* Enums - RunnerLevel */
+"Beginner" = "初学者";
+"Intermediate" = "中级";
+"Advanced" = "高级";
+
+/* Enums - TrainingTarget */
+"5K" = "5公里";
+"10K" = "10公里";
+"Half Marathon" = "半程马拉松";
+"Marathon" = "马拉松";
+"General Fitness" = "综合健身";
+
+/* Compare with Elite */
+"Compare with Elite" = "与精英运动员比较";
+"Pick an athlete to compare your form against their elite biomechanical benchmarks." = "选择一位运动员，将你的跑步姿态与其精英生物力学基准进行对比。";
+"Comparing your form..." = "正在对比跑步姿态…";
+"Coach's Take" = "教练点评";
+"Biggest Gaps" = "主要差距";
+"Metric Breakdown" = "指标详情";
+"match" = "匹配度";
+"You" = "你";
+"Elite benchmark" = "精英基准";
+"Close" = "关闭";
+"Couldn't Load Athletes" = "无法加载运动员数据";
+"Comparison Failed" = "对比失败";
+"Partly accurate" = "部分准确";
+"Not accurate" = "不准确";
+"Confusing" = "令人困惑";
+
+/* Video mode */
+"Side" = "侧面";
+"Rear" = "后面";
+"Front" = "正面";
+"cadence, overstride, trunk lean" = "步频、跨步、躯干倾斜";
+"hip stability, knee tracking" = "髋部稳定性、膝关节追踪";
+"knee valgus, hip symmetry" = "膝关节外翻、髋部对称性";
+
+/* Metric capability levels */
+"Overstride" = "跨步";
+"Trunk lean" = "躯干倾斜";
+"Knee valgus" = "膝关节外翻";
+"Best" = "最佳";
+"Good" = "良好";
+"Limited" = "有限";

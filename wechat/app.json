@@ -1,0 +1,45 @@
+{
+  "pages": [
+    "pages/analyze/analyze",
+    "pages/result/result",
+    "pages/plan/plan",
+    "pages/history/history",
+    "pages/profile/profile",
+    "pages/compare/compare",
+    "pages/webview/webview"
+  ],
+  "tabBar": {
+    "color": "#888888",
+    "selectedColor": "#00f5a0",
+    "backgroundColor": "#0d0d14",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/analyze/analyze",
+        "text": "分析"
+      },
+      {
+        "pagePath": "pages/plan/plan",
+        "text": "计划"
+      },
+      {
+        "pagePath": "pages/history/history",
+        "text": "历史"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
+  },
+  "window": {
+    "backgroundColor": "#0a0a0f",
+    "backgroundColorTop": "#0a0a0f",
+    "backgroundColorBottom": "#0a0a0f",
+    "navigationBarBackgroundColor": "#0d0d14",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "RunForm Coach AI"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

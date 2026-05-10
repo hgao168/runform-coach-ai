@@ -1,0 +1,128 @@
+<!-- pages/plan/plan.wxml -->
+<view class="page-container">
+
+  <!-- Header -->
+  <view class="card">
+    <view class="header-row">
+      <view class="icon-bubble">📅</view>
+      <view class="header-text">
+        <text class="title">{{i.planTitle}}</text>
+        <text class="subtitle">{{i.planSubtitle}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Form card -->
+  <view class="card">
+
+    <!-- Weekly km -->
+    <view class="form-section">
+      <text class="label">{{i.weeklyKm}}</text>
+      <view class="km-row">
+        <slider
+          class="km-slider"
+          min="5" max="120" step="5"
+          value="{{weeklyKm}}"
+          activeColor="#00f5a0"
+          backgroundColor="rgba(255,255,255,0.12)"
+          bindchange="onKmChange"
+        />
+        <view class="km-badge">
+          <text class="text-mint km-num">{{weeklyKm}}</text>
+          <text class="km-unit">km</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Goal picker -->
+    <view class="form-section">
+      <text class="label">{{i.goal}}</text>
+      <view class="chip-row">
+        <view
+          wx:for="{{goals}}" wx:key="index"
+          class="chip {{selectedGoal === item.key ? 'chip-active' : ''}}"
+          bindtap="selectGoal"
+          data-key="{{item.key}}"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- Day picker -->
+    <view class="form-section">
+      <view class="label-row">
+        <text class="label">{{i.runDays}}</text>
+        <text class="text-mint label-note">{{selectedDays.length}} {{i.daysSelected}}</text>
+      </view>
+      <view class="chip-row">
+        <view
+          wx:for="{{dayLabels}}" wx:key="index"
+          class="chip day-chip {{selectedDays.indexOf(item) !== -1 ? 'chip-active' : ''}}"
+          bindtap="toggleDay"
+          data-day="{{item}}"
+        >{{item}}</view>
+      </view>
+    </view>
+
+    <!-- Injury toggle -->
+    <view class="form-section injury-row">
+      <view class="injury-text">
+        <text class="label">{{i.injuryFlag}}</text>
+        <text class="caption" wx:if="{{injuryFlag}}">{{i.injuryWarning}}</text>
+      </view>
+      <switch checked="{{injuryFlag}}" color="#00f5a0" bindchange="onInjuryChange" />
+    </view>
+
+    <!-- Generate button -->
+    <button
+      class="btn-primary full-btn"
+      style="margin-top: 8rpx;"
+      bindtap="generatePlan"
+      disabled="{{generating || selectedDays.length === 0}}"
+    >
+      <block wx:if="{{generating}}">
+        <view class="loading-row">
+          <view class="spinner"></view>
+          <text style="margin-left: 12rpx;">{{i.generating}}</text>
+        </view>
+      </block>
+      <block wx:else>{{i.generatePlan}}</block>
+    </button>
+
+  </view>
+
+  <!-- Result section -->
+  <view wx:if="{{plan}}">
+
+    <!-- Summary row -->
+    <view class="card-dark">
+      <text class="section-title">📊 {{i.nextWeekPlan}}</text>
+      <view class="plan-summary-row">
+        <view class="plan-stat">
+          <text class="plan-stat-num text-mint">{{plan.total_km}}</text>
+          <text class="plan-stat-label">{{i.totalKm}}</text>
+        </view>
+        <view class="plan-stat">
+          <text class="plan-stat-num text-cyan">{{plan.running_days}}</text>
+          <text class="plan-stat-label">{{i.runningDays}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Day cards -->
+    <view wx:for="{{plan.days}}" wx:key="index" class="day-card" style="border-left: 4rpx solid {{item.color}};">
+      <view class="day-card-header">
+        <view class="day-tag" style="background: {{item.color}}20; border-color: {{item.color}}40;">
+          <text style="color: {{item.color}}; font-size: 24rpx; font-weight: 700;">{{item.day}}</text>
+        </view>
+        <text class="day-type" style="color: {{item.color}};">{{item.type}}</text>
+        <text wx:if="{{item.km}}" class="day-km text-mint">{{item.km}} km</text>
+      </view>
+      <text class="day-desc">{{item.description}}</text>
+      <view wx:if="{{item.notes}}" class="day-notes">
+        <text class="caption">📝 {{item.notes}}</text>
+      </view>
+    </view>
+
+  </view>
+
+</view>

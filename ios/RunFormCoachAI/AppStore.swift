@@ -6,6 +6,9 @@ final class AppStore: ObservableObject {
         didSet { saveProfile() }
     }
 
+    @Published private(set) var appUserID: String
+    @Published private(set) var stravaStatus: StravaStatusResponse?
+
     @Published private(set) var history: [AnalysisHistoryItem] = []
     @Published private(set) var savedPlans: [SavedPlan] = []
     @Published private(set) var nextWeekPlan: SavedPlan?
@@ -33,6 +36,8 @@ final class AppStore: ObservableObject {
     }
 
     private let profileKey = "tester.profile.v1"
+    private let appUserIDKey = "app.user.id.v1"
+    private let stravaStatusKey = "strava.status.v1"
     private let historyKey = "analysis.history.v1"
     private let savedPlansKey = "saved.plans.v1"
     private let nextWeekPlanKey = "next.week.plan.v1"
@@ -44,11 +49,26 @@ final class AppStore: ObservableObject {
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601
 
+        if let storedAppUserID = UserDefaults.standard.string(forKey: appUserIDKey), !storedAppUserID.isEmpty {
+            appUserID = storedAppUserID
+        } else {
+            let newAppUserID = UUID().uuidString
+            appUserID = newAppUserID
+            UserDefaults.standard.set(newAppUserID, forKey: appUserIDKey)
+        }
+
         if let data = UserDefaults.standard.data(forKey: profileKey),
            let savedProfile = try? decoder.decode(TesterProfile.self, from: data) {
             profile = savedProfile
         } else {
             profile = TesterProfile()
+        }
+
+        if let data = UserDefaults.standard.data(forKey: stravaStatusKey),
+           let savedStatus = try? decoder.decode(StravaStatusResponse.self, from: data) {
+            stravaStatus = savedStatus
+        } else {
+            stravaStatus = nil
         }
 
         loadHistory()
@@ -197,6 +217,20 @@ final class AppStore: ObservableObject {
     private func saveProfile() {
         guard let data = try? encoder.encode(profile) else { return }
         UserDefaults.standard.set(data, forKey: profileKey)
+    }
+
+    func updateStravaStatus(_ status: StravaStatusResponse?) {
+        stravaStatus = status
+        saveStravaStatus()
+    }
+
+    private func saveStravaStatus() {
+        guard let stravaStatus,
+              let data = try? encoder.encode(stravaStatus) else {
+            UserDefaults.standard.removeObject(forKey: stravaStatusKey)
+            return
+        }
+        UserDefaults.standard.set(data, forKey: stravaStatusKey)
     }
 
     private func loadHistory() {

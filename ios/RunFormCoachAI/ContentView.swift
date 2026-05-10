@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var showLiveRecorder = false
     @State private var isAnalyzing = false
     @State private var analysis: AnalysisResponse?
+    @State private var lastPoseMetrics: PoseMetrics?
     @State private var latestHistoryItemID: UUID?
     @State private var errorMessage: String?
     @State private var statusMessage: String?
@@ -46,7 +47,7 @@ struct ContentView: View {
                         messageSection
 
                         if let analysis {
-                            AnalysisResultView(result: analysis)
+                            AnalysisResultView(result: analysis, poseMetrics: lastPoseMetrics)
                             if let latestHistoryItemID {
                                 FeedbackView(historyItemID: latestHistoryItemID)
                             }
@@ -68,7 +69,7 @@ struct ContentView: View {
                     analysis = nil
                     latestHistoryItemID = nil
                     errorMessage = nil
-                    statusMessage = "Video selected. RunForm will check pose quality before coaching."
+                    statusMessage = String(localized: "status.video_selected")
                 }
             }
             .sheet(isPresented: $showLiveRecorder) {
@@ -77,7 +78,7 @@ struct ContentView: View {
                     analysis = nil
                     latestHistoryItemID = nil
                     errorMessage = nil
-                    statusMessage = "Recording captured with live guidance. Ready to analyze."
+                    statusMessage = String(localized: "status.recording_captured")
                 }
             }
         }
@@ -210,12 +211,12 @@ struct ContentView: View {
                             VStack(spacing: 14) {
                                 ZStack {
                                     Circle().fill(AppTheme.cyan.opacity(0.14)).frame(width: 90, height: 90)
-                                    Image(systemName: "video.badge.plus")
+                                    Image(systemName: "record.circle")
                                         .font(.system(size: 42, weight: .semibold))
                                         .foregroundStyle(AppTheme.mint)
                                 }
                                 VStack(spacing: 5) {
-                                    Text("Choose a running video")
+                                    Text("Record Live")
                                         .font(.headline)
                                         .foregroundStyle(.white)
                                     Text("10–20 seconds, full body visible, both feet in frame")
@@ -231,7 +232,7 @@ struct ContentView: View {
                                 .stroke(style: StrokeStyle(lineWidth: 1, dash: [7, 7]))
                                 .foregroundStyle(.white.opacity(0.16))
                         )
-                        .onTapGesture { showVideoPicker = true }
+                        .onTapGesture { showLiveRecorder = true }
                 }
             }
         }
@@ -260,18 +261,18 @@ struct ContentView: View {
     }
 
     private var actionButtons: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                Button { showLiveRecorder = true } label: {
-                    Label("Record Live", systemImage: "record.circle")
-                }
-                .buttonStyle(SecondaryButtonStyle())
-
-                Button { showVideoPicker = true } label: {
-                    Label("Pick Video", systemImage: "plus")
-                }
-                .buttonStyle(SecondaryButtonStyle())
+        HStack(spacing: 12) {
+            Button { showVideoPicker = true } label: {
+                Label("Pick Video", systemImage: "photo.on.rectangle")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(AppTheme.mint)
+                    .padding(.vertical, 15)
+                    .frame(maxWidth: .infinity)
+                    .background(AppTheme.mint.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(AppTheme.mint.opacity(0.35), lineWidth: 1))
             }
+            .buttonStyle(.plain)
 
             Button { Task { await analyzeSelectedVideo() } } label: {
                 if isAnalyzing {
@@ -312,11 +313,18 @@ struct ContentView: View {
         guard let selectedVideoURL else { return }
         isAnalyzing = true
         errorMessage = nil
-        statusMessage = "Extracting pose metrics on device..."
+        statusMessage = String(localized: "status.extracting_pose")
 
         do {
             var poseMetrics = try await PoseExtractor().extract(from: selectedVideoURL, expectedVideoMode: videoMode.rawValue)
             poseMetrics.videoMode = videoMode.rawValue
+            poseMetrics.language = Bundle.main.preferredLocalizations.first ?? "en"
+            let profile = appStore.profile
+            poseMetrics.gender = profile.gender.rawValue
+            poseMetrics.shoeSize = profile.shoeSize.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : profile.shoeSize
+            poseMetrics.legLengthCm = profile.legLengthCm
+            poseMetrics.shoeBrandModel = profile.shoeBrandModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : profile.shoeBrandModel
+            lastPoseMetrics = poseMetrics
             if poseMetrics.videoQualityScore < 0.40 {
                 let topIssue = poseMetrics.qualityNotes.first ?? "Video quality is too low for reliable form analysis."
                 errorMessage = "Please re-record: \(topIssue)"
@@ -329,14 +337,14 @@ struct ContentView: View {
                 let topGuidance = poseMetrics.qualityNotes.prefix(2).joined(separator: " ")
                 statusMessage = "Video quality is low. \(topGuidance)"
             } else {
-                statusMessage = "Pose quality looks usable. Generating coaching advice..."
+                statusMessage = String(localized: "status.quality_usable")
             }
 
             let result = try await APIClient.shared.analyzeMetrics(poseMetrics)
             analysis = result
             appStore.addHistory(result: result, videoURL: selectedVideoURL)
             latestHistoryItemID = appStore.history.first?.id
-            statusMessage = "Analysis saved. Please add feedback after review."
+            statusMessage = String(localized: "status.analysis_saved")
         } catch {
             errorMessage = "Analysis failed: \(error.localizedDescription)"
             statusMessage = nil
@@ -374,7 +382,7 @@ struct MiniStatCard: View {
 }
 
 struct GuidelineRow: View {
-    let text: String
+    let text: LocalizedStringKey
     var icon: String = "checkmark.circle.fill"
 
     var body: some View {
@@ -414,8 +422,8 @@ struct MessageBanner: View {
 }
 
 struct FeatureRow: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
     let icon: String
 
     var body: some View {

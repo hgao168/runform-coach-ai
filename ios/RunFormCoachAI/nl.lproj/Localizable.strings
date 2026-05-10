@@ -1,0 +1,231 @@
+/* Tab bar */
+"Analyze" = "Analyseer";
+"History" = "Geschiedenis";
+"Plan" = "Plan";
+"Profile" = "Profiel";
+
+/* Navigation titles */
+"RunForm" = "RunForm";
+"Training Plan" = "Trainingsplan";
+"Manual Week Plan" = "Handmatig weekplan";
+"Saved Plans" = "Opgeslagen plannen";
+
+/* Analyze tab - hero */
+"AI Running Form Coach" = "AI Loopvorm Coach";
+"Unlock Your Speed with a Better Form" = "Verbeter je looptechniek en verhoog je snelheid";
+"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "Upload een korte clip voor nauwkeurige feedback, efficiëntiemetrieken en gerichte training.";
+
+/* Analyze tab - video card */
+"Running clip" = "Loopvideo";
+"Select camera angle" = "Selecteer camerahoek";
+"Choose a running video" = "Kies een loopvideo";
+"Pick an existing video" = "Kies een bestaande video";
+"10–20 seconds, full body visible, both feet in frame" = "10–20 seconden, volledig lichaam zichtbaar, beide voeten in beeld";
+"Selected" = "Geselecteerd";
+
+/* Analyze tab - capture guide */
+"Capture guide" = "Opnamegids";
+"Side view tips" = "Zijkant opnametips";
+"Rear view tips" = "Achterkant opnametips";
+"Front view tips" = "Voorkant opnametips";
+"Record 10–20 seconds at normal running pace" = "Neem 10–20 seconden op in normaal looptempo";
+"Side view: phone at hip height, parallel to your direction of travel" = "Zijkant: telefoon op heuphoogte, parallel aan de looprichting";
+"Full body visible — both feet must stay in frame" = "Volledig lichaam zichtbaar — beide voeten moeten in beeld blijven";
+"Rear view: phone centered behind you at waist height" = "Achterkant: telefoon gecentreerd achter je op taillehoogte";
+"Full body visible from head to heels, keep hips/knees in frame" = "Volledig lichaam van hoofd tot hielen, heupen en knieën in beeld";
+"Front view: phone centered in front of you at waist height" = "Voorkant: telefoon gecentreerd voor je op taillehoogte";
+"Face the camera directly — full body visible from head to feet" = "Kijk recht in de camera — volledig lichaam van hoofd tot voeten";
+"Use bright lighting and avoid motion blur" = "Gebruik heldere verlichting en vermijd bewegingsonscherpte";
+
+/* Analyze tab - actions */
+"Record Live" = "Live opnemen";
+"Pick Video" = "Video kiezen";
+"Analyzing" = "Analyseren";
+
+/* Analyze tab - ready card */
+"What you'll get" = "Wat je krijgt";
+"Clear, runner-friendly coaching" = "Duidelijke, lopersvriendelijke coaching";
+"Movement metrics" = "Bewegingsmetrieken";
+"Cadence, overstride, trunk lean, arm movement, arm swing" = "Cadans, overstap, romp helling, armbeweging, armschommel";
+"Strength focus" = "Krachtoefeningen";
+"Issue-based exercises with why each one helps" = "Probleemgerichte oefeningen met uitleg";
+"Quality check" = "Kwaliteitscontrole";
+"If metrics are unreliable, RunForm asks for a better clip" = "Als metrieken onbetrouwbaar zijn, vraagt RunForm om een betere clip";
+
+/* Status / error messages */
+"status.extracting_pose" = "Houdingsmetrieken worden geëxtraheerd...";
+"status.recording_captured" = "Opname vastgelegd met live begeleiding. Klaar om te analyseren.";
+"status.video_selected" = "Video geselecteerd. RunForm controleert de houdingskwaliteit.";
+"status.quality_usable" = "Houdingskwaliteit is bruikbaar. Coachingadvies wordt gegenereerd...";
+"status.analysis_saved" = "Analyse opgeslagen. Voeg feedback toe na beoordeling.";
+"error.invalid_km" = "Voer een geldig aantal wekelijkse km in.";
+"error.plan_failed" = "Plangeneratie mislukt. Controleer je verbinding.";
+"profile.saved" = "Profiel opgeslagen";
+
+/* Analysis result */
+"Form Report" = "Techniekrapport";
+"Video Quality" = "Videokwaliteit";
+"Clip quality is good enough for reliable on-device pose analysis." = "Clipkwaliteit is goed genoeg voor betrouwbare houdingsanalyse.";
+"Movement Metrics" = "Bewegingsmetrieken";
+"Strength Focus" = "Krachtoefeningen";
+
+/* History tab */
+"Progress" = "Voortgang";
+"Reports" = "Rapporten";
+"Form score" = "Techniekscore";
+"Cadence" = "Cadans";
+"Hip stability" = "Heupstabiliteit";
+"Consistency" = "Consistentie";
+"No sessions yet" = "Nog geen sessies";
+"Good start!" = "Goede start!";
+"Building habit" = "Gewoonte opbouwen";
+"Staying consistent" = "Consistent blijven";
+"Great consistency!" = "Geweldige consistentie!";
+"days / 30d" = "dagen / 30d";
+"No analysis yet" = "Nog geen analyse";
+"Analyze your first running video. Results and tester feedback will appear here." = "Analyseer je eerste loopvideo. Resultaten verschijnen hier.";
+"No data yet" = "Nog geen data";
+"Saved Feedback" = "Opgeslagen feedback";
+"Tester signal" = "Testersignaal";
+"Clear" = "Wis";
+"Clear all local history?" = "Alle lokale geschiedenis wissen?";
+"Clear History" = "Geschiedenis wissen";
+
+/* Plan tab - inputs */
+"Next Week Plan" = "Plan volgende week";
+"Set your goal, volume, and days. Get a smart weekly plan." = "Stel je doel, volume en dagen in. Krijg een slim weekplan.";
+"Edit next week (Mon-Sun)" = "Bewerk volgende week (ma-zo)";
+"Manual Week Preview" = "Handmatig weekoverzicht";
+"Monday to Sunday" = "Maandag tot zondag";
+"Your inputs" = "Jouw invoer";
+"Current weekly km" = "Huidige wekelijkse km";
+"Goal" = "Doel";
+"Running days: %lld" = "Loopdagen: %lld";
+"Injury / pain flag" = "Blessure / pijn markering";
+"Progression will be reduced; hard sessions replaced with easy runs." = "Progressie wordt verminderd; zware sessies worden vervangen door rustige runs.";
+"Connected coaching" = "Verbonden coaching";
+"Using your latest form analysis to adjust the plan." = "Gebruikt je laatste techniekanalyse om het plan aan te passen.";
+"Generate an analysis first to personalise your plan." = "Genereer eerst een analyse om je plan te personaliseren.";
+"Without an analysis, RunForm will create a plan from your weekly km, goal, days, and injury flag only." = "Zonder analyse maakt RunForm een plan op basis van wekelijkse km, doel, dagen en blessuremarkering.";
+"No major form issue found in your latest analysis." = "Geen grote techniekproblemen gevonden in je laatste analyse.";
+"Generate Plan" = "Plan genereren";
+
+/* Plan tab - saved plans */
+"No saved plans yet" = "Nog geen opgeslagen plannen";
+"Generate a plan and tap \"Save Plan\" to keep it here." = "Genereer een plan en tik op \"Plan opslaan\" om het hier te bewaren.";
+"Cancel" = "Annuleer";
+"Save" = "Opslaan";
+"Fill all 7 days manually. Week starts Monday and ends Sunday." = "Vul alle 7 dagen handmatig in. De week begint op maandag en eindigt op zondag.";
+
+/* Plan result */
+"Plan Summary" = "Planoverzicht";
+"Adapted from your latest RunForm analysis" = "Aangepast op basis van je laatste RunForm-analyse";
+"Workouts" = "Trainingen";
+"Coach Notes" = "Coachopmerkingen";
+
+/* Workout status */
+"Done" = "Gedaan";
+"Skipped" = "Overgeslagen";
+"Too Hard" = "Te zwaar";
+"Pain" = "Pijn";
+
+/* Workout titles / categories from planner */
+"Easy Run" = "Rustige run";
+"Long Run" = "Lange duurloop";
+"Tempo Run" = "Tempoloop";
+"5K Rhythm Session" = "5km ritmosessie";
+"Controlled Easy Run" = "Gecontroleerde rustige run";
+"Recovery Run" = "Herstelrun";
+"Optional Easy Run" = "Optionele rustige run";
+"Strength / Mobility" = "Kracht & Mobiliteit";
+"Light Quality Run" = "Lichte kwaliteitsrun";
+"Easy" = "Rustig";
+"Long" = "Lang";
+"Quality" = "Kwaliteit";
+"Recovery" = "Herstel";
+"Strength" = "Kracht";
+
+/* Profile tab */
+"Runner setup" = "Lopersinstellingen";
+"Used to personalize TestFlight feedback" = "Gebruikt om TestFlight-feedback te personaliseren";
+"First name" = "Voornaam";
+"Last name" = "Achternaam";
+"Nickname" = "Bijnaam";
+"Running level" = "Loopniveau";
+"Weekly mileage" = "Wekelijkse kilometerstand";
+"Running days / week: %lld" = "Loopdagen per week: %lld";
+"Height" = "Lengte";
+"Weight" = "Gewicht";
+"Injury note" = "Blessureopmerking";
+"Optional" = "Optioneel";
+"Save Profile" = "Profiel opslaan";
+"Why this matters" = "Waarom dit belangrijk is";
+"Better coaching needs context" = "Betere coaching heeft context nodig";
+"RunForm stores this locally and uses it to understand tester feedback. Future versions can use it to personalize running plans and strength recommendations." = "RunForm slaat dit lokaal op en gebruikt het om testerfeedback te begrijpen. Toekomstige versies kunnen het gebruiken om loopplannen en krachtaanbevelingen te personaliseren.";
+
+/* Feedback view */
+"Tester Feedback" = "Testerfeedback";
+"Help improve coaching quality" = "Help de coachingkwaliteit verbeteren";
+"Rating" = "Beoordeling";
+"Optional comment: what was wrong or useful?" = "Optionele opmerking: wat was er fout of nuttig?";
+"Save Feedback" = "Feedback opslaan";
+"Feedback Saved" = "Feedback opgeslagen";
+
+/* Live recorder */
+"Close" = "Sluiten";
+"Ready" = "Klaar";
+"Side View Guidance" = "Zijkant weergavegids";
+"Rear View Guidance" = "Achterkant weergavegids";
+"Front View Guidance" = "Voorkant weergavegids";
+"Great framing. Keep full body in the guide box." = "Goed gekaderd. Houd volledig lichaam in het hulpvak.";
+"Record" = "Opnemen";
+"Stop" = "Stoppen";
+"Use Library" = "Bibliotheek";
+"Camera Access Needed" = "Cameratoegang nodig";
+"Allow camera access in iOS Settings to record a running clip with live guidance." = "Sta cameratoegang toe in iOS-instellingen om een loopclip op te nemen met live begeleiding.";
+"OK" = "OK";
+
+/* Enums - RunnerLevel */
+"Beginner" = "Beginner";
+"Intermediate" = "Gevorderd";
+"Advanced" = "Expert";
+
+/* Enums - TrainingTarget */
+"5K" = "5K";
+"10K" = "10K";
+"Half Marathon" = "Halve marathon";
+"Marathon" = "Marathon";
+"General Fitness" = "Algemene conditie";
+
+/* Compare with Elite */
+"Compare with Elite" = "Vergelijk met Elite";
+"Pick an athlete to compare your form against their elite biomechanical benchmarks." = "Kies een atleet om jouw looptechniek te vergelijken met hun elite biomechanische benchmarks.";
+"Comparing your form..." = "Jouw looptechniek vergelijken…";
+"Coach's Take" = "Mening van de coach";
+"Biggest Gaps" = "Grootste verbeterpunten";
+"Metric Breakdown" = "Metrieken overzicht";
+"match" = "overeenkomst";
+"You" = "Jij";
+"Elite benchmark" = "Elite benchmark";
+"Close" = "Sluiten";
+"Couldn't Load Athletes" = "Atleten laden mislukt";
+"Comparison Failed" = "Vergelijking mislukt";
+"Partly accurate" = "Deels nauwkeurig";
+"Not accurate" = "Niet nauwkeurig";
+"Confusing" = "Verwarrend";
+
+/* Video mode */
+"Side" = "Zijkant";
+"Rear" = "Achterkant";
+"Front" = "Voorkant";
+"cadence, overstride, trunk lean" = "cadans, overstap, romp helling";
+"hip stability, knee tracking" = "heupstabiliteit, knietracering";
+"knee valgus, hip symmetry" = "knie valgus, heupsymmetrie";
+
+/* Metric capability levels */
+"Overstride" = "Overstap";
+"Trunk lean" = "Romp helling";
+"Knee valgus" = "Knie valgus";
+"Best" = "Beste";
+"Good" = "Goed";
+"Limited" = "Beperkt";

@@ -1,0 +1,83 @@
+<!-- pages/analyze/analyze.wxml -->
+<view class="page-container">
+
+  <!-- Header card -->
+  <view class="card">
+    <view class="header-row">
+      <view class="icon-bubble">🏃</view>
+      <view class="header-text">
+        <text class="title">{{i.analyzeTitle}}</text>
+        <text class="subtitle">{{i.analyzeSubtitle}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Recording guide -->
+  <view class="card-dark">
+    <text class="section-title">{{i.videoGuide}}</text>
+    <text class="body-text">{{i.videoGuideBody}}</text>
+    <view class="guide-tips">
+      <view class="tip-row" wx:for="{{tips}}" wx:key="index">
+        <text class="tip-icon">{{item.icon}}</text>
+        <text class="tip-text">{{item.text}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Video picker area -->
+  <view class="card">
+    <view class="video-area" bindtap="pickVideo">
+      <block wx:if="{{!videoPath}}">
+        <text class="video-placeholder-icon">🎬</text>
+        <text class="video-placeholder-text">{{i.pickVideo}}</text>
+        <text class="caption" style="margin-top: 8rpx; text-align: center;">点击选择或录制跑步视频</text>
+      </block>
+      <block wx:else>
+        <video
+          class="video-preview"
+          src="{{videoPath}}"
+          controls="{{false}}"
+          autoplay="{{false}}"
+          loop="{{false}}"
+          muted="{{true}}"
+          show-play-btn="{{false}}"
+        />
+        <view class="video-overlay">
+          <text class="video-overlay-text">{{videoName}}</text>
+          <text class="video-overlay-sub">{{videoDurationText}} · {{videoSizeText}}</text>
+        </view>
+      </block>
+    </view>
+
+    <!-- Action row -->
+    <view class="action-row" style="margin-top: 20rpx;">
+      <button class="btn-secondary pick-btn" bindtap="pickVideo">{{i.pickVideo}}</button>
+      <view style="width: 16rpx;"></view>
+      <button
+        class="btn-primary analyze-btn"
+        bindtap="analyze"
+        disabled="{{!videoPath || analyzing}}"
+      >
+        <block wx:if="{{analyzing}}">
+          <view class="loading-row">
+            <view class="spinner"></view>
+            <text style="margin-left: 12rpx;">{{uploadProgress > 0 ? i.uploadProgress + ' ' + uploadProgress + '%' : i.analyzing}}</text>
+          </view>
+        </block>
+        <block wx:else>{{i.analyzeBtn}}</block>
+      </button>
+    </view>
+  </view>
+
+  <!-- Upload progress bar -->
+  <view wx:if="{{analyzing && uploadProgress > 0}}" class="progress-card">
+    <view class="progress-label-row">
+      <text class="label">{{i.uploadProgress}}</text>
+      <text class="text-mint">{{uploadProgress}}%</text>
+    </view>
+    <view class="progress-track">
+      <view class="progress-fill" style="width: {{uploadProgress}}%;"></view>
+    </view>
+  </view>
+
+</view>

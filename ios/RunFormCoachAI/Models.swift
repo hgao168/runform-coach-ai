@@ -68,12 +68,30 @@ struct PoseMetrics: Codable {
     let shoulderElevationStatus: String
     let armSwingScore: Double
     let armSwingStatus: String
+    let armCrossingScore: Double
+    let armCrossingStatus: String
+    let armCrossingDirection: String
+    let backwardElbowDriveScore: Double
+    let backwardElbowDriveStatus: String
+    let backwardElbowDriveAngleDegrees: Double
+    let elbowAngleScore: Double
+    let elbowAngleStatus: String
+    let elbowAngleDegrees: Double
+    let shoulderArmIndependenceScore: Double
+    let shoulderArmIndependenceStatus: String
     let pelvicDropScore: Double
     let pelvicDropStatus: String
     let stepSymmetryScore: Double
     let stepSymmetryStatus: String
     let headForwardScore: Double
     let headForwardStatus: String
+    let postureScore: Double
+    let efficiencyScore: Double
+    let stabilityScore: Double
+    let propulsionScore: Double
+    let armMechanicsScore: Double
+    let symmetryScore: Double
+    let injuryRiskScore: Double
     let frameCount: Int
     let videoDurationSeconds: Double
     let notes: [String]
@@ -81,6 +99,11 @@ struct PoseMetrics: Codable {
     let poseDetectionRate: Double
     let qualityNotes: [String]
     var videoMode: String = "side"
+    var language: String = "en"
+    var gender: String? = nil
+    var shoeSize: String? = nil
+    var legLengthCm: Double? = nil
+    var shoeBrandModel: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case cadenceEstimateSPM = "cadence_estimate_spm"
@@ -99,12 +122,30 @@ struct PoseMetrics: Codable {
         case shoulderElevationStatus = "shoulder_elevation_status"
         case armSwingScore = "arm_swing_score"
         case armSwingStatus = "arm_swing_status"
+        case armCrossingScore = "arm_crossing_score"
+        case armCrossingStatus = "arm_crossing_status"
+        case armCrossingDirection = "arm_crossing_direction"
+        case backwardElbowDriveScore = "backward_elbow_drive_score"
+        case backwardElbowDriveStatus = "backward_elbow_drive_status"
+        case backwardElbowDriveAngleDegrees = "backward_elbow_drive_angle_degrees"
+        case elbowAngleScore = "elbow_angle_score"
+        case elbowAngleStatus = "elbow_angle_status"
+        case elbowAngleDegrees = "elbow_angle_degrees"
+        case shoulderArmIndependenceScore = "shoulder_arm_independence_score"
+        case shoulderArmIndependenceStatus = "shoulder_arm_independence_status"
         case pelvicDropScore = "pelvic_drop_score"
         case pelvicDropStatus = "pelvic_drop_status"
         case stepSymmetryScore = "step_symmetry_score"
         case stepSymmetryStatus = "step_symmetry_status"
         case headForwardScore = "head_forward_score"
         case headForwardStatus = "head_forward_status"
+        case postureScore = "posture_score"
+        case efficiencyScore = "efficiency_score"
+        case stabilityScore = "stability_score"
+        case propulsionScore = "propulsion_score"
+        case armMechanicsScore = "arm_mechanics_score"
+        case symmetryScore = "symmetry_score"
+        case injuryRiskScore = "injury_risk_score"
         case frameCount = "frame_count"
         case videoDurationSeconds = "video_duration_seconds"
         case notes
@@ -112,6 +153,11 @@ struct PoseMetrics: Codable {
         case poseDetectionRate = "pose_detection_rate"
         case qualityNotes = "quality_notes"
         case videoMode = "video_mode"
+        case language
+        case gender
+        case shoeSize = "shoe_size"
+        case legLengthCm = "leg_length_cm"
+        case shoeBrandModel = "shoe_brand_model"
     }
 }
 
@@ -119,6 +165,15 @@ enum RunnerLevel: String, Codable, CaseIterable, Identifiable {
     case beginner = "Beginner"
     case intermediate = "Intermediate"
     case advanced = "Advanced"
+    var id: String { rawValue }
+}
+
+enum ProfileGender: String, Codable, CaseIterable, Identifiable {
+    case male = "male"
+    case female = "female"
+    case other = "other"
+    case unspecified = "unspecified"
+
     var id: String { rawValue }
 }
 
@@ -133,6 +188,87 @@ struct TesterProfile: Codable, Equatable {
     var weightKg: Double = 70
     var target: String = "General Fitness"
     var injuryNote: String = ""
+    var dateOfBirth: Date? = nil
+    var weeklyExerciseHours: Double = 5
+    var gender: ProfileGender = .unspecified
+    var shoeSize: String = ""
+    var legLengthCm: Double? = nil
+    var shoeBrandModel: String = ""
+
+    enum CodingKeys: String, CodingKey {
+        case firstName
+        case lastName
+        case nickname
+        case level
+        case weeklyMileageKm
+        case runningDaysPerWeek
+        case heightCm
+        case weightKg
+        case target
+        case injuryNote
+        case dateOfBirth
+        case weeklyExerciseHours
+        case gender
+        case shoeSize
+        case legLengthCm
+        case shoeBrandModel
+    }
+
+    init(
+        firstName: String = "",
+        lastName: String = "",
+        nickname: String = "",
+        level: RunnerLevel = .beginner,
+        weeklyMileageKm: Double = 15,
+        runningDaysPerWeek: Int = 3,
+        heightCm: Double = 170,
+        weightKg: Double = 70,
+        target: String = "General Fitness",
+        injuryNote: String = "",
+        dateOfBirth: Date? = nil,
+        weeklyExerciseHours: Double = 5,
+        gender: ProfileGender = .unspecified,
+        shoeSize: String = "",
+        legLengthCm: Double? = nil,
+        shoeBrandModel: String = ""
+    ) {
+        self.firstName = firstName
+        self.lastName = lastName
+        self.nickname = nickname
+        self.level = level
+        self.weeklyMileageKm = weeklyMileageKm
+        self.runningDaysPerWeek = runningDaysPerWeek
+        self.heightCm = heightCm
+        self.weightKg = weightKg
+        self.target = target
+        self.injuryNote = injuryNote
+        self.dateOfBirth = dateOfBirth
+        self.weeklyExerciseHours = weeklyExerciseHours
+        self.gender = gender
+        self.shoeSize = shoeSize
+        self.legLengthCm = legLengthCm
+        self.shoeBrandModel = shoeBrandModel
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        firstName = try c.decodeIfPresent(String.self, forKey: .firstName) ?? ""
+        lastName = try c.decodeIfPresent(String.self, forKey: .lastName) ?? ""
+        nickname = try c.decodeIfPresent(String.self, forKey: .nickname) ?? ""
+        level = try c.decodeIfPresent(RunnerLevel.self, forKey: .level) ?? .beginner
+        weeklyMileageKm = try c.decodeIfPresent(Double.self, forKey: .weeklyMileageKm) ?? 15
+        runningDaysPerWeek = try c.decodeIfPresent(Int.self, forKey: .runningDaysPerWeek) ?? 3
+        heightCm = try c.decodeIfPresent(Double.self, forKey: .heightCm) ?? 170
+        weightKg = try c.decodeIfPresent(Double.self, forKey: .weightKg) ?? 70
+        target = try c.decodeIfPresent(String.self, forKey: .target) ?? "General Fitness"
+        injuryNote = try c.decodeIfPresent(String.self, forKey: .injuryNote) ?? ""
+        dateOfBirth = try c.decodeIfPresent(Date.self, forKey: .dateOfBirth)
+        weeklyExerciseHours = try c.decodeIfPresent(Double.self, forKey: .weeklyExerciseHours) ?? 5
+        gender = try c.decodeIfPresent(ProfileGender.self, forKey: .gender) ?? .unspecified
+        shoeSize = try c.decodeIfPresent(String.self, forKey: .shoeSize) ?? ""
+        legLengthCm = try c.decodeIfPresent(Double.self, forKey: .legLengthCm)
+        shoeBrandModel = try c.decodeIfPresent(String.self, forKey: .shoeBrandModel) ?? ""
+    }
 }
 
 enum FeedbackRating: String, Codable, CaseIterable, Identifiable {
@@ -174,9 +310,9 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .side: return "Side"
-        case .rear: return "Rear"
-        case .front: return "Front"
+        case .side: return String(localized: "Side")
+        case .rear: return String(localized: "Rear")
+        case .front: return String(localized: "Front")
         }
     }
 
@@ -190,9 +326,9 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
 
     var metrics: String {
         switch self {
-        case .side: return "cadence, overstride, trunk lean"
-        case .rear: return "hip stability, knee tracking"
-        case .front: return "knee valgus, hip symmetry"
+        case .side: return String(localized: "cadence, overstride, trunk lean")
+        case .rear: return String(localized: "hip stability, knee tracking")
+        case .front: return String(localized: "knee valgus, hip symmetry")
         }
     }
 
@@ -200,24 +336,24 @@ enum VideoMode: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .side:
             return [
-                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Best"),
-                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Best"),
-                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Best"),
-                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Limited"),
+                ViewMetricCapability(metric: String(localized: "Cadence"), icon: "metronome", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Overstride"), icon: "arrow.forward", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Trunk lean"), icon: "arrow.up.forward", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Knee valgus"), icon: "figure.run", level: String(localized: "Limited")),
             ]
         case .rear:
             return [
-                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Good"),
-                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Best"),
-                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Limited"),
-                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Limited"),
+                ViewMetricCapability(metric: String(localized: "Cadence"), icon: "metronome", level: String(localized: "Good")),
+                ViewMetricCapability(metric: String(localized: "Knee valgus"), icon: "figure.run", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Trunk lean"), icon: "arrow.up.forward", level: String(localized: "Limited")),
+                ViewMetricCapability(metric: String(localized: "Overstride"), icon: "arrow.forward", level: String(localized: "Limited")),
             ]
         case .front:
             return [
-                ViewMetricCapability(metric: "Cadence", icon: "metronome", level: "Good"),
-                ViewMetricCapability(metric: "Knee valgus", icon: "figure.run", level: "Best"),
-                ViewMetricCapability(metric: "Trunk lean", icon: "arrow.up.forward", level: "Good"),
-                ViewMetricCapability(metric: "Overstride", icon: "arrow.forward", level: "Limited"),
+                ViewMetricCapability(metric: String(localized: "Cadence"), icon: "metronome", level: String(localized: "Good")),
+                ViewMetricCapability(metric: String(localized: "Knee valgus"), icon: "figure.run", level: String(localized: "Best")),
+                ViewMetricCapability(metric: String(localized: "Trunk lean"), icon: "arrow.up.forward", level: String(localized: "Good")),
+                ViewMetricCapability(metric: String(localized: "Overstride"), icon: "arrow.forward", level: String(localized: "Limited")),
             ]
         }
     }
@@ -229,6 +365,18 @@ enum TrainingTarget: String, CaseIterable, Codable, Identifiable {
     case halfMarathon = "Half Marathon"
     case marathon = "Marathon"
     case generalFitness = "General Fitness"
+
+    var id: String { rawValue }
+}
+
+enum MarathonMajor: String, CaseIterable, Codable, Identifiable {
+    case tokyo = "Tokyo"
+    case boston = "Boston"
+    case london = "London"
+    case berlin = "Berlin"
+    case chicago = "Chicago"
+    case newYorkCity = "New York City"
+    case sydney = "Sydney"
 
     var id: String { rawValue }
 }
@@ -252,41 +400,89 @@ struct TrainingPlanInput: Codable {
     let currentWeeklyKm: Double
     let target: String
     let availableRunningDays: Int
+    let selectedRunDays: [String]
     let injuryFlag: Bool
     let formIssues: [FormIssueContext]
     let recentAnalysisSummary: String?
     let recentAnalysisConfidence: Double?
     let previousWeekSummary: String?
+    let language: String
+    let marathonMajor: String?
+    let marathonPlanWeeks: Int?
+    let includeMarathonBlock: Bool
 
     init(
         currentWeeklyKm: Double,
         target: String,
         availableRunningDays: Int,
+        selectedRunDays: [String] = [],
         injuryFlag: Bool,
         formIssues: [FormIssueContext] = [],
         recentAnalysisSummary: String? = nil,
         recentAnalysisConfidence: Double? = nil,
-        previousWeekSummary: String? = nil
+        previousWeekSummary: String? = nil,
+        language: String = "en",
+        marathonMajor: String? = nil,
+        marathonPlanWeeks: Int? = nil,
+        includeMarathonBlock: Bool = true
     ) {
         self.currentWeeklyKm = currentWeeklyKm
         self.target = target
         self.availableRunningDays = availableRunningDays
+        self.selectedRunDays = selectedRunDays
         self.injuryFlag = injuryFlag
         self.formIssues = formIssues
         self.recentAnalysisSummary = recentAnalysisSummary
         self.recentAnalysisConfidence = recentAnalysisConfidence
         self.previousWeekSummary = previousWeekSummary
+        self.language = language
+        self.marathonMajor = marathonMajor
+        self.marathonPlanWeeks = marathonPlanWeeks
+        self.includeMarathonBlock = includeMarathonBlock
     }
 
     enum CodingKeys: String, CodingKey {
         case currentWeeklyKm = "current_weekly_km"
         case target
         case availableRunningDays = "available_running_days"
+        case selectedRunDays = "selected_run_days"
         case injuryFlag = "injury_flag"
         case formIssues = "form_issues"
         case recentAnalysisSummary = "recent_analysis_summary"
         case recentAnalysisConfidence = "recent_analysis_confidence"
         case previousWeekSummary = "previous_week_summary"
+        case language
+        case marathonMajor = "marathon_major"
+        case marathonPlanWeeks = "marathon_plan_weeks"
+        case includeMarathonBlock = "include_marathon_block"
+    }
+}
+
+struct StravaConnectResponse: Codable, Equatable {
+    let authorizeURL: URL
+    let state: String
+
+    enum CodingKeys: String, CodingKey {
+        case authorizeURL = "authorize_url"
+        case state
+    }
+}
+
+struct StravaStatusResponse: Codable, Equatable {
+    let connected: Bool
+    let provider: String
+    let providerAthleteId: String?
+    let scope: String?
+    let expiresAt: String?
+    let lastRefreshAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case connected
+        case provider
+        case providerAthleteId = "provider_athlete_id"
+        case scope
+        case expiresAt = "expires_at"
+        case lastRefreshAt = "last_refresh_at"
     }
 }
 
@@ -317,6 +513,7 @@ struct TrainingPlanResponse: Codable, Equatable {
     let workouts: [PlannedWorkout]
     let notes: [String]
     let connectedAnalysisUsed: Bool
+    let marathonPlan: MarathonPlanBlock?
 
     enum CodingKeys: String, CodingKey {
         case summary
@@ -325,6 +522,45 @@ struct TrainingPlanResponse: Codable, Equatable {
         case workouts
         case notes
         case connectedAnalysisUsed = "connected_analysis_used"
+        case marathonPlan = "marathon_plan"
+    }
+}
+
+struct MarathonPlanWeek: Codable, Equatable, Identifiable {
+    var id: Int { week }
+    let week: Int
+    let phase: String
+    let targetKm: Double
+    let longRunKm: Double
+    let keyWorkout: String
+    let terrainFocus: String
+    let workouts: [PlannedWorkout]
+
+    enum CodingKeys: String, CodingKey {
+        case week, phase
+        case targetKm = "target_km"
+        case longRunKm = "long_run_km"
+        case keyWorkout = "key_workout"
+        case terrainFocus = "terrain_focus"
+        case workouts
+    }
+}
+
+struct MarathonPlanBlock: Codable, Equatable {
+    let race: String
+    let totalWeeks: Int
+    let planProfile: String
+    let courseProfile: String
+    let elevationNote: String
+    let weeks: [MarathonPlanWeek]
+
+    enum CodingKeys: String, CodingKey {
+        case race
+        case totalWeeks = "total_weeks"
+        case planProfile = "plan_profile"
+        case courseProfile = "course_profile"
+        case elevationNote = "elevation_note"
+        case weeks
     }
 }
 
@@ -378,4 +614,91 @@ struct ManualNextWeekPlan: Codable, Identifiable, Equatable {
     let createdAt: Date
     var updatedAt: Date
     var days: [ManualWeekDayPlan]
+}
+
+// ── Elite athlete comparison ─────────────────────────────────────────────────
+
+struct AthleteListItem: Codable, Identifiable {
+    let id: String
+    let name: String
+    let event: String
+    let nationality: String
+    let achievement: String
+    let photoUrl: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, event, nationality, achievement
+        case photoUrl = "photo_url"
+    }
+}
+
+struct AthleteProfile: Codable {
+    let id: String
+    let name: String
+    let event: String
+    let nationality: String
+    let achievement: String
+    let bio: String
+    let photoUrl: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, event, nationality, achievement, bio
+        case photoUrl = "photo_url"
+    }
+}
+
+struct MetricComparison: Codable, Identifiable {
+    var id: String { metricKey }
+    let metric: String
+    let metricKey: String
+    let userScore: Double
+    let athleteScore: Double
+    let userLabel: String
+    let athleteLabel: String
+    let userValue: Double
+    let athleteValue: Double
+    let gap: Double
+    let gapPct: Double
+    let status: String  // "gap" | "on_par" | "ahead"
+
+    enum CodingKeys: String, CodingKey {
+        case metric
+        case metricKey = "metric_key"
+        case userScore = "user_score"
+        case athleteScore = "athlete_score"
+        case userLabel = "user_label"
+        case athleteLabel = "athlete_label"
+        case userValue = "user_value"
+        case athleteValue = "athlete_value"
+        case gap
+        case gapPct = "gap_pct"
+        case status
+    }
+}
+
+struct CompareRequest: Codable {
+    let userMetrics: PoseMetrics
+    let athleteId: String
+    let language: String
+
+    enum CodingKeys: String, CodingKey {
+        case userMetrics = "user_metrics"
+        case athleteId = "athlete_id"
+        case language
+    }
+}
+
+struct CompareResponse: Codable {
+    let athlete: AthleteProfile
+    let comparisons: [MetricComparison]
+    let topGaps: [String]
+    let coachingNarrative: String
+    let overallSimilarityScore: Double
+
+    enum CodingKeys: String, CodingKey {
+        case athlete, comparisons
+        case topGaps = "top_gaps"
+        case coachingNarrative = "coaching_narrative"
+        case overallSimilarityScore = "overall_similarity_score"
+    }
 }
