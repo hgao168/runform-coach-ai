@@ -153,23 +153,25 @@ async def strava_callback(code: str | None = None, state: str | None = None, err
     try:
         ios_user_id = verify_state(state)
         token_payload = await exchange_code_for_token(code)
+        provider_athlete_id = None
         with get_db_session() as session:
             connection = upsert_strava_connection(session, ios_user_id=ios_user_id, token_payload=token_payload)
             session.commit()
+            provider_athlete_id = connection.provider_athlete_id
 
         if app_url := app_callback_url():
             query = urlencode({
                 "status": "connected",
                 "ios_user_id": ios_user_id,
                 "provider": "strava",
-                "provider_athlete_id": connection.provider_athlete_id,
+                "provider_athlete_id": provider_athlete_id,
             })
             return RedirectResponse(url=f"{app_url}?{query}")
 
         return StravaCallbackResponse(
             connected=True,
             ios_user_id=ios_user_id,
-            provider_athlete_id=connection.provider_athlete_id,
+            provider_athlete_id=provider_athlete_id,
         )
     except StravaOAuthConfigError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
