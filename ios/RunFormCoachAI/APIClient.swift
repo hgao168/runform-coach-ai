@@ -2,6 +2,7 @@ import Foundation
 
 final class APIClient {
     static let shared = APIClient()
+    private static let defaultStravaBackendBaseURL = "https://runform-coach-ai-production.up.railway.app"
 
     private let baseURL: URL = {
         guard
@@ -20,6 +21,10 @@ final class APIClient {
            !urlString.isEmpty,
            let url = URL(string: urlString) {
             return url
+        }
+
+        if let defaultURL = URL(string: APIClient.defaultStravaBackendBaseURL) {
+            return defaultURL
         }
 
         guard

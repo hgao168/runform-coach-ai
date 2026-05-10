@@ -20,7 +20,6 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         BACKEND_BASE_URL: $(BACKEND_BASE_URL)
-        STRAVA_BACKEND_BASE_URL: $(STRAVA_BACKEND_BASE_URL)
         NSCameraUsageDescription: Record your running form with live framing guidance for accurate analysis.
         NSPhotoLibraryUsageDescription: Select a short running video for form analysis.
         UISupportedInterfaceOrientations:
@@ -38,7 +37,5 @@ targets:
       configs:
         Debug:
           BACKEND_BASE_URL: https://runform-coach-ai-staging.up.railway.app
-          STRAVA_BACKEND_BASE_URL: https://runform-coach-ai-production.up.railway.app
         Release:
           BACKEND_BASE_URL: https://runform-coach-ai-staging.up.railway.app
-          STRAVA_BACKEND_BASE_URL: https://runform-coach-ai-production.up.railway.app
