@@ -37,7 +37,16 @@ struct ProfileView: View {
                         profileHero
                         formCard
                         whyCard
-                        stravaCard
+                        ProfileStravaCard(
+                            stravaMessage: $stravaMessage,
+                            lastSyncedAt: $lastSyncedAt,
+                            isLoadingStravaStatus: isLoadingStravaStatus,
+                            isSyncingStravaRuns: isSyncingStravaRuns,
+                            isConnectingStrava: isConnectingStrava,
+                            onConnect: connectStrava,
+                            onDisconnect: disconnectStrava,
+                            onSync: syncStravaRuns
+                        )
                     }
                     .padding(18)
                 }
@@ -325,100 +334,6 @@ struct ProfileView: View {
         }
     }
 
-    private var stravaCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
-                SectionTitle("Connect Strava", subtitle: "Bring weekly load into future plans", systemImage: "link.circle.fill")
-
-                if let status = appStore.stravaStatus, status.connected {
-                    HStack(spacing: 12) {
-                        StatusBadge(text: "Connected")
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Connected with Strava")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
-                            if let athleteID = status.providerAthleteId {
-                                Text("Athlete ID: \(athleteID)")
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.58))
-                            }
-                        }
-                        Spacer()
-                    }
-
-                    if let scope = status.scope, !scope.isEmpty {
-                        Text("Scopes: \(scope)")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.54))
-                    }
-
-                    if let localSync = lastSyncedAt {
-                        Text("Last sync: \(localSync.formatted(.dateTime.month().day().hour().minute()))")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.54))
-                    } else if let lastRefreshAt = status.lastRefreshAt, !lastRefreshAt.isEmpty {
-                        Text("Last refresh: \(lastRefreshAt)")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.54))
-                    } else {
-                        Text("Last refresh: not available yet")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.54))
-                    }
-
-                    Button {
-                        syncStravaRuns()
-                    } label: {
-                        Label(isSyncingStravaRuns ? "Syncing runs…" : "Sync runs from Strava", systemImage: "arrow.triangle.2.circlepath")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(GradientButtonStyle())
-                    .disabled(isSyncingStravaRuns || isConnectingStrava)
-
-                    Button(role: .destructive) {
-                        disconnectStrava()
-                    } label: {
-                        Label("Disconnect Strava", systemImage: "link.slash")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(GradientButtonStyle())
-                } else {
-                    Text("Connect Strava to bring your weekly load into future plan suggestions.")
-                        .font(.callout)
-                        .foregroundStyle(.white.opacity(0.66))
-
-                    Button {
-                        connectStrava()
-                    } label: {
-                        Label(isConnectingStrava ? "Connecting…" : "Connect Strava", systemImage: "link")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(GradientButtonStyle())
-                    .disabled(isConnectingStrava)
-                }
-
-                Text("Strava data is used only for your coaching and plan generation. It is not used to train AI models.")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.54))
-
-                if isLoadingStravaStatus {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                            .tint(AppTheme.mint)
-                        Text("Checking Strava connection…")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.55))
-                    }
-                }
-
-                if let stravaMessage {
-                    Text(stravaMessage)
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.mint)
-                }
-            }
-        }
-    }
 
     private func loadDraftFromStore() {
         let profile = appStore.profile
@@ -633,38 +548,6 @@ struct ProfileView: View {
     private func dismissKeyboard() {
         #if canImport(UIKit)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        #endif
-    }
-}
-
-private final class StravaPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
-    static let shared = StravaPresentationContextProvider()
-
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        #if canImport(UIKit)
-        let scenes = UIApplication.shared.connectedScenes
-        for scene in scenes {
-            guard let windowScene = scene as? UIWindowScene,
-                  windowScene.activationState == .foregroundActive else {
-                continue
-            }
-            if let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
-                return keyWindow
-            }
-        }
-
-        for scene in scenes {
-            guard let windowScene = scene as? UIWindowScene else {
-                continue
-            }
-            if let firstWindow = windowScene.windows.first {
-                return firstWindow
-            }
-        }
-
-        return ASPresentationAnchor()
-        #else
-        return ASPresentationAnchor()
         #endif
     }
 }
