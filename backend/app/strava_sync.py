@@ -111,6 +111,69 @@ def _weekly_summary_from_runs(runs: list[StravaRun]) -> list[dict[str, Any]]:
     return summaries
 
 
+async def _fetch_strava_athlete(access_token: str) -> dict[str, Any] | None:
+    """Fetch the connected athlete's profile from Strava. Returns None on failure (non-fatal)."""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            response = await client.get(
+                f"{STRAVA_API_BASE_URL}/athlete",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            if response.status_code >= 400:
+                return None
+            payload = response.json()
+            return payload if isinstance(payload, dict) else None
+    except (httpx.HTTPError, ValueError):
+        return None
+
+
+def _strava_sex_to_gender(sex: str | None) -> str | None:
+    if not sex:
+        return None
+    s = sex.strip().upper()
+    if s == "M":
+        return "male"
+    if s == "F":
+        return "female"
+    return None
+
+
+def _prefill_user_from_strava_athlete(user: User, athlete: dict[str, Any]) -> dict[str, Any]:
+    """Fill empty User profile fields from Strava /athlete data. Never overwrites user-set values.
+
+    Returns a dict of fields that were actually filled, for client feedback.
+    """
+    prefilled: dict[str, Any] = {}
+
+    def _is_blank(v: Any) -> bool:
+        return v is None or (isinstance(v, str) and not v.strip())
+
+    first = athlete.get("firstname")
+    if isinstance(first, str) and first.strip() and _is_blank(user.first_name):
+        user.first_name = first.strip()
+        prefilled["first_name"] = user.first_name
+
+    last = athlete.get("lastname")
+    if isinstance(last, str) and last.strip() and _is_blank(user.last_name):
+        user.last_name = last.strip()
+        prefilled["last_name"] = user.last_name
+
+    gender = _strava_sex_to_gender(athlete.get("sex"))
+    # Treat "unspecified" as blank, since it's the iOS default
+    current_gender = user.gender
+    if gender and (current_gender is None or current_gender == "" or current_gender == "unspecified"):
+        user.gender = gender
+        prefilled["gender"] = gender
+
+    weight = athlete.get("weight")
+    if isinstance(weight, (int, float)) and weight > 0 and user.weight_kg in (None, 0, 70):
+        # 70 is the iOS default seed value; only overwrite the default, never user-edited values
+        user.weight_kg = float(weight)
+        prefilled["weight_kg"] = float(weight)
+
+    return prefilled
+
+
 async def _fetch_strava_activities(access_token: str, cutoff: datetime) -> list[dict[str, Any]]:
     activities: list[dict[str, Any]] = []
     params = {"after": int(cutoff.timestamp()), "per_page": 200}
@@ -155,6 +218,12 @@ async def sync_strava_runs_for_user(session: Session, ios_user_id: str, lookback
     access_token = await get_valid_access_token(session, connection)
     cutoff = datetime.now(timezone.utc) - timedelta(days=lookback_days)
     activities = await _fetch_strava_activities(access_token, cutoff)
+
+    # Best-effort: pull /athlete and fill empty profile fields. Failures are non-fatal.
+    prefilled: dict[str, Any] = {}
+    athlete_payload = await _fetch_strava_athlete(access_token)
+    if athlete_payload:
+        prefilled = _prefill_user_from_strava_athlete(user, athlete_payload)
 
     run_activities = [activity for activity in activities if _is_run_activity(activity)]
     for activity in run_activities:
@@ -202,6 +271,7 @@ async def sync_strava_runs_for_user(session: Session, ios_user_id: str, lookback
         "scanned_activity_count": len(activities),
         "synced_run_count": len(run_activities),
         "week_count": len(weekly_rows),
+        "prefilled_profile": prefilled,
         "weekly_stats": [
             {
                 "week_start": item["week_start"].date().isoformat(),

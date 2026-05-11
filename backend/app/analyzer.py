@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -10,6 +11,22 @@ from openai import OpenAI
 
 from .planner import generate_training_plan
 from .schemas import AnalyzeProfileContext, AnalysisResponse, Exercise, Issue, Metric, PoseMetricsInput, TrainingPlanInput, TrainingPlanResponse
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_llm_json(raw: str | None, context: str) -> dict:
+    """Parse JSON returned by the LLM; log the malformed payload on failure."""
+    if not raw:
+        logger.error("%s: LLM returned empty content.", context)
+        raise RuntimeError(f"{context}: LLM returned no content.")
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        # Truncate to keep logs manageable while still being useful for debugging.
+        snippet = raw[:1000] + ("…" if len(raw) > 1000 else "")
+        logger.error("%s: malformed JSON from LLM: %s | payload: %s", context, exc, snippet)
+        raise RuntimeError(f"{context}: LLM returned invalid JSON.") from exc
 
 _SYSTEM_PROMPT = """You are an expert running coach and sports biomechanics analyst. Analyze the provided video frames of a person running and give a detailed biomechanical assessment.
 Return ONLY valid JSON with this exact structure: { "summary": "<1-2 sentence overall assessment>", "confidence": 0.0, "metrics": [ { "name": "", "score": 0.0, "status": "", "explanation": "" } ], "issues": [ { "title": "", "severity": "", "explanation": "", "recommended_exercises": [ { "name": "", "category": "", "sets": 0, "reps": "", "frequency_per_week": 0, "reason": "" } ] } ] }
@@ -150,7 +167,7 @@ def analyze_running_video(
         temperature=0.2,
         response_format={"type": "json_object"},
     )
-    data = json.loads(response.choices[0].message.content)
+    data = _parse_llm_json(response.choices[0].message.content, "analyze_running_video")
     return AnalysisResponse(
         summary=data["summary"],
         confidence=float(data["confidence"]),
@@ -250,7 +267,7 @@ Generate targeted coaching issues and exercise recommendations based on these me
         temperature=0.2,
         response_format={"type": "json_object"},
     )
-    data = json.loads(response.choices[0].message.content)
+    data = _parse_llm_json(response.choices[0].message.content, "analyze_from_metrics")
 
     # --- Form Score: weighted average of biomechanical metric values ---
     # Cadence is excluded when "Not measurable" so it doesn't unfairly tank the score.
