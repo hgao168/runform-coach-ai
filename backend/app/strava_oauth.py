@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .db_models import OAuthConnection, User
@@ -171,6 +172,25 @@ async def deauthorize_access_token(access_token: str) -> None:
         raise StravaOAuthError(f"Strava deauthorize failed: {response.text}")
 
 
+def _apply_connection_tokens(
+    conn: OAuthConnection,
+    *,
+    user_id: int,
+    athlete_id: str,
+    access_token_encrypted: str,
+    refresh_token_encrypted: str,
+    expires_at: datetime,
+    scope: str | None,
+) -> None:
+    conn.user_id = user_id
+    conn.provider_athlete_id = athlete_id
+    conn.access_token_encrypted = access_token_encrypted
+    conn.refresh_token_encrypted = refresh_token_encrypted
+    conn.expires_at = expires_at
+    conn.scope = scope
+    conn.last_refresh_at = datetime.now(timezone.utc)
+
+
 def upsert_strava_connection(session: Session, ios_user_id: str, token_payload: dict[str, Any]) -> OAuthConnection:
     athlete = token_payload.get("athlete") or {}
     athlete_id = athlete.get("id")
@@ -181,35 +201,82 @@ def upsert_strava_connection(session: Session, ios_user_id: str, token_payload: 
     if not athlete_id or not access_token or not refresh_token or not expires_at_epoch:
         raise StravaOAuthError("Incomplete token payload returned by Strava.")
 
-    user = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
-    if user is None:
-        user = User(ios_user_id=ios_user_id)
-        session.add(user)
-        session.flush()
+    provider_athlete_id = str(athlete_id)
+    expires_at = time_to_utc_datetime(int(expires_at_epoch))
+    scope = token_payload.get("scope")
+    access_token_encrypted = encrypt_secret(access_token)
+    refresh_token_encrypted = encrypt_secret(refresh_token)
 
-    conn = session.scalar(
-        select(OAuthConnection).where(OAuthConnection.user_id == user.id, OAuthConnection.provider == "strava")
-    )
-    if conn is None:
-        conn = OAuthConnection(
-            user_id=user.id,
-            provider="strava",
-            provider_athlete_id=str(athlete_id),
-            access_token_encrypted=encrypt_secret(access_token),
-            refresh_token_encrypted=encrypt_secret(refresh_token),
-            expires_at=time_to_utc_datetime(int(expires_at_epoch)),
-            scope=token_payload.get("scope"),
-        )
-        session.add(conn)
-    else:
-        conn.provider_athlete_id = str(athlete_id)
-        conn.access_token_encrypted = encrypt_secret(access_token)
-        conn.refresh_token_encrypted = encrypt_secret(refresh_token)
-        conn.expires_at = time_to_utc_datetime(int(expires_at_epoch))
-        conn.scope = token_payload.get("scope")
+    # Retry once if a concurrent callback races on the same athlete row.
+    for attempt in range(2):
+        try:
+            user = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
+            if user is None:
+                user = User(ios_user_id=ios_user_id)
+                session.add(user)
+                session.flush()
 
-    session.flush()
-    return conn
+            athlete_conn = session.scalar(
+                select(OAuthConnection).where(
+                    OAuthConnection.provider == "strava",
+                    OAuthConnection.provider_athlete_id == provider_athlete_id,
+                )
+            )
+            user_conn = session.scalar(
+                select(OAuthConnection).where(
+                    OAuthConnection.user_id == user.id,
+                    OAuthConnection.provider == "strava",
+                )
+            )
+
+            if athlete_conn is not None:
+                # Same athlete already exists: refresh tokens and (optionally) rebind to current local user.
+                _apply_connection_tokens(
+                    athlete_conn,
+                    user_id=user.id,
+                    athlete_id=provider_athlete_id,
+                    access_token_encrypted=access_token_encrypted,
+                    refresh_token_encrypted=refresh_token_encrypted,
+                    expires_at=expires_at,
+                    scope=scope,
+                )
+                if user_conn is not None and user_conn.id != athlete_conn.id:
+                    session.delete(user_conn)
+                conn = athlete_conn
+            elif user_conn is not None:
+                _apply_connection_tokens(
+                    user_conn,
+                    user_id=user.id,
+                    athlete_id=provider_athlete_id,
+                    access_token_encrypted=access_token_encrypted,
+                    refresh_token_encrypted=refresh_token_encrypted,
+                    expires_at=expires_at,
+                    scope=scope,
+                )
+                conn = user_conn
+            else:
+                conn = OAuthConnection(
+                    user_id=user.id,
+                    provider="strava",
+                    provider_athlete_id=provider_athlete_id,
+                    access_token_encrypted=access_token_encrypted,
+                    refresh_token_encrypted=refresh_token_encrypted,
+                    expires_at=expires_at,
+                    scope=scope,
+                )
+                session.add(conn)
+
+            session.flush()
+            return conn
+        except IntegrityError as exc:
+            session.rollback()
+            if attempt == 0:
+                continue
+            raise StravaOAuthError(
+                "This Strava account is already connected. Please retry to reconnect."
+            ) from exc
+
+    raise StravaOAuthError("Unable to upsert Strava connection.")
 
 
 def get_strava_connection(session: Session, ios_user_id: str) -> OAuthConnection | None:
