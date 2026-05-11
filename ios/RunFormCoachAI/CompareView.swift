@@ -58,7 +58,7 @@ struct CompareView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    HStack(spacing: 0) {
+                    HStack(spacing: 10) {
                         Button(action: { selectedTab = .elite }) {
                             Text("Elite Athletes")
                                 .font(.headline)
@@ -66,8 +66,8 @@ struct CompareView: View {
                                 .frame(maxWidth: .infinity)
                         }
                         Divider()
-                            .frame(height: 20)
-                            .background(.white.opacity(0.20))
+                            .frame(width: 2, height: 20)
+                            .overlay(.white.opacity(0.42))
                         Button(action: { selectedTab = .custom }) {
                             Text("Add Any Athlete")
                                 .font(.headline)
@@ -75,7 +75,7 @@ struct CompareView: View {
                                 .frame(maxWidth: .infinity)
                         }
                     }
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 10)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
