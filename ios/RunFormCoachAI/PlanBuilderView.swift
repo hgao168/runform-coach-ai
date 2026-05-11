@@ -580,7 +580,7 @@ struct PlanBuilderView: View {
                         SectionTitle(
                             "Connected coaching",
                             subtitle: hasStrava
-                                ? "Using your latest form analysis and Strava data to adjust the plan."
+                                ? "Using your latest form analysis and Strava runs to adjust plan."
                                 : "Using your latest form analysis to adjust the plan.",
                             systemImage: "link.circle.fill"
                         )
@@ -649,8 +649,8 @@ struct PlanBuilderView: View {
                         SectionTitle(
                             "Connected coaching",
                             subtitle: hasStrava
-                                ? "Using your latest form analysis and Strava data to adjust the plan."
-                                : "Generate an analysis first to personalise your plan.",
+                                ? "Using your Strava runs to adjust plan."
+                                : "Generate an analysis or connect to Strava to personalise your plan.",
                             systemImage: hasStrava ? "link.circle.fill" : "link.circle"
                         )
                         if let strava = stravaSummary {
@@ -1486,6 +1486,30 @@ private struct RacePlanDetailView: View {
         planBlock.weeks.sorted { $0.week < $1.week }.last?.week == week.week
     }
 
+    private func buildDisplayWorkouts(for week: RacePlanWeek) -> [PlannedWorkout] {
+        guard isLastWeek(week) else { return week.workouts }
+        return week.workouts.map { workout in
+            guard workout.day.lowercased().contains("sun") else { return workout }
+            let raceLabel: String
+            switch planBlock.target {
+            case "5K":          raceLabel = "Race day - 5K"
+            case "10K":         raceLabel = "Race day - 10K"
+            default:            raceLabel = "Race day - 21.1K Half Marathon"
+            }
+            return PlannedWorkout(
+                day: workout.day,
+                title: "\(planBlock.target) Race",
+                category: workout.category,
+                intensity: "race",
+                details: raceLabel,
+                purpose: workout.purpose,
+                distanceKm: raceDistanceKm,
+                durationMinutes: workout.durationMinutes,
+                coachingFocus: workout.coachingFocus
+            )
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -1558,7 +1582,7 @@ private struct RacePlanDetailView: View {
                                                     Text("Weekly activities")
                                                         .font(.caption.bold())
                                                         .foregroundStyle(AppTheme.mint)
-                                                    ForEach(week.workouts, id: \.id) { workout in
+                                                    ForEach(buildDisplayWorkouts(for: week), id: \.id) { workout in
                                                         HStack(alignment: .top, spacing: 6) {
                                                             Text(workout.day)
                                                                 .font(.caption2.bold())
