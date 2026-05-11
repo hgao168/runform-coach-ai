@@ -1358,9 +1358,11 @@ private struct MarathonPlanDetailView: View {
                                                     }
                                                 }
                                             }
-                                            Text("Long run: \(week.longRunKm, specifier: "%.1f") km")
-                                                .font(.caption)
-                                                .foregroundStyle(.white.opacity(0.66))
+                                            if !isRaceWeek {
+                                                Text("Long run: \(week.longRunKm, specifier: "%.1f") km")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.white.opacity(0.66))
+                                            }
                                             Text(week.keyWorkout)
                                                 .font(.caption)
                                                 .foregroundStyle(.white.opacity(0.78))
@@ -1570,9 +1572,11 @@ private struct RacePlanDetailView: View {
                                                 .buttonStyle(.plain)
                                             }
 
-                                            Text("Long run: \(week.longRunKm, specifier: "%.1f") km")
-                                                .font(.caption)
-                                                .foregroundStyle(.white.opacity(0.66))
+                                            if !isRace {
+                                                Text("Long run: \(week.longRunKm, specifier: "%.1f") km")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.white.opacity(0.66))
+                                            }
                                             Text(week.keyWorkout)
                                                 .font(.caption)
                                                 .foregroundStyle(.white.opacity(0.78))
