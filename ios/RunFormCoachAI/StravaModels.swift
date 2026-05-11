@@ -80,6 +80,7 @@ struct StravaSyncResponse: Codable, Equatable {
     let weekCount: Int
     let syncedAt: String
     let weeklyStats: [StravaWeeklySummaryItem]
+    let prefilledProfile: StravaProfilePrefill?
 
     enum CodingKeys: String, CodingKey {
         case connected
@@ -90,6 +91,37 @@ struct StravaSyncResponse: Codable, Equatable {
         case weekCount = "week_count"
         case syncedAt = "synced_at"
         case weeklyStats = "weekly_stats"
+        case prefilledProfile = "prefilled_profile"
+    }
+}
+
+struct StravaProfilePrefill: Codable, Equatable {
+    let firstName: String?
+    let lastName: String?
+    let gender: String?
+    let weightKg: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case gender
+        case weightKg = "weight_kg"
+    }
+
+    var isEmpty: Bool {
+        (firstName?.isEmpty ?? true) &&
+        (lastName?.isEmpty ?? true) &&
+        (gender?.isEmpty ?? true) &&
+        weightKg == nil
+    }
+
+    var summaryLabel: String {
+        var parts: [String] = []
+        if let firstName, !firstName.isEmpty { parts.append(firstName) }
+        if let lastName, !lastName.isEmpty { parts.append(lastName) }
+        if let gender, !gender.isEmpty { parts.append(gender) }
+        if let weightKg { parts.append("\(Int(weightKg)) kg") }
+        return parts.joined(separator: ", ")
     }
 }
 

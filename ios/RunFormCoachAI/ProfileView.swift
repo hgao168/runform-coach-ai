@@ -104,44 +104,26 @@ struct ProfileView: View {
                 SectionTitle("Runner setup", subtitle: "Used to personalize TestFlight feedback", systemImage: "slider.horizontal.3")
 
                 HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("First name")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.62))
-                        TextField("First name", text: $firstName)
-                            .textInputAutocapitalization(.words)
-                            .focused($fieldFocused)
-                            .padding(13)
-                            .background(.black.opacity(0.20))
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .foregroundStyle(.white)
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Last name")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.62))
-                        TextField("Last name", text: $lastName)
-                            .textInputAutocapitalization(.words)
-                            .focused($fieldFocused)
-                            .padding(13)
-                            .background(.black.opacity(0.20))
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .foregroundStyle(.white)
-                    }
+                    ProfileLabeledTextField(
+                        label: "First name",
+                        placeholder: "First name",
+                        text: $firstName,
+                        focus: $fieldFocused
+                    )
+                    ProfileLabeledTextField(
+                        label: "Last name",
+                        placeholder: "Last name",
+                        text: $lastName,
+                        focus: $fieldFocused
+                    )
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Nickname")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.62))
-                    TextField("Nickname", text: $nickname)
-                        .textInputAutocapitalization(.words)
-                        .focused($fieldFocused)
-                        .padding(13)
-                        .background(.black.opacity(0.20))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .foregroundStyle(.white)
-                }
+                ProfileLabeledTextField(
+                    label: "Nickname",
+                    placeholder: "Nickname",
+                    text: $nickname,
+                    focus: $fieldFocused
+                )
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Date of Birth")
@@ -153,158 +135,97 @@ struct ProfileView: View {
                         .colorScheme(.dark)
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Running level")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.62))
-                    Picker("Running level", selection: $level) {
-                        ForEach(RunnerLevel.allCases) { level in
-                            Text(LocalizedStringKey(level.rawValue)).tag(level)
-                        }
+                ProfileMenuPicker(label: "Running level", selection: $level) {
+                    ForEach(RunnerLevel.allCases) { level in
+                        Text(LocalizedStringKey(level.rawValue)).tag(level)
                     }
-                    .pickerStyle(.menu)
-                    .tint(AppTheme.mint)
                 }
 
-                VStack(alignment: .leading, spacing: 9) {
-                    HStack {
-                        Label("Weekly mileage", systemImage: "speedometer")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.72))
-                        Spacer()
-                        Text("\(Int(weeklyMileageKm)) km")
-                            .font(.headline.bold())
-                            .foregroundStyle(AppTheme.mint)
-                    }
-                    Slider(value: $weeklyMileageKm, in: 0...120, step: 1)
-                        .tint(AppTheme.mint)
-                }
+                ProfileSliderRow(
+                    icon: "speedometer",
+                    label: "Weekly mileage",
+                    value: $weeklyMileageKm,
+                    range: 0...120,
+                    step: 1,
+                    valueText: "\(Int(weeklyMileageKm)) km"
+                )
 
                 Stepper("Running days / week: \(runningDaysPerWeek)", value: $runningDaysPerWeek, in: 1...7)
                     .foregroundStyle(.white)
                     .font(.subheadline)
 
-                VStack(alignment: .leading, spacing: 9) {
-                    HStack {
-                        Label("Total exercise hours / week", systemImage: "clock.fill")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.72))
-                        Spacer()
-                        Text(String(format: "%.1f hrs", weeklyExerciseHours))
-                            .font(.headline.bold())
-                            .foregroundStyle(AppTheme.mint)
+                ProfileSliderRow(
+                    icon: "clock.fill",
+                    label: "Total exercise hours / week",
+                    value: $weeklyExerciseHours,
+                    range: 0...30,
+                    step: 0.5,
+                    valueText: String(format: "%.1f hrs", weeklyExerciseHours)
+                )
+
+                ProfileSliderRow(
+                    icon: "ruler",
+                    label: "Height",
+                    value: $heightCm,
+                    range: 130...220,
+                    step: 1,
+                    valueText: "\(Int(heightCm)) cm"
+                )
+
+                ProfileSliderRow(
+                    icon: "scalemass",
+                    label: "Weight",
+                    value: $weightKg,
+                    range: 30...200,
+                    step: 1,
+                    valueText: "\(Int(weightKg)) kg"
+                )
+
+                ProfileMenuPicker(label: "Goal", selection: $target) {
+                    ForEach(TrainingTarget.allCases) { item in
+                        Text(LocalizedStringKey(item.rawValue)).tag(item)
                     }
-                    Slider(value: $weeklyExerciseHours, in: 0...30, step: 0.5)
-                        .tint(AppTheme.mint)
                 }
 
-                VStack(alignment: .leading, spacing: 9) {
-                    HStack {
-                        Label("Height", systemImage: "ruler")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.72))
-                        Spacer()
-                        Text("\(Int(heightCm)) cm")
-                            .font(.headline.bold())
-                            .foregroundStyle(AppTheme.mint)
-                    }
-                    Slider(value: $heightCm, in: 130...220, step: 1)
-                        .tint(AppTheme.mint)
-                }
-
-                VStack(alignment: .leading, spacing: 9) {
-                    HStack {
-                        Label("Weight", systemImage: "scalemass")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.72))
-                        Spacer()
-                        Text("\(Int(weightKg)) kg")
-                            .font(.headline.bold())
-                            .foregroundStyle(AppTheme.mint)
-                    }
-                    Slider(value: $weightKg, in: 30...200, step: 1)
-                        .tint(AppTheme.mint)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Goal")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.62))
-                    Picker("Goal", selection: $target) {
-                        ForEach(TrainingTarget.allCases) { item in
-                            Text(LocalizedStringKey(item.rawValue)).tag(item)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .tint(AppTheme.mint)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Gender")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.62))
-                    Picker("Gender", selection: $gender) {
-                        Text("Male").tag(ProfileGender.male)
-                        Text("Female").tag(ProfileGender.female)
-                        Text("Other").tag(ProfileGender.other)
-                        Text("Prefer not to say").tag(ProfileGender.unspecified)
-                    }
-                    .pickerStyle(.menu)
-                    .tint(AppTheme.mint)
+                ProfileMenuPicker(label: "Gender", selection: $gender) {
+                    Text("Male").tag(ProfileGender.male)
+                    Text("Female").tag(ProfileGender.female)
+                    Text("Other").tag(ProfileGender.other)
+                    Text("Prefer not to say").tag(ProfileGender.unspecified)
                 }
 
                 HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Shoe size")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.62))
-                        TextField("EU 42 / US 9", text: $shoeSize)
-                            .focused($fieldFocused)
-                            .padding(13)
-                            .background(.black.opacity(0.20))
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .foregroundStyle(.white)
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Leg length (cm)")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.62))
-                        TextField("85", text: $legLengthCmText)
-                            .keyboardType(.decimalPad)
-                            .focused($fieldFocused)
-                            .padding(13)
-                            .background(.black.opacity(0.20))
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .foregroundStyle(.white)
-                    }
+                    ProfileLabeledTextField(
+                        label: "Shoe size",
+                        placeholder: "EU 42 / US 9",
+                        text: $shoeSize,
+                        autocapitalization: .never,
+                        focus: $fieldFocused
+                    )
+                    ProfileLabeledTextField(
+                        label: "Leg length (cm)",
+                        placeholder: "85",
+                        text: $legLengthCmText,
+                        autocapitalization: .never,
+                        keyboardType: .decimalPad,
+                        focus: $fieldFocused
+                    )
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Shoe brand/model")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.62))
-                    TextField("ASICS Nimbus 27", text: $shoeBrandModel)
-                        .textInputAutocapitalization(.words)
-                        .focused($fieldFocused)
-                        .padding(13)
-                        .background(.black.opacity(0.20))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .foregroundStyle(.white)
-                }
+                ProfileLabeledTextField(
+                    label: "Shoe brand/model",
+                    placeholder: "ASICS Nimbus 27",
+                    text: $shoeBrandModel,
+                    focus: $fieldFocused
+                )
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Injury note")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.62))
-                    TextField("Optional", text: $injuryNote, axis: .vertical)
-                        .lineLimit(3...6)
-                        .focused($fieldFocused)
-                        .padding(13)
-                        .background(.black.opacity(0.20))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .foregroundStyle(.white)
-                }
+                ProfileLabeledTextField(
+                    label: "Injury note",
+                    placeholder: "Optional",
+                    text: $injuryNote,
+                    multiline: true,
+                    focus: $fieldFocused
+                )
 
                 Button {
                     saveProfile()
@@ -445,7 +366,12 @@ struct ProfileView: View {
                     isSyncingStravaRuns = false
                     lastSyncedAt = Date()
                     let weekLabel = result.weekCount == 1 ? "week" : "weeks"
-                    stravaMessage = "Synced \(result.syncedRunCount) runs across \(result.weekCount) \(weekLabel)."
+                    var message = "Synced \(result.syncedRunCount) runs across \(result.weekCount) \(weekLabel)."
+                    if let prefill = result.prefilledProfile, !prefill.isEmpty {
+                        applyStravaPrefill(prefill)
+                        message += " Pre-filled profile: \(prefill.summaryLabel)."
+                    }
+                    stravaMessage = message
                 }
             } catch {
                 await MainActor.run {
@@ -549,5 +475,50 @@ struct ProfileView: View {
         #if canImport(UIKit)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         #endif
+    }
+
+    /// Merge Strava `/athlete` pre-fill values into the local form. Only fills
+    /// fields that the user hasn't already filled in (server-side keeps the
+    /// same invariant). Also persists the merged profile so it survives reload.
+    @MainActor
+    private func applyStravaPrefill(_ prefill: StravaProfilePrefill) {
+        if let firstName = prefill.firstName, !firstName.isEmpty,
+           self.firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            self.firstName = firstName
+        }
+        if let lastName = prefill.lastName, !lastName.isEmpty,
+           self.lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            self.lastName = lastName
+        }
+        if let gender = prefill.gender, !gender.isEmpty,
+           self.gender == .unspecified,
+           let parsed = ProfileGender(rawValue: gender) {
+            self.gender = parsed
+        }
+        if let weight = prefill.weightKg, weight > 0,
+           // Only overwrite the seed default (70). Any user-edited value is preserved.
+           abs(self.weightKg - 70) < 0.001 {
+            self.weightKg = weight
+        }
+        // Persist silently (no focus/keyboard side effects, no "saved" toast).
+        let profile = TesterProfile(
+            firstName: firstName,
+            lastName: lastName,
+            nickname: nickname,
+            level: level,
+            weeklyMileageKm: weeklyMileageKm,
+            runningDaysPerWeek: runningDaysPerWeek,
+            heightCm: heightCm,
+            weightKg: weightKg,
+            target: target.rawValue,
+            injuryNote: injuryNote,
+            dateOfBirth: dateOfBirth,
+            weeklyExerciseHours: weeklyExerciseHours,
+            gender: gender,
+            shoeSize: shoeSize,
+            legLengthCm: Double(legLengthCmText.replacingOccurrences(of: ",", with: ".")),
+            shoeBrandModel: shoeBrandModel
+        )
+        appStore.profile = profile
     }
 }

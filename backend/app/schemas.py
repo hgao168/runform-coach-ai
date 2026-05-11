@@ -224,6 +224,13 @@ class StravaWeeklySummaryItem(BaseModel):
     intensity_score: Optional[float] = None
 
 
+class StravaProfilePrefill(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    gender: Optional[str] = None
+    weight_kg: Optional[float] = None
+
+
 class StravaSyncResponse(BaseModel):
     connected: bool = True
     ios_user_id: str
@@ -233,6 +240,7 @@ class StravaSyncResponse(BaseModel):
     week_count: int
     synced_at: str
     weekly_stats: List[StravaWeeklySummaryItem] = []
+    prefilled_profile: Optional[StravaProfilePrefill] = None
 
 
 class StravaSummaryResponse(BaseModel):

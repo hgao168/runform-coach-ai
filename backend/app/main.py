@@ -302,6 +302,7 @@ async def strava_sync(payload: StravaSyncRequest) -> StravaSyncResponse:
         week_count=result["week_count"],
         synced_at=_utc_now_iso(),
         weekly_stats=result["weekly_stats"],
+        prefilled_profile=result.get("prefilled_profile") or None,
     )
 
 
