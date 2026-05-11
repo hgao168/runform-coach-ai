@@ -1340,7 +1340,8 @@ private struct MarathonPlanDetailView: View {
                                     ForEach(group.weeks) { week in
                                         VStack(alignment: .leading, spacing: 6) {
                                             let isRaceWeek = isLastWeek(week)
-                                            let displayTargetKm = isRaceWeek ? 47.7 : week.targetKm
+                                            // Race week shows the actual race distance (42.2 km), mirroring 5K/10K/Half plans.
+                                            let displayTargetKm = isRaceWeek ? 42.2 : week.targetKm
                                             
                                             HStack {
                                                 Text("Week \(week.week)")
@@ -1418,37 +1419,22 @@ private struct MarathonPlanDetailView: View {
 
     private func buildDisplayWorkouts(for week: MarathonPlanWeek) -> [PlannedWorkout] {
         guard isLastWeek(week) else { return week.workouts }
-        
-        // For race week, modify Saturday and Sunday
+        // On race week, only override Sunday to show the marathon race entry.
+        // Saturday (and any other planner-generated day) is left untouched so the
+        // taper logic in the backend planner stays in control.
         return week.workouts.map { workout in
-            if workout.day.lowercased().contains("sun") {
-                // Sunday is race day: 42.2k
-                return PlannedWorkout(
-                    day: workout.day,
-                    title: "Marathon Race",
-                    category: workout.category,
-                    intensity: "race",
-                    details: "Race day - 42.2k marathon",
-                    purpose: workout.purpose,
-                    distanceKm: 42.2,
-                    durationMinutes: workout.durationMinutes,
-                    coachingFocus: workout.coachingFocus
-                )
-            } else if workout.day.lowercased().contains("sat") {
-                // Saturday is easy run: 5.5k
-                return PlannedWorkout(
-                    day: workout.day,
-                    title: "Easy run",
-                    category: "Easy",
-                    intensity: "easy",
-                    details: "Easy run before race",
-                    purpose: "Recovery",
-                    distanceKm: 5.5,
-                    durationMinutes: 35,
-                    coachingFocus: "Keep loose"
-                )
-            }
-            return workout
+            guard workout.day.lowercased().contains("sun") else { return workout }
+            return PlannedWorkout(
+                day: workout.day,
+                title: "Marathon Race",
+                category: workout.category,
+                intensity: "race",
+                details: "Race day - 42.2 km marathon",
+                purpose: workout.purpose,
+                distanceKm: 42.2,
+                durationMinutes: workout.durationMinutes,
+                coachingFocus: workout.coachingFocus
+            )
         }
     }
 
