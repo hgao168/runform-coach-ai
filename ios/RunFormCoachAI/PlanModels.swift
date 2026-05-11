@@ -307,3 +307,12 @@ struct ManualNextWeekPlan: Codable, Identifiable, Equatable {
     var updatedAt: Date
     var days: [ManualWeekDayPlan]
 }
+
+extension String {
+    /// Repairs common mojibake tokens seen in backend-generated plan text.
+    var normalizedPlanText: String {
+        replacingOccurrences(of: "â€¢", with: "•")
+            .replacingOccurrences(of: "Â " , with: " ")
+            .replacingOccurrences(of: "Â", with: "")
+    }
+}

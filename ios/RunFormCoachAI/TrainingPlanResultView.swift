@@ -25,13 +25,13 @@ struct TrainingPlanResultView: View {
                 Text("Marathon Block")
                     .font(.headline)
                     .foregroundStyle(.white)
-                Text("\(marathonPlan.race) • \(marathonPlan.totalWeeks) weeks")
+                Text("\(marathonPlan.race.normalizedPlanText) • \(marathonPlan.totalWeeks) weeks")
                     .font(.subheadline.bold())
                     .foregroundStyle(AppTheme.mint)
-                Text(marathonPlan.courseProfile)
+                Text(marathonPlan.courseProfile.normalizedPlanText)
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.72))
-                Label(marathonPlan.elevationNote, systemImage: "mountain.2")
+                Label(marathonPlan.elevationNote.normalizedPlanText, systemImage: "mountain.2")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.68))
 
@@ -42,7 +42,7 @@ struct TrainingPlanResultView: View {
                             .foregroundStyle(AppTheme.mint)
                         ForEach(boundaries, id: \.id) { boundary in
                             HStack(spacing: 8) {
-                                Text(boundary.label)
+                                Text(boundary.label.normalizedPlanText)
                                     .font(.caption.bold())
                                     .foregroundStyle(.black)
                                     .padding(.horizontal, 9)
@@ -60,7 +60,7 @@ struct TrainingPlanResultView: View {
                 ForEach(boundaries, id: \.id) { boundary in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            Text("\(boundary.label) summary")
+                            Text("\(boundary.label.normalizedPlanText) summary")
                                 .font(.caption.bold())
                                 .foregroundStyle(AppTheme.mint)
                             Spacer()
@@ -74,7 +74,7 @@ struct TrainingPlanResultView: View {
                         Text("Long run: \(boundary.startLongRunKm, specifier: "%.1f") -> \(boundary.endLongRunKm, specifier: "%.1f") km")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.62))
-                        Text(boundary.sampleKeyWorkout)
+                        Text(boundary.sampleKeyWorkout.normalizedPlanText)
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.78))
                     }
@@ -133,7 +133,7 @@ struct TrainingPlanResultView: View {
                 Text("Plan Summary")
                     .font(.headline)
                     .foregroundStyle(.white)
-                Text(plan.summary)
+                Text(plan.summary.normalizedPlanText)
                     .foregroundStyle(.white.opacity(0.75))
                 HStack {
                     Label("\(plan.plannedWeeklyKm, specifier: "%.1f") km", systemImage: "figure.run")
@@ -170,7 +170,7 @@ struct TrainingPlanResultView: View {
                     .font(.headline)
                     .foregroundStyle(.white)
                 ForEach(plan.notes, id: \.self) { note in
-                    Label(note, systemImage: "checkmark.circle")
+                    Label(note.normalizedPlanText, systemImage: "checkmark.circle")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.7))
                 }

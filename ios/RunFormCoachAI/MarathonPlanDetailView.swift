@@ -54,16 +54,16 @@ struct MarathonPlanDetailView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         DarkCard {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("\(planBlock.race) Marathon Block")
+                                Text("\(planBlock.race.normalizedPlanText) Marathon Block")
                                     .font(.headline)
                                     .foregroundStyle(.white)
-                                Text("\(planBlock.planProfile) • \(planBlock.totalWeeks) weeks")
+                                Text("\(planBlock.planProfile.normalizedPlanText) • \(planBlock.totalWeeks) weeks")
                                     .font(.caption.bold())
                                     .foregroundStyle(AppTheme.mint)
-                                Text(planBlock.courseProfile)
+                                Text(planBlock.courseProfile.normalizedPlanText)
                                     .font(.caption)
                                     .foregroundStyle(.white.opacity(0.72))
-                                Text(planBlock.elevationNote)
+                                Text(planBlock.elevationNote.normalizedPlanText)
                                     .font(.caption)
                                     .foregroundStyle(.white.opacity(0.72))
                             }
@@ -72,7 +72,7 @@ struct MarathonPlanDetailView: View {
                         ForEach(phaseGroups) { group in
                             DarkCard {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("\(group.label) W\(group.startWeek)-W\(group.endWeek)")
+                                    Text("\(group.label.normalizedPlanText) W\(group.startWeek)-W\(group.endWeek)")
                                         .font(.headline)
                                         .foregroundStyle(.white)
                                     Text("Target: \(group.startTargetKm, specifier: "%.1f") -> \(group.endTargetKm, specifier: "%.1f") km/week")
@@ -106,7 +106,7 @@ struct MarathonPlanDetailView: View {
                                                     .font(.caption)
                                                     .foregroundStyle(.white.opacity(0.66))
                                             }
-                                            Text(week.keyWorkout)
+                                            Text(week.keyWorkout.normalizedPlanText)
                                                 .font(.caption)
                                                 .foregroundStyle(.white.opacity(0.78))
 
@@ -122,10 +122,10 @@ struct MarathonPlanDetailView: View {
                                                                 .foregroundStyle(.white)
                                                                 .frame(width: 28, alignment: .leading)
                                                             VStack(alignment: .leading, spacing: 2) {
-                                                                Text("\(workout.title) • \(workout.distanceKm ?? 0, specifier: "%.1f") km")
+                                                                Text("\(workout.title.normalizedPlanText) • \(workout.distanceKm ?? 0, specifier: "%.1f") km")
                                                                     .font(.caption2.bold())
                                                                     .foregroundStyle(.white.opacity(0.88))
-                                                                Text(workout.details)
+                                                                Text(workout.details.normalizedPlanText)
                                                                     .font(.caption2)
                                                                     .foregroundStyle(.white.opacity(0.68))
                                                             }
