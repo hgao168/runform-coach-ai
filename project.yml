@@ -38,4 +38,4 @@ targets:
         Debug:
           BACKEND_BASE_URL: https://runform-coach-ai-staging.up.railway.app
         Release:
-          BACKEND_BASE_URL: https://runform-coach-ai-staging.up.railway.app
+          BACKEND_BASE_URL: https://runform-coach-ai-production.up.railway.app
