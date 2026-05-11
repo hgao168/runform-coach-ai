@@ -85,7 +85,7 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="RunFormCoachAI-Prod" \
             BACKEND_BASE_URL="${{ secrets.BACKEND_BASE_URL }}" \
             CURRENT_PROJECT_VERSION="1.${{ github.run_number }}" \
-            MARKETING_VERSION="1.0"
+            MARKETING_VERSION="1.1"
 
       # ── Export IPA ──────────────────────────────────────────────────────────
 
