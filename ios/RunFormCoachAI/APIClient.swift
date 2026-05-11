@@ -54,107 +54,46 @@ final class APIClient {
     }
 
     func fetchStravaConnectResponse(iosUserID: String) async throws -> StravaConnectResponse {
-        var lastError: APIError?
-        for candidateBaseURL in stravaBaseURLCandidates() {
-            let endpoint = stravaEndpoint(path: "connect", iosUserID: iosUserID, baseURL: candidateBaseURL)
-            var request = URLRequest(url: endpoint)
-            request.httpMethod = "GET"
-            request.timeoutInterval = 20
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                continue
-            }
-            if (200..<300).contains(http.statusCode) {
-                return try JSONDecoder().decode(StravaConnectResponse.self, from: data)
-            }
-            if http.statusCode != 404 {
-                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
-            }
-            lastError = .server(String(data: data, encoding: .utf8) ?? "Strava connect route not found")
-        }
-        throw lastError ?? APIError.server("Unable to load Strava connect URL from available backends.")
+        try await requestStrava(
+            path: "connect",
+            method: "GET",
+            iosUserID: iosUserID,
+            notFoundMessage: "Strava connect route not found",
+            exhaustedMessage: "Unable to load Strava connect URL from available backends."
+        )
     }
 
     func fetchStravaStatus(iosUserID: String) async throws -> StravaStatusResponse {
-        var lastError: APIError?
-        for candidateBaseURL in stravaBaseURLCandidates() {
-            let endpoint = stravaEndpoint(path: "status", iosUserID: iosUserID, baseURL: candidateBaseURL)
-            var request = URLRequest(url: endpoint)
-            request.httpMethod = "GET"
-            request.timeoutInterval = 20
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                continue
-            }
-            if (200..<300).contains(http.statusCode) {
-                return try JSONDecoder().decode(StravaStatusResponse.self, from: data)
-            }
-            if http.statusCode != 404 {
-                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
-            }
-            lastError = .server(String(data: data, encoding: .utf8) ?? "Strava status route not found")
-        }
-        throw lastError ?? APIError.server("Unable to load Strava status from available backends.")
+        try await requestStrava(
+            path: "status",
+            method: "GET",
+            iosUserID: iosUserID,
+            notFoundMessage: "Strava status route not found",
+            exhaustedMessage: "Unable to load Strava status from available backends."
+        )
     }
 
     func disconnectStrava(iosUserID: String) async throws -> StravaDisconnectResponse {
-        var lastError: APIError?
-        for candidateBaseURL in stravaBaseURLCandidates() {
-            let endpoint = stravaEndpoint(path: "disconnect", iosUserID: iosUserID, baseURL: candidateBaseURL)
-            var request = URLRequest(url: endpoint)
-            request.httpMethod = "POST"
-            request.timeoutInterval = 20
-
-            let payload = ["ios_user_id": iosUserID]
-            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                continue
-            }
-            if (200..<300).contains(http.statusCode) {
-                return try JSONDecoder().decode(StravaDisconnectResponse.self, from: data)
-            }
-            if http.statusCode != 404 {
-                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
-            }
-            lastError = .server(String(data: data, encoding: .utf8) ?? "Strava disconnect route not found")
-        }
-        throw lastError ?? APIError.server("Unable to disconnect Strava from available backends.")
+        try await requestStrava(
+            path: "disconnect",
+            method: "POST",
+            iosUserID: iosUserID,
+            body: ["ios_user_id": iosUserID],
+            notFoundMessage: "Strava disconnect route not found",
+            exhaustedMessage: "Unable to disconnect Strava from available backends."
+        )
     }
 
     func syncStravaActivities(iosUserID: String) async throws -> StravaSyncResponse {
-        var lastError: APIError?
-        for candidateBaseURL in stravaBaseURLCandidates() {
-            let endpoint = stravaEndpoint(path: "sync", iosUserID: iosUserID, baseURL: candidateBaseURL)
-            var request = URLRequest(url: endpoint)
-            request.httpMethod = "POST"
-            request.timeoutInterval = 30
-
-            let payload = ["ios_user_id": iosUserID]
-            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                continue
-            }
-            if (200..<300).contains(http.statusCode) {
-                return try JSONDecoder().decode(StravaSyncResponse.self, from: data)
-            }
-            if http.statusCode != 404 {
-                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
-            }
-            lastError = .server(String(data: data, encoding: .utf8) ?? "Strava sync route not found")
-        }
-        throw lastError ?? APIError.server("Unable to sync Strava activities from available backends.")
+        try await requestStrava(
+            path: "sync",
+            method: "POST",
+            iosUserID: iosUserID,
+            body: ["ios_user_id": iosUserID],
+            timeout: 30,
+            notFoundMessage: "Strava sync route not found",
+            exhaustedMessage: "Unable to sync Strava activities from available backends."
+        )
     }
 
     func fetchStravaSummary(iosUserID: String, weeks: Int = 4) async throws -> StravaSummaryResponse {
@@ -251,6 +190,45 @@ final class APIClient {
             seen.insert(key)
             return true
         }
+    }
+
+    /// Generic Strava request with backend-URL fallback. Tries each candidate base URL,
+    /// returning on the first 2xx and falling through on 404 so callers can degrade across
+    /// staging/production. Non-404 errors surface immediately.
+    private func requestStrava<T: Decodable>(
+        path: String,
+        method: String,
+        iosUserID: String,
+        body: [String: Any]? = nil,
+        timeout: TimeInterval = 20,
+        notFoundMessage: String,
+        exhaustedMessage: String
+    ) async throws -> T {
+        var lastError: APIError?
+        for candidateBaseURL in stravaBaseURLCandidates() {
+            let endpoint = stravaEndpoint(path: path, iosUserID: iosUserID, baseURL: candidateBaseURL)
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = method
+            request.timeoutInterval = timeout
+            if let body {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            }
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                continue
+            }
+            if (200..<300).contains(http.statusCode) {
+                return try JSONDecoder().decode(T.self, from: data)
+            }
+            if http.statusCode != 404 {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            lastError = .server(String(data: data, encoding: .utf8) ?? notFoundMessage)
+        }
+        throw lastError ?? APIError.server(exhaustedMessage)
     }
 
     func generateTrainingPlan(input: TrainingPlanInput) async throws -> TrainingPlanResponse {
