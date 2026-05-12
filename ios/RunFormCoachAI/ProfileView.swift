@@ -27,6 +27,7 @@ struct ProfileView: View {
                 AppBackground()
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 16) {
+                        profileHero
                         formCard
                         whyCard
                         stravaComingSoonCard
@@ -80,30 +81,133 @@ struct ProfileView: View {
     }
 
     private var formCard: some View {
-        GlassCard {
+        DarkCard {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Injury note")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.58))
+                SectionTitle("Runner setup", subtitle: "Used to personalize TestFlight feedback", systemImage: "slider.horizontal.3")
 
-                ZStack(alignment: .topLeading) {
-                    if injuryNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("Optional")
-                            .foregroundStyle(.white.opacity(0.45))
-                            .padding(.top, 10)
-                            .padding(.leading, 5)
-                    }
-                    TextEditor(text: $injuryNote)
-                        .focused($fieldFocused)
-                        .textInputAutocapitalization(.sentences)
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 120, maxHeight: 180)
-                        .foregroundStyle(.white)
+                HStack(spacing: 12) {
+                    ProfileLabeledTextField(
+                        label: "First name",
+                        placeholder: "First name",
+                        text: $firstName,
+                        focus: $fieldFocused
+                    )
+                    ProfileLabeledTextField(
+                        label: "Last name",
+                        placeholder: "Last name",
+                        text: $lastName,
+                        focus: $fieldFocused
+                    )
                 }
-                .padding(13)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.black.opacity(0.20))
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                ProfileLabeledTextField(
+                    label: "Nickname",
+                    placeholder: "Nickname",
+                    text: $nickname,
+                    focus: $fieldFocused
+                )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Date of Birth")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.62))
+                    DatePicker("", selection: $dateOfBirth, displayedComponents: .date)
+                        .labelsHidden()
+                        .tint(AppTheme.mint)
+                        .colorScheme(.dark)
+                }
+
+                ProfileMenuPicker(label: "Running level", selection: $level) {
+                    ForEach(RunnerLevel.allCases) { level in
+                        Text(LocalizedStringKey(level.rawValue)).tag(level)
+                    }
+                }
+
+                ProfileSliderRow(
+                    icon: "speedometer",
+                    label: "Weekly mileage",
+                    value: $weeklyMileageKm,
+                    range: 0...120,
+                    step: 1,
+                    valueText: "\(Int(weeklyMileageKm)) km"
+                )
+
+                Stepper("Running days / week: \(runningDaysPerWeek)", value: $runningDaysPerWeek, in: 1...7)
+                    .foregroundStyle(.white)
+                    .font(.subheadline)
+
+                ProfileSliderRow(
+                    icon: "clock.fill",
+                    label: "Total exercise hours / week",
+                    value: $weeklyExerciseHours,
+                    range: 0...30,
+                    step: 0.5,
+                    valueText: String(format: "%.1f hrs", weeklyExerciseHours)
+                )
+
+                ProfileSliderRow(
+                    icon: "ruler",
+                    label: "Height",
+                    value: $heightCm,
+                    range: 130...220,
+                    step: 1,
+                    valueText: "\(Int(heightCm)) cm"
+                )
+
+                ProfileSliderRow(
+                    icon: "scalemass",
+                    label: "Weight",
+                    value: $weightKg,
+                    range: 30...200,
+                    step: 1,
+                    valueText: "\(Int(weightKg)) kg"
+                )
+
+                ProfileMenuPicker(label: "Goal", selection: $target) {
+                    ForEach(TrainingTarget.allCases) { item in
+                        Text(LocalizedStringKey(item.rawValue)).tag(item)
+                    }
+                }
+
+                ProfileMenuPicker(label: "Gender", selection: $gender) {
+                    Text("Male").tag(ProfileGender.male)
+                    Text("Female").tag(ProfileGender.female)
+                    Text("Other").tag(ProfileGender.other)
+                    Text("Prefer not to say").tag(ProfileGender.unspecified)
+                }
+
+                HStack(spacing: 12) {
+                    ProfileLabeledTextField(
+                        label: "Shoe size",
+                        placeholder: "EU 42 / US 9",
+                        text: $shoeSize,
+                        autocapitalization: .never,
+                        focus: $fieldFocused
+                    )
+                    ProfileLabeledTextField(
+                        label: "Leg length (cm)",
+                        placeholder: "85",
+                        text: $legLengthCmText,
+                        autocapitalization: .never,
+                        keyboardType: .decimalPad,
+                        focus: $fieldFocused
+                    )
+                }
+
+                ProfileLabeledTextField(
+                    label: "Shoe brand/model",
+                    placeholder: "ASICS Nimbus 27",
+                    text: $shoeBrandModel,
+                    focus: $fieldFocused
+                )
+
+                ProfileLabeledTextField(
+                    label: "Injury note",
+                    placeholder: "Optional",
+                    text: $injuryNote,
+                    multiline: true,
+                    focus: $fieldFocused
+                )
 
                 Button {
                     saveProfile()
