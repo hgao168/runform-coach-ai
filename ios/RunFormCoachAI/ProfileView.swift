@@ -1,5 +1,4 @@
 import SwiftUI
-import AuthenticationServices
 
 struct ProfileView: View {
     @EnvironmentObject private var appStore: AppStore
@@ -20,12 +19,6 @@ struct ProfileView: View {
     @State private var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
     @State private var weeklyExerciseHours: Double = 5
     @State private var savedMessage: String?
-    @State private var stravaMessage: String?
-    @State private var isLoadingStravaStatus = false
-    @State private var isSyncingStravaRuns = false
-    @State private var isConnectingStrava = false
-    @State private var lastSyncedAt: Date?
-    @State private var stravaAuthSession: ASWebAuthenticationSession?
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
@@ -93,15 +86,24 @@ struct ProfileView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.58))
 
-                TextField("Optional", text: $injuryNote, axis: .vertical)
-                    .lineLimit(5...8)
-                    .focused($fieldFocused)
-                    .textInputAutocapitalization(.sentences)
-                    .padding(18)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.black.opacity(0.20))
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .foregroundStyle(.white)
+                ZStack(alignment: .topLeading) {
+                    if injuryNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("Optional")
+                            .foregroundStyle(.white.opacity(0.45))
+                            .padding(.top, 10)
+                            .padding(.leading, 5)
+                    }
+                    TextEditor(text: $injuryNote)
+                        .focused($fieldFocused)
+                        .textInputAutocapitalization(.sentences)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 120, maxHeight: 180)
+                        .foregroundStyle(.white)
+                }
+                .padding(13)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.black.opacity(0.20))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
                 Button {
                     saveProfile()
@@ -171,164 +173,6 @@ struct ProfileView: View {
         weeklyExerciseHours = profile.weeklyExerciseHours
     }
 
-    @MainActor
-    private func refreshStravaStatus() async {
-        isLoadingStravaStatus = true
-        defer { isLoadingStravaStatus = false }
-
-        do {
-            let status = try await APIClient.shared.fetchStravaStatus(iosUserID: appStore.appUserID)
-            appStore.updateStravaStatus(status)
-            stravaMessage = status.connected ? "Strava connection synced." : nil
-        } catch {
-            if appStore.stravaStatus == nil {
-                stravaMessage = nil
-            }
-        }
-    }
-
-    private func connectStrava() {
-        guard !isConnectingStrava else { return }
-        isConnectingStrava = true
-        stravaMessage = nil
-
-        Task {
-            do {
-                let response = try await APIClient.shared.fetchStravaConnectResponse(iosUserID: appStore.appUserID)
-                await MainActor.run {
-                    startStravaSession(authorizeURL: response.authorizeURL)
-                }
-            } catch {
-                await MainActor.run {
-                    isConnectingStrava = false
-                    if let apiError = error as? APIError,
-                       let message = apiError.errorDescription,
-                       !message.isEmpty {
-                        stravaMessage = "Strava sign-in failed: \(message)"
-                    } else {
-                        stravaMessage = "Unable to start Strava sign-in: \(error.localizedDescription)"
-                    }
-                }
-            }
-        }
-    }
-
-    private func disconnectStrava() {
-        guard !isConnectingStrava else { return }
-        isConnectingStrava = true
-        stravaMessage = nil
-
-        Task {
-            do {
-                let response = try await APIClient.shared.disconnectStrava(iosUserID: appStore.appUserID)
-                await MainActor.run {
-                    appStore.updateStravaStatus(nil)
-                    isConnectingStrava = false
-                    stravaMessage = response.message
-                }
-            } catch {
-                await MainActor.run {
-                    isConnectingStrava = false
-                    if let apiError = error as? APIError,
-                       let message = apiError.errorDescription,
-                       !message.isEmpty {
-                        stravaMessage = "Strava disconnect failed: \(message)"
-                    } else {
-                        stravaMessage = "Unable to disconnect Strava: \(error.localizedDescription)"
-                    }
-                }
-            }
-        }
-    }
-
-    private func syncStravaRuns() {
-        guard !isSyncingStravaRuns else { return }
-        isSyncingStravaRuns = true
-        stravaMessage = nil
-
-        Task {
-            do {
-                let result = try await APIClient.shared.syncStravaActivities(iosUserID: appStore.appUserID)
-                await MainActor.run {
-                    isSyncingStravaRuns = false
-                    lastSyncedAt = Date()
-                    let weekLabel = result.weekCount == 1 ? "week" : "weeks"
-                    var message = "Synced \(result.syncedRunCount) runs across \(result.weekCount) \(weekLabel)."
-                    if let prefill = result.prefilledProfile, !prefill.isEmpty {
-                        applyStravaPrefill(prefill)
-                        message += " Pre-filled profile: \(prefill.summaryLabel)."
-                    }
-                    stravaMessage = message
-                }
-            } catch {
-                await MainActor.run {
-                    isSyncingStravaRuns = false
-                    if let apiError = error as? APIError,
-                       let message = apiError.errorDescription,
-                       !message.isEmpty {
-                        stravaMessage = "Strava sync failed: \(message)"
-                    } else {
-                        stravaMessage = "Unable to sync Strava runs: \(error.localizedDescription)"
-                    }
-                }
-            }
-        }
-    }
-
-    @MainActor
-    private func startStravaSession(authorizeURL: URL) {
-        let session = ASWebAuthenticationSession(
-            url: authorizeURL,
-            callbackURLScheme: "runformcoachai"
-        ) { callbackURL, error in
-            Task { @MainActor in
-                self.isConnectingStrava = false
-                self.stravaAuthSession = nil
-
-                if let error = error as? ASWebAuthenticationSessionError,
-                   error.code == .canceledLogin {
-                    self.stravaMessage = "Strava connection canceled."
-                    return
-                }
-
-                if let error {
-                    self.stravaMessage = error.localizedDescription
-                    return
-                }
-
-                guard let callbackURL else {
-                    self.stravaMessage = "Strava connection finished without a callback."
-                    return
-                }
-
-                let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)
-                let queryItems = components?.queryItems ?? []
-                let status = queryItems.first(where: { $0.name == "status" })?.value
-                let athleteID = queryItems.first(where: { $0.name == "provider_athlete_id" })?.value
-
-                if status == "connected" {
-                    if let athleteID {
-                        self.stravaMessage = "Strava connected for athlete \(athleteID)."
-                    } else {
-                        self.stravaMessage = "Strava connected."
-                    }
-                    await self.refreshStravaStatus()
-                } else {
-                    self.stravaMessage = "Strava flow completed."
-                }
-            }
-        }
-        session.presentationContextProvider = StravaPresentationContextProvider.shared
-        session.prefersEphemeralWebBrowserSession = true
-        stravaAuthSession = session
-
-        if !session.start() {
-            isConnectingStrava = false
-            stravaMessage = "Unable to start Strava sign-in. Please close and reopen the Profile page, then try again."
-            stravaAuthSession = nil
-        }
-    }
-
     private func saveProfile() {
         fieldFocused = false
         dismissKeyboard()
@@ -364,48 +208,4 @@ struct ProfileView: View {
         #endif
     }
 
-    /// Merge Strava `/athlete` pre-fill values into the local form. Only fills
-    /// fields that the user hasn't already filled in (server-side keeps the
-    /// same invariant). Also persists the merged profile so it survives reload.
-    @MainActor
-    private func applyStravaPrefill(_ prefill: StravaProfilePrefill) {
-        if let firstName = prefill.firstName, !firstName.isEmpty,
-           self.firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            self.firstName = firstName
-        }
-        if let lastName = prefill.lastName, !lastName.isEmpty,
-           self.lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            self.lastName = lastName
-        }
-        if let gender = prefill.gender, !gender.isEmpty,
-           self.gender == .unspecified,
-           let parsed = ProfileGender(rawValue: gender) {
-            self.gender = parsed
-        }
-        if let weight = prefill.weightKg, weight > 0,
-           // Only overwrite the seed default (70). Any user-edited value is preserved.
-           abs(self.weightKg - 70) < 0.001 {
-            self.weightKg = weight
-        }
-        // Persist silently (no focus/keyboard side effects, no "saved" toast).
-        let profile = TesterProfile(
-            firstName: firstName,
-            lastName: lastName,
-            nickname: nickname,
-            level: level,
-            weeklyMileageKm: weeklyMileageKm,
-            runningDaysPerWeek: runningDaysPerWeek,
-            heightCm: heightCm,
-            weightKg: weightKg,
-            target: target.rawValue,
-            injuryNote: injuryNote,
-            dateOfBirth: dateOfBirth,
-            weeklyExerciseHours: weeklyExerciseHours,
-            gender: gender,
-            shoeSize: shoeSize,
-            legLengthCm: Double(legLengthCmText.replacingOccurrences(of: ",", with: ".")),
-            shoeBrandModel: shoeBrandModel
-        )
-        appStore.profile = profile
-    }
 }
