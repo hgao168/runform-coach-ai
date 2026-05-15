@@ -1,0 +1,101 @@
+<!-- pages/cadence/cadence.wxml -->
+<view class="page-container">
+
+  <!-- Header -->
+  <view class="card">
+    <view class="header-row">
+      <view class="icon-bubble">🦶</view>
+      <view class="header-text">
+        <text class="title">{{i.title}}</text>
+        <text class="subtitle">{{i.ready}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 实时数据卡片 -->
+  <view class="card cadence-card">
+    <!-- 大号步频数值 -->
+    <view class="cadence-display">
+      <text class="cadence-number">{{cadence}}</text>
+      <text class="cadence-unit">{{i.spmUnit}}</text>
+    </view>
+
+    <!-- 检测中动画指示器 -->
+    <view wx:if="{{isRunning}}" class="detecting-indicator">
+      <view class="dot-pulse"></view>
+      <text class="detecting-text">{{i.detecting}}</text>
+    </view>
+
+    <!-- 数据行 -->
+    <view class="data-grid">
+      <view class="data-cell">
+        <text class="data-value">{{confidence}}</text>
+        <text class="data-label">{{i.confidenceLabel}}</text>
+      </view>
+      <view class="data-cell">
+        <text class="data-value">{{totalSteps}}</text>
+        <text class="data-label">{{i.stepsLabel}}</text>
+      </view>
+      <view class="data-cell">
+        <text class="data-value">{{elapsedSec}}</text>
+        <text class="data-label">{{i.elapsedLabel + i.secUnit}}</text>
+      </view>
+    </view>
+
+    <!-- 置信度进度条 -->
+    <view class="confidence-bar">
+      <view class="confidence-fill" style="width: {{confidence * 100}}%;"></view>
+    </view>
+  </view>
+
+  <!-- 开始/停止按钮 -->
+  <view class="action-area">
+    <button
+      wx:if="{{!isRunning}}"
+      class="btn-primary start-btn"
+      bindtap="startDetection"
+    >{{i.startBtn}}</button>
+
+    <button
+      wx:else
+      class="btn-mint-outline stop-btn"
+      bindtap="stopDetection"
+    >{{i.stopBtn}}</button>
+  </view>
+
+  <!-- 错误提示 -->
+  <view wx:if="{{error}}" class="card error-card">
+    <text class="error-text">⚠️ {{error}}</text>
+  </view>
+
+  <!-- 最终结果卡片 -->
+  <view wx:if="{{finalResult}}" class="card result-card">
+    <text class="section-title">{{t('isZh') ? '检测结果' : 'Result'}}</text>
+    <view class="result-row">
+      <text class="result-key">{{i.cadenceLabel}}</text>
+      <text class="result-val">{{finalResult.cadence}} {{i.spmUnit}}</text>
+    </view>
+    <view class="result-row">
+      <text class="result-key">{{i.stepsLabel}}</text>
+      <text class="result-val">{{finalResult.totalSteps}} 步</text>
+    </view>
+    <view class="result-row">
+      <text class="result-key">{{i.elapsedLabel}}</text>
+      <text class="result-val">{{finalResult.elapsedSec}}s</text>
+    </view>
+    <view class="result-row">
+      <text class="result-key">{{i.confidenceLabel}}</text>
+      <text class="result-val">{{(finalResult.confidence * 100).toFixed(0)}}%</text>
+    </view>
+  </view>
+
+  <!-- 使用提示 -->
+  <view class="card-dark">
+    <text class="section-title">{{i.tipTitle}}</text>
+    <text class="body-text">{{i.tipBody}}</text>
+  </view>
+
+  <!-- 安全间距 -->
+  <view style="height: 60rpx;"></view>
+
+</view>
