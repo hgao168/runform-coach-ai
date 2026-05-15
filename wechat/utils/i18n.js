@@ -78,6 +78,14 @@ const strings = {
     deleteConfirm: '确定清除所有历史记录？',
     deleteOk: '清除',
     deleteCancel: '取消',
+    trendTitle: '趋势图表',
+    trendToggle: '展开',
+    trendToggleHide: '收起',
+    trendCadence: '步频',
+    trendOscillation: '垂直振幅',
+    trendGCT: '触地时间',
+    trendNoData: '至少需要 2 条记录才能生成趋势图',
+    trendTapHint: '点击数据点查看数值',
 
     // Profile page
     profileTitle: '我的',
@@ -112,6 +120,18 @@ const strings = {
     achievement: '成就',
     nationality: '国籍',
     event: '项目',
+    compareResult: '对比结果',
+    yourMetrics: '你的数据',
+    eliteMetrics: '精英数据',
+    gap: '差距',
+    noAnalysisForCompare: '请先完成一次视频分析',
+    goAnalyzeNow: '去分析',
+    comparing: '对比中...',
+    compareError: '对比失败，请重试',
+    compareVs: 'VS',
+    noCompareData: '暂无可对比指标',
+    trainingParams: '训练参数',
+    startFirstAnalysis: '开始第一次分析',
 
     // Common
     loading: '加载中...',
@@ -126,6 +146,19 @@ const strings = {
     sets: '组',
     times: '次',
     perWeek: '次/周',
+
+    // Feedback
+    feedbackTitle: '反馈评分',
+    feedbackSubtitle: '帮助我们改进教练质量',
+    feedbackPlaceholder: '可选：哪里不对或有帮助？',
+    feedbackSubmit: '提交反馈',
+    feedbackSubmitted: '感谢反馈！',
+    feedbackSavedOffline: '已离线保存，联网后自动同步',
+    feedbackNoRating: '请先选择评分',
+
+    // Share
+    shareResult: '分享结果',
+    shareTapHint: '请点击右上角分享',
   },
 
   en: {
@@ -187,6 +220,14 @@ const strings = {
     deleteConfirm: 'Clear all history records?',
     deleteOk: 'Clear',
     deleteCancel: 'Cancel',
+    trendTitle: 'Trend Chart',
+    trendToggle: 'Expand',
+    trendToggleHide: 'Collapse',
+    trendCadence: 'Cadence',
+    trendOscillation: 'Vert. Osc.',
+    trendGCT: 'GCT',
+    trendNoData: 'Need at least 2 records for trend chart',
+    trendTapHint: 'Tap data point to see value',
     profileTitle: 'Profile',
     firstName: 'First name',
     lastName: 'Last name',
@@ -217,6 +258,18 @@ const strings = {
     achievement: 'Achievement',
     nationality: 'Nationality',
     event: 'Event',
+    compareResult: 'Comparison',
+    yourMetrics: 'Your Metrics',
+    eliteMetrics: 'Elite Metrics',
+    gap: 'Gap',
+    noAnalysisForCompare: 'Complete a video analysis first',
+    goAnalyzeNow: 'Analyze',
+    comparing: 'Comparing...',
+    compareError: 'Comparison failed, retry',
+    compareVs: 'VS',
+    noCompareData: 'No comparable metrics',
+    trainingParams: 'Training Params',
+    startFirstAnalysis: 'Start First Analysis',
     loading: 'Loading...',
     error: 'Error',
     retry: 'Retry',
@@ -229,6 +282,19 @@ const strings = {
     sets: 'sets',
     times: 'reps',
     perWeek: 'x/week',
+
+    // Feedback
+    feedbackTitle: 'Feedback',
+    feedbackSubtitle: 'Help improve coaching quality',
+    feedbackPlaceholder: 'Optional: what was wrong or useful?',
+    feedbackSubmit: 'Submit Feedback',
+    feedbackSubmitted: 'Thank you!',
+    feedbackSavedOffline: 'Saved offline, will sync when online',
+    feedbackNoRating: 'Please select a rating first',
+
+    // Share
+    shareResult: 'Share Result',
+    shareTapHint: 'Tap top-right to share',
   },
 }
 

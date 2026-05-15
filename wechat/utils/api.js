@@ -123,10 +123,19 @@ function health() {
   return request('GET', '/health')
 }
 
+/**
+ * Submit user feedback for an analysis result.
+ * @param {object} feedback - { analysis_id, rating, comment }
+ */
+function submitFeedback(feedback) {
+  return request('POST', '/feedback', feedback)
+}
+
 module.exports = {
   analyzeVideo,
   generatePlan,
   fetchAthletes,
   compareWithAthlete,
+  submitFeedback,
   health,
 }

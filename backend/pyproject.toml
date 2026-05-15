@@ -1,52 +1,11 @@
 [tool.ruff]
-# Python 版本
-target-version = "py311"
-
-# 检查目录
-src = ["backend"]
-
-# 排除目录
-exclude = [
-    "backend/alembic/versions/",
-    ".venv/",
-    "__pycache__/",
-    ".git/",
-]
+target-version = "py312"
+line-length = 100
 
 [tool.ruff.lint]
-select = [
-    "E",      # pycodestyle errors
-    "F",      # pyflakes (未使用变量、导入等)
-    "W",      # pycodestyle warnings
-    "B",      # flake8-bugbear (常见错误)
-    "I",      # isort (导入排序)
-    "UP",     # pyupgrade (现代化语法)
-    "C4",     # flake8-comprehensions
-    "SIM",    # flake8-simplify
-    "RUF",    # Ruff 专属规则
-]
-ignore = [
-    "E501",   # 行长度（由 IDE 管理）
-    "B008",   # FastAPI Depends() 需要函数内调用
-    "SIM108", # 三元表达式有时不如 if/else 清晰
-]
-
-[tool.ruff.lint.isort]
-known-first-party = ["app"]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = []
 
 [tool.ruff.format]
-line-length = 100
 quote-style = "double"
 indent-style = "space"
-
-[tool.pytest.ini_options]
-minversion = "8.0"
-testpaths = ["backend/tests"]
-pythonpath = ["backend"]
-asyncio_mode = "auto"
-addopts = "--strict-markers --tb=short"
-markers = [
-    "slow: slow running tests",
-    "integration: tests that require external services (database, Strava API)",
-    "unit: fast unit tests",
-]

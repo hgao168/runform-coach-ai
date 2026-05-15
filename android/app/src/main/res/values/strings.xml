@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── App name ──────────────────────────────────────────────────────── -->
+    <string name="app_name">RunForm</string>
+
+    <!-- ── Tab bar ───────────────────────────────────────────────────────── -->
+    <string name="tab_analyze">Analyze</string>
+    <string name="tab_history">History</string>
+    <string name="tab_plan">Plan</string>
+    <string name="tab_profile">Profile</string>
+
+    <!-- ── Analyze tab - hero ─────────────────────────────────────────────── -->
+    <string name="analyze_title">RunForm Coach AI</string>
+    <string name="analyze_subtitle">Upload or record a video to get AI coaching feedback</string>
+
+    <!-- ── Analyze tab - camera angle ─────────────────────────────────────── -->
+    <string name="camera_angle">Camera Angle</string>
+    <string name="mode_side">Side View</string>
+    <string name="mode_rear">Rear View</string>
+    <string name="mode_front">Front View</string>
+    <string name="mode_side_desc">Cadence, overstride, trunk lean</string>
+    <string name="mode_rear_desc">Hip stability, knee tracking</string>
+    <string name="mode_front_desc">Knee valgus, hip symmetry</string>
+
+    <!-- ── Analyze tab - video card ──────────────────────────────────────── -->
+    <string name="video_selected">Video selected</string>
+    <string name="tap_to_change">Tap to change</string>
+    <string name="tap_to_pick_video">Tap to pick video</string>
+
+    <!-- ── Analyze tab - actions ─────────────────────────────────────────── -->
+    <string name="pick_video">Pick Video</string>
+    <string name="record">Record</string>
+    <string name="analyze_running_form">Analyze Running Form</string>
+    <string name="analyzing">Analyzing…</string>
+
+    <!-- ── Analyze tab - tips ────────────────────────────────────────────── -->
+    <string name="recording_tips">Recording Tips</string>
+    <string name="tip_treadmill">Film on a treadmill or flat, consistent surface</string>
+    <string name="tip_lighting">Use good lighting — avoid backlighting</string>
+    <string name="tip_framing">Keep whole body in frame, 3–5 seconds minimum</string>
+    <string name="tip_side_view">Side view gives the most analysis metrics</string>
+
+    <!-- ── Analyze tab - ready card ──────────────────────────────────────── -->
+    <string name="what_youll_get">What you\'ll get</string>
+    <string name="clear_coaching">Clear, runner-friendly coaching</string>
+    <string name="movement_metrics">Movement metrics</string>
+    <string name="cadence_metrics_list">Cadence, overstride, trunk lean, arm movement, arm swing</string>
+    <string name="strength_focus">Strength focus</string>
+    <string name="issue_exercises">Issue-based exercises with why each one helps</string>
+    <string name="quality_check">Quality check</string>
+    <string name="quality_check_desc">If metrics are unreliable, RunForm asks for a better clip</string>
+
+    <!-- ── Analysis result ───────────────────────────────────────────────── -->
+    <string name="overall_score">Overall Score</string>
+    <string name="movement_metrics_title">Movement Metrics</string>
+    <string name="strength_focus_title">Strength Focus</string>
+    <string name="video_quality">Video Quality</string>
+    <string name="exercises">Exercises</string>
+    <string name="analyze_new_video">Analyze New Video</string>
+
+    <!-- ── Analysis result - exercise card ───────────────────────────────── -->
+    <string name="sets_reps_freq">%1$d sets × %2$s — %3$dx/week</string>
+
+    <!-- ── History tab ───────────────────────────────────────────────────── -->
+    <string name="history_title">History</string>
+    <string name="x_analyses">%1$d analyses</string>
+    <string name="no_analyses_yet">No analyses yet</string>
+    <string name="go_to_analyze">Go to Analyze to get started</string>
+    <string name="clear_history">Clear History</string>
+    <string name="clear_history_confirm">Delete all analysis records?</string>
+    <string name="delete_all">Delete All</string>
+    <string name="cancel">Cancel</string>
+    <string name="x_more">+%1$d more</string>
+
+    <!-- ── Plan tab ──────────────────────────────────────────────────────── -->
+    <string name="training_plan">Training Plan</string>
+    <string name="plan_subtitle">Get an AI-generated weekly plan</string>
+    <string name="plan_settings">Plan Settings</string>
+    <string name="current_weekly_km">Current weekly km</string>
+    <string name="training_goal">Training Goal</string>
+    <string name="available_days">Available Days</string>
+    <string name="x_selected">%1$d selected</string>
+    <string name="injury_pain_flag">Injury / Pain Flag</string>
+    <string name="injury_pain_desc">Plan will be more conservative</string>
+    <string name="generate_plan">Generate Plan</string>
+    <string name="building_plan">Building plan…</string>
+    <string name="select_at_least_one_day">Select at least one available day</string>
+    <string name="your_training_plan">Your Training Plan</string>
+    <string name="x_run_days_y_km_week">%1$d run days · %2$d km/week</string>
+    <string name="ai_personalized">AI-personalized</string>
+    <string name="coach_notes">Coach Notes</string>
+    <string name="new_plan">New Plan</string>
+    <string name="km_unit">km</string>
+    <string name="min_unit">min</string>
+    <string name="focus_prefix">Focus: %1$s</string>
+
+    <!-- ── Plan days ─────────────────────────────────────────────────────── -->
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
+    <string name="day_sun">Sun</string>
+
+    <!-- ── Profile tab ───────────────────────────────────────────────────── -->
+    <string name="profile_title">Profile</string>
+    <string name="profile_subtitle">Your info improves plan quality</string>
+    <string name="identity">Identity</string>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="nickname_optional">Nickname (optional)</string>
+    <string name="runner_profile">Runner Profile</string>
+    <string name="experience_level">Experience Level</string>
+    <string name="training_target">Training Target</string>
+    <string name="running_stats">Running Stats</string>
+    <string name="weekly_mileage">Weekly mileage</string>
+    <string name="running_days_week">Running days / week</string>
+    <string name="weekly_exercise_hours">Weekly exercise hours</string>
+    <string name="body_stats">Body Stats</string>
+    <string name="height">Height</string>
+    <string name="weight">Weight</string>
+    <string name="injury_medical_note">Injury / Medical Note</string>
+    <string name="injury_placeholder">e.g. knee pain, plantar fasciitis…</string>
+    <string name="save_profile">Save Profile</string>
+    <string name="saved">Saved!</string>
+
+    <!-- ── Enums - RunnerLevel ───────────────────────────────────────────── -->
+    <string name="level_beginner">Beginner</string>
+    <string name="level_intermediate">Intermediate</string>
+    <string name="level_advanced">Advanced</string>
+
+    <!-- ── Enums - TrainingTarget ────────────────────────────────────────── -->
+    <string name="target_5k">5K</string>
+    <string name="target_10k">10K</string>
+    <string name="target_half_marathon">Half Marathon</string>
+    <string name="target_marathon">Marathon</string>
+    <string name="target_general_fitness">General Fitness</string>
+
+    <!-- ── Error ─────────────────────────────────────────────────────────── -->
+    <string name="error_prefix">Error: %1$s</string>
+    <string name="error_invalid_km">Please enter a valid weekly km number.</string>
+    <string name="error_plan_failed">Plan generation failed. Check your connection.</string>
+    <string name="profile_saved">Profile saved</string>
+
+    <!-- ── Compare Screen ────────────────────────────────────────────────── -->
+    <string name="compare_with_elite">Compare with Elite</string>
+    <string name="compare_subtitle">Pick an athlete to compare your form against their elite biomechanical benchmarks.</string>
+    <string name="comparing_your_form">Comparing your form…</string>
+    <string name="coachs_take">Coach\'s Take</string>
+    <string name="biggest_gaps">Biggest Gaps</string>
+    <string name="metric_breakdown">Metric Breakdown</string>
+    <string name="match_label">match</string>
+    <string name="you">You</string>
+    <string name="elite_benchmark">Elite benchmark</string>
+    <string name="close">Close</string>
+    <string name="couldnt_load_athletes">Couldn\'t Load Athletes</string>
+    <string name="comparison_failed">Comparison Failed</string>
+</resources>

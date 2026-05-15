@@ -1,21 +1,29 @@
 package com.runformcoach.runformcoachai
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.runformcoach.runformcoachai.data.AnalysisDao
+import com.runformcoach.runformcoachai.data.AnalysisHistoryEntity
+import com.runformcoach.runformcoachai.data.MigrationHelper
+import com.runformcoach.runformcoachai.data.ProfileDao
+import com.runformcoach.runformcoachai.data.RunFormDatabase
+import com.runformcoach.runformcoachai.data.RunnerProfileEntity
+import com.runformcoach.runformcoachai.di.VideoPartFactory
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.UUID
+import javax.inject.Inject
 
 sealed class AnalysisState {
     object Idle : AnalysisState()
@@ -31,7 +39,16 @@ sealed class PlanState {
     data class Error(val message: String) : PlanState()
 }
 
-class AppViewModel : ViewModel() {
+@HiltViewModel
+class AppViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
+    private val api: RunFormApi,
+    private val database: RunFormDatabase,
+    private val analysisDao: AnalysisDao,
+    private val profileDao: ProfileDao
+) : ViewModel() {
+
+    private val gson = Gson()
 
     // ── Analyze Tab ───────────────────────────────────────────────────────────
 
@@ -54,32 +71,30 @@ class AppViewModel : ViewModel() {
 
     var planState by mutableStateOf<PlanState>(PlanState.Idle)
 
-    // ── SharedPreferences ─────────────────────────────────────────────────────
-
-    private val gson = Gson()
-    private lateinit var prefs: SharedPreferences
-
-    fun init(context: Context) {
-        prefs = context.getSharedPreferences("runform_prefs", Context.MODE_PRIVATE)
-        loadProfile()
-        loadHistory()
+    init {
+        // One-shot SharedPreferences → Room migration, then load from Room
+        viewModelScope.launch {
+            MigrationHelper.migrateIfNeeded(appContext, database)
+            loadProfile()
+            observeHistory()
+        }
     }
 
     // ── Analyze ───────────────────────────────────────────────────────────────
 
-    fun analyzeVideo(context: Context) {
+    fun analyzeVideo() {
         val uri = selectedVideoUri ?: return
         analysisState = AnalysisState.Loading
         viewModelScope.launch {
             try {
                 val videoFile = withContext(Dispatchers.IO) {
-                    copyUriToTempFile(context, uri)
+                    copyUriToTempFile(appContext, uri)
                 }
-                val videoPart = ApiClient.buildVideoPart(videoFile)
-                val modePart = ApiClient.buildModePart(selectedMode)
-                val result = ApiClient.api.analyzeVideo(videoPart, modePart)
+                val videoPart = VideoPartFactory.buildVideoPart(videoFile)
+                val modePart = VideoPartFactory.buildModePart(selectedMode)
+                val result = api.analyzeVideo(videoPart, modePart)
                 analysisState = AnalysisState.Success(result)
-                addToHistory(videoFile.name, result)
+                saveAnalysisToRoom(videoFile.name, uri.toString(), result)
                 withContext(Dispatchers.IO) { videoFile.delete() }
             } catch (e: Exception) {
                 analysisState = AnalysisState.Error(e.message ?: "Unknown error")
@@ -92,23 +107,43 @@ class AppViewModel : ViewModel() {
         selectedVideoUri = null
     }
 
-    // ── History ───────────────────────────────────────────────────────────────
+    // ── History (Room-backed) ─────────────────────────────────────────────────
 
-    private fun addToHistory(filename: String, result: AnalysisResponse) {
-        val item = AnalysisHistoryItem(
-            id = UUID.randomUUID().toString(),
-            createdAt = System.currentTimeMillis(),
-            videoFilename = filename,
-            result = result
-        )
-        val updated = (listOf(item) + history).take(50)
-        history = updated
-        saveHistory(updated)
+    private fun observeHistory() {
+        viewModelScope.launch {
+            analysisDao.observeAll()
+                .map { entities -> entities.map { it.toDomainModel(gson) } }
+                .catch { } // silently ignore DB read errors
+                .collect { items -> history = items }
+        }
+    }
+
+    private fun saveAnalysisToRoom(filename: String, videoUri: String, result: AnalysisResponse) {
+        viewModelScope.launch(Dispatchers.IO) {
+            analysisDao.insert(
+                AnalysisHistoryEntity(
+                    userId = "local",
+                    videoUri = videoUri,
+                    analysisJson = gson.toJson(result),
+                    metricsJson = gson.toJson(result.metrics),
+                    confidence = result.confidence,
+                    createdAt = System.currentTimeMillis()
+                )
+            )
+            // Trim to max 50 records
+            val count = analysisDao.countByUser()
+            if (count > 50) {
+                // Keep newest 50 — delete oldest by collecting all and removing extras
+                val all = analysisDao.getAll()
+                all.drop(50).forEach { analysisDao.delete(it) }
+            }
+        }
     }
 
     fun clearHistory() {
-        history = emptyList()
-        prefs.edit { putString("history", "[]") }
+        viewModelScope.launch(Dispatchers.IO) {
+            analysisDao.deleteAll()
+        }
     }
 
     // ── Training Plan ─────────────────────────────────────────────────────────
@@ -144,7 +179,7 @@ class AppViewModel : ViewModel() {
         )
         viewModelScope.launch {
             try {
-                val plan = ApiClient.api.generatePlan(request)
+                val plan = api.generatePlan(request)
                 planState = PlanState.Success(plan)
             } catch (e: Exception) {
                 planState = PlanState.Error(e.message ?: "Unknown error")
@@ -154,31 +189,30 @@ class AppViewModel : ViewModel() {
 
     fun resetPlan() { planState = PlanState.Idle }
 
-    // ── Profile ───────────────────────────────────────────────────────────────
+    // ── Profile (Room-backed) ─────────────────────────────────────────────────
 
     fun updateProfile(updated: TesterProfile) {
         profile = updated
-        prefs.edit { putString("profile", gson.toJson(updated)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            profileDao.upsert(
+                RunnerProfileEntity(
+                    userId = "local",
+                    profileJson = gson.toJson(updated),
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
     }
 
-    // ── Persistence helpers ───────────────────────────────────────────────────
-
-    private fun loadProfile() {
-        val json = prefs.getString("profile", null) ?: return
-        runCatching { gson.fromJson(json, TesterProfile::class.java) }
-            .onSuccess { profile = it }
-    }
-
-    private fun loadHistory() {
-        val json = prefs.getString("history", "[]") ?: "[]"
-        runCatching {
-            val type = object : TypeToken<List<AnalysisHistoryItem>>() {}.type
-            gson.fromJson<List<AnalysisHistoryItem>>(json, type)
-        }.onSuccess { history = it ?: emptyList() }
-    }
-
-    private fun saveHistory(items: List<AnalysisHistoryItem>) {
-        prefs.edit { putString("history", gson.toJson(items)) }
+    private suspend fun loadProfile() {
+        val entity = withContext(Dispatchers.IO) {
+            profileDao.getByUser()
+        }
+        entity?.let {
+            runCatching {
+                gson.fromJson(it.profileJson, TesterProfile::class.java)
+            }.onSuccess { profile = it }
+        }
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
@@ -191,4 +225,16 @@ class AppViewModel : ViewModel() {
             }
             file
         }
+}
+
+// ── Entity → domain mapping (used by observeHistory) ─────────────────────────
+
+private fun AnalysisHistoryEntity.toDomainModel(gson: Gson): AnalysisHistoryItem {
+    val result: AnalysisResponse = gson.fromJson(analysisJson, AnalysisResponse::class.java)
+    return AnalysisHistoryItem(
+        id = id.toString(),
+        createdAt = createdAt,
+        videoFilename = videoUri.substringAfterLast('/'),
+        result = result
+    )
 }

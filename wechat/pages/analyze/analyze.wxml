@@ -72,12 +72,15 @@
   <!-- Upload progress bar -->
   <view wx:if="{{analyzing && uploadProgress > 0}}" class="progress-card">
     <view class="progress-label-row">
-      <text class="label">{{i.uploadProgress}}</text>
+      <text class="label">{{compressing ? '压缩中' : i.uploadProgress}}</text>
       <text class="text-mint">{{uploadProgress}}%</text>
     </view>
     <view class="progress-track">
       <view class="progress-fill" style="width: {{uploadProgress}}%;"></view>
     </view>
+    <text wx:if="{{compressResult && compressResult.compressed}}" class="caption" style="margin-top: 12rpx; display: block;">
+      视频已压缩：{{compressResult.originalSizeMB}}MB → {{compressResult.compressedSizeMB}}MB
+    </text>
   </view>
 
 </view>

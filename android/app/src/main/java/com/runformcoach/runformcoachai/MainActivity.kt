@@ -19,7 +19,6 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -27,11 +26,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
 data class TabItem(val label: String, val icon: ImageVector)
 
@@ -42,6 +41,7 @@ private val TABS = listOf(
     TabItem("Profile", Icons.Default.Person)
 )
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,12 +55,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppRoot(vm: AppViewModel = viewModel()) {
-    val context = LocalContext.current
-
-    // Initialize persistence on first composition
-    LaunchedEffect(Unit) { vm.init(context) }
-
+fun AppRoot(vm: AppViewModel = hiltViewModel()) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     AppBackground {
@@ -113,4 +108,3 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
         }
     }
 }
-

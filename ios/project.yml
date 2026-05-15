@@ -65,9 +65,7 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: RunFormCoachAI
-        includes:
-          - "**/*Tests*"
+      - path: RunFormCoachAITests
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.runformcoachai.tests

@@ -229,7 +229,7 @@ fun AnalyzeScreen(vm: AppViewModel) {
         item {
             val canAnalyze = vm.selectedVideoUri != null && vm.analysisState !is AnalysisState.Loading
             Button(
-                onClick = { vm.analyzeVideo(context) },
+                onClick = { vm.analyzeVideo() },
                 enabled = canAnalyze,
                 modifier = Modifier
                     .fillMaxWidth()

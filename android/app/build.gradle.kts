@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -15,11 +17,18 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "STAGING_URL", "\"https://runform-coach-ai-staging.up.railway.app/\"")
+        buildConfigField("String", "PRODUCTION_URL", "\"https://api.runformcoach.com/\"")
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"https://runform-coach-ai-staging.up.railway.app/\"")
+        }
         release {
             isMinifyEnabled = false
+            buildConfigField("String", "API_BASE_URL", "\"https://api.runformcoach.com/\"")
         }
     }
     compileOptions {
@@ -53,6 +62,24 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.gson)
     debugImplementation(libs.androidx.ui.tooling)
+
+    // Hilt DI
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.hilt.navigation.compose)
+
+    // EncryptedSharedPreferences (token storage)
+    implementation(libs.androidx.security.crypto)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+}
+
+// Room schema export directory for versioned migrations
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 ktlint {

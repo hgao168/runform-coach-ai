@@ -289,6 +289,19 @@ class ProfileSaveResponse(BaseModel):
     saved: bool
     ios_user_id: str
 
+# ── Tester feedback ─────────────────────────────────────────────────────
+# Mirrors the iOS AnalysisFeedback / FeedbackRating models
+
+class FeedbackSubmitRequest(BaseModel):
+    ios_user_id: str
+    analysis_id: str          # UUID of the AnalysisHistoryItem from iOS
+    rating: str               # "Accurate" | "Partly accurate" | "Not accurate" | "Confusing"
+    comment: str = ""
+
+class FeedbackSubmitResponse(BaseModel):
+    accepted: bool
+    message: str
+
 
 # ── Elite athlete comparison ────────────────────────────────────────────────
 

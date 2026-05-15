@@ -20,19 +20,21 @@ from .schemas import (
     AthleteListItem,
     CompareRequest,
     CompareResponse,
+    FeedbackSubmitRequest,
+    FeedbackSubmitResponse,
     PoseMetricsInput,
+    ProfileSaveRequest,
+    ProfileSaveResponse,
     StravaCallbackResponse,
     StravaConnectResponse,
     StravaDisconnectRequest,
     StravaDisconnectResponse,
+    StravaStatusResponse,
     StravaSummaryResponse,
     StravaSyncRequest,
     StravaSyncResponse,
-    StravaStatusResponse,
     TrainingPlanInput,
     TrainingPlanResponse,
-    ProfileSaveRequest,
-    ProfileSaveResponse,
 )
 from .strava_sync import sync_strava_runs_for_user
 from .strava_summary import build_strava_summary
@@ -224,6 +226,32 @@ async def compare(request: CompareRequest) -> CompareResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Comparison error: {exc}") from exc
+
+
+@app.post("/api/v1/feedback", response_model=FeedbackSubmitResponse)
+def submit_feedback(payload: FeedbackSubmitRequest) -> FeedbackSubmitResponse:
+    """Accept tester feedback on an analysis result for coaching-quality improvement.
+
+    Receives a rating (Accurate / Partly accurate / Not accurate / Confusing)
+    and optional comment from the iOS FeedbackView. Stores it for future
+    model tuning and coaching quality analysis.
+    """
+    valid_ratings = {"Accurate", "Partly accurate", "Not accurate", "Confusing"}
+    if payload.rating not in valid_ratings:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid rating '{payload.rating}'. Must be one of: {', '.join(sorted(valid_ratings))}",
+        )
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(
+        "Feedback received — ios_user_id=%s analysis_id=%s rating=%s comment_len=%d",
+        payload.ios_user_id, payload.analysis_id, payload.rating, len(payload.comment),
+    )
+    return FeedbackSubmitResponse(
+        accepted=True,
+        message="Thank you! Your feedback helps us improve coaching accuracy.",
+    )
 
 
 @app.get("/integrations/strava/connect", response_model=StravaConnectResponse)

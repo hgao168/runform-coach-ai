@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
+        android:name=".RunFormApplication"
         android:allowBackup="true"
         android:label="RunForm Coach AI"
         android:theme="@style/Theme.Material3.DynamicColors.DayNight"
