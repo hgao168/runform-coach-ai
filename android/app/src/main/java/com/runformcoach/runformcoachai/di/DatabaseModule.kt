@@ -3,6 +3,7 @@ package com.runformcoach.runformcoachai.di
 import android.content.Context
 import androidx.room.Room
 import com.runformcoach.runformcoachai.data.AnalysisDao
+import com.runformcoach.runformcoachai.data.FeedbackDao
 import com.runformcoach.runformcoachai.data.PlanDao
 import com.runformcoach.runformcoachai.data.ProfileDao
 import com.runformcoach.runformcoachai.data.RunFormDatabase
@@ -25,7 +26,7 @@ object DatabaseModule {
             RunFormDatabase::class.java,
             "runform.db"
         )
-            .fallbackToDestructiveMigration() // acceptable for v1; remove for v2+
+            .fallbackToDestructiveMigration() // acceptable for v1→v2; remove for v3+
             .build()
     }
 
@@ -37,4 +38,7 @@ object DatabaseModule {
 
     @Provides
     fun provideProfileDao(db: RunFormDatabase): ProfileDao = db.profileDao()
+
+    @Provides
+    fun provideFeedbackDao(db: RunFormDatabase): FeedbackDao = db.feedbackDao()
 }

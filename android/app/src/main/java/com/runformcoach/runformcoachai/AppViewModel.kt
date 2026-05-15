@@ -11,9 +11,11 @@ import com.google.gson.Gson
 import com.runformcoach.runformcoachai.data.AnalysisDao
 import com.runformcoach.runformcoachai.data.AnalysisHistoryEntity
 import com.runformcoach.runformcoachai.data.MigrationHelper
+import com.runformcoach.runformcoachai.data.PlanDao
 import com.runformcoach.runformcoachai.data.ProfileDao
 import com.runformcoach.runformcoachai.data.RunFormDatabase
 import com.runformcoach.runformcoachai.data.RunnerProfileEntity
+import com.runformcoach.runformcoachai.data.SavedPlanEntity
 import com.runformcoach.runformcoachai.di.VideoPartFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -45,7 +47,8 @@ class AppViewModel @Inject constructor(
     private val api: RunFormApi,
     private val database: RunFormDatabase,
     private val analysisDao: AnalysisDao,
-    private val profileDao: ProfileDao
+    private val profileDao: ProfileDao,
+    private val planDao: PlanDao
 ) : ViewModel() {
 
     private val gson = Gson()
@@ -71,12 +74,27 @@ class AppViewModel @Inject constructor(
 
     var planState by mutableStateOf<PlanState>(PlanState.Idle)
 
+    /** Which plan mode is active: "weekly", "marathon", "race" */
+    var planType by mutableStateOf("weekly")
+
+    /** Marathon plan generation inputs */
+    var marathonMajor by mutableStateOf("Berlin")
+    var marathonTargetTime by mutableStateOf("")
+    var marathonPlanWeeks by mutableStateOf(16)
+    var trainingLevel by mutableStateOf("Intermediate")
+    var planDurationWeeks by mutableStateOf<Int?>(null)
+
+    /** Saved plans list (observed from Room) */
+    var savedPlans by mutableStateOf<List<SavedPlanEntity>>(emptyList())
+        private set
+
     init {
         // One-shot SharedPreferences → Room migration, then load from Room
         viewModelScope.launch {
             MigrationHelper.migrateIfNeeded(appContext, database)
             loadProfile()
             observeHistory()
+            observeSavedPlans()
         }
     }
 
@@ -166,6 +184,10 @@ class AppViewModel @Inject constructor(
             )
         } ?: emptyList()
 
+        // Determine marathon/race block flags from planType
+        val includeMarathon = planType == "marathon"
+        val includeRace = planType == "race"
+
         val request = TrainingPlanRequest(
             currentWeeklyKm = weeklyKm,
             target = target,
@@ -175,7 +197,13 @@ class AppViewModel @Inject constructor(
             formIssues = formIssues,
             recentAnalysisSummary = lastAnalysis?.summary,
             recentAnalysisConfidence = lastAnalysis?.confidence,
-            language = language
+            language = language,
+            marathonMajor = if (includeMarathon) marathonMajor else null,
+            marathonPlanWeeks = if (includeMarathon) marathonPlanWeeks else null,
+            includeMarathonBlock = includeMarathon,
+            includeRaceBlock = includeRace,
+            trainingLevel = trainingLevel,
+            planDurationWeeks = planDurationWeeks
         )
         viewModelScope.launch {
             try {
@@ -188,6 +216,45 @@ class AppViewModel @Inject constructor(
     }
 
     fun resetPlan() { planState = PlanState.Idle }
+
+    // ── Saved Plans (Room-backed) ─────────────────────────────────────────────
+
+    private fun observeSavedPlans() {
+        viewModelScope.launch {
+            planDao.observeAll()
+                .catch { }
+                .collect { entities -> savedPlans = entities }
+        }
+    }
+
+    fun saveCurrentPlan() {
+        val state = planState
+        if (state !is PlanState.Success) return
+        viewModelScope.launch(Dispatchers.IO) {
+            planDao.insert(
+                SavedPlanEntity(
+                    userId = "local",
+                    planJson = gson.toJson(state.plan),
+                    planType = planType,
+                    createdAt = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    fun deleteSavedPlan(entity: SavedPlanEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            planDao.delete(entity)
+        }
+    }
+
+    fun loadSavedPlan(entity: SavedPlanEntity) {
+        runCatching {
+            val plan: TrainingPlanResponse = gson.fromJson(entity.planJson, TrainingPlanResponse::class.java)
+            planState = PlanState.Success(plan)
+            planType = entity.planType
+        }
+    }
 
     // ── Profile (Room-backed) ─────────────────────────────────────────────────
 

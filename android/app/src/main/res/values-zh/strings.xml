@@ -94,6 +94,67 @@
     <string name="min_unit">分钟</string>
     <string name="focus_prefix">重点：%1$s</string>
 
+    <!-- ── Plan: mode tabs ───────────────────────────────────────────────── -->
+    <string name="plan_mode_weekly">周计划</string>
+    <string name="plan_mode_marathon">马拉松</string>
+    <string name="plan_mode_race">比赛计划</string>
+
+    <!-- ── Plan: marathon setup ───────────────────────────────────────────── -->
+    <string name="marathon_race">马拉松赛事</string>
+    <string name="marathon_major">世界大满贯</string>
+    <string name="marathon_target_time">目标时间 (HH:MM)</string>
+    <string name="marathon_plan_weeks">计划周期</string>
+    <string name="marathon_custom">自定义马拉松</string>
+    <string name="marathon_race_name">赛事名称</string>
+    <string name="generate_weekly_plan">周计划</string>
+    <string name="generate_marathon_plan">马拉松计划</string>
+    <string name="generate_race_plan">比赛计划</string>
+
+    <!-- ── Plan: marathon detail ──────────────────────────────────────────── -->
+    <string name="marathon_plan_detail">马拉松计划详情</string>
+    <string name="phase_view">阶段视图</string>
+    <string name="week_view">周视图</string>
+    <string name="week_label">第 %1$d 周</string>
+    <string name="total_weeks">%1$d 周</string>
+    <string name="target_km">目标：%1$.0f 公里</string>
+    <string name="long_run">长跑：%1$.0f 公里</string>
+    <string name="apply_week_km">应用本周公里数</string>
+
+    <!-- ── Plan: saved plans ─────────────────────────────────────────────── -->
+    <string name="saved_plans">已保存计划</string>
+    <string name="no_saved_plans">暂无已保存的计划</string>
+    <string name="go_to_plan_to_save">生成计划并保存后可在此查看</string>
+    <string name="delete_plan">删除计划</string>
+    <string name="delete_plan_confirm">删除此训练计划？</string>
+    <string name="save_plan">保存计划</string>
+    <string name="plan_saved">计划已保存！</string>
+
+    <!-- ── Plan: edit plan ───────────────────────────────────────────────── -->
+    <string name="edit_next_week">编辑下周计划</string>
+    <string name="edit_plan_subtitle">自定义周一至周日的训练日</string>
+    <string name="add_training_day">添加训练日</string>
+    <string name="training_day_label">第 %1$d 天</string>
+    <string name="workout_description">训练描述</string>
+    <string name="delete_day">删除该日</string>
+
+    <!-- ── Plan: training level ───────────────────────────────────────────── -->
+    <string name="training_level">训练水平</string>
+    <string name="plan_duration">计划周期</string>
+    <string name="auto_weeks">自动</string>
+    <string name="x_weeks">%1$d 周</string>
+
+    <!-- ── History: trend chart ───────────────────────────────────────────── -->
+    <string name="trends">趋势</string>
+    <string name="cadence">步频</string>
+    <string name="vertical_oscillation">垂直振幅</string>
+    <string name="ground_contact_time">触地时间</string>
+    <string name="no_trend_data">暂无趋势数据</string>
+    <string name="need_more_analyses">至少完成 2 次分析才能查看趋势</string>
+    <string name="spm">%1$.0f 步/分</string>
+    <string name="cm_unit">%1$.1f 厘米</string>
+    <string name="ms_unit">%1$.0f 毫秒</string>
+    <string name="tap_for_detail">点击图表查看详情</string>
+
     <!-- ── Plan days ─────────────────────────────────────────────────────── -->
     <string name="day_mon">周一</string>
     <string name="day_tue">周二</string>

@@ -94,6 +94,67 @@
     <string name="min_unit">min</string>
     <string name="focus_prefix">Focus: %1$s</string>
 
+    <!-- ── Plan: mode tabs ───────────────────────────────────────────────── -->
+    <string name="plan_mode_weekly">Weekly</string>
+    <string name="plan_mode_marathon">Marathon</string>
+    <string name="plan_mode_race">Race Plan</string>
+
+    <!-- ── Plan: marathon setup ───────────────────────────────────────────── -->
+    <string name="marathon_race">Marathon Race</string>
+    <string name="marathon_major">World Major</string>
+    <string name="marathon_target_time">Target Time (HH:MM)</string>
+    <string name="marathon_plan_weeks">Plan Duration</string>
+    <string name="marathon_custom">Custom Marathon</string>
+    <string name="marathon_race_name">Race Name</string>
+    <string name="generate_weekly_plan">Weekly Plan</string>
+    <string name="generate_marathon_plan">Marathon Plan</string>
+    <string name="generate_race_plan">Race Plan</string>
+
+    <!-- ── Plan: marathon detail ──────────────────────────────────────────── -->
+    <string name="marathon_plan_detail">Marathon Plan Detail</string>
+    <string name="phase_view">Phase View</string>
+    <string name="week_view">Week View</string>
+    <string name="week_label">Week %1$d</string>
+    <string name="total_weeks">%1$d weeks</string>
+    <string name="target_km">Target: %1$.0f km</string>
+    <string name="long_run">Long Run: %1$.0f km</string>
+    <string name="apply_week_km">Apply this week\'s km</string>
+
+    <!-- ── Plan: saved plans ─────────────────────────────────────────────── -->
+    <string name="saved_plans">Saved Plans</string>
+    <string name="no_saved_plans">No saved plans yet</string>
+    <string name="go_to_plan_to_save">Generate a plan and save it to see it here</string>
+    <string name="delete_plan">Delete Plan</string>
+    <string name="delete_plan_confirm">Delete this training plan?</string>
+    <string name="save_plan">Save Plan</string>
+    <string name="plan_saved">Plan saved!</string>
+
+    <!-- ── Plan: edit plan ───────────────────────────────────────────────── -->
+    <string name="edit_next_week">Edit Next Week</string>
+    <string name="edit_plan_subtitle">Customize your Mon–Sun training days</string>
+    <string name="add_training_day">Add Training Day</string>
+    <string name="training_day_label">Day %1$d</string>
+    <string name="workout_description">Workout description</string>
+    <string name="delete_day">Delete day</string>
+
+    <!-- ── Plan: training level ───────────────────────────────────────────── -->
+    <string name="training_level">Training Level</string>
+    <string name="plan_duration">Plan Duration</string>
+    <string name="auto_weeks">Auto</string>
+    <string name="x_weeks">%1$d weeks</string>
+
+    <!-- ── History: trend chart ───────────────────────────────────────────── -->
+    <string name="trends">Trends</string>
+    <string name="cadence">Cadence</string>
+    <string name="vertical_oscillation">Vertical Osc.</string>
+    <string name="ground_contact_time">GCT</string>
+    <string name="no_trend_data">No trend data yet</string>
+    <string name="need_more_analyses">Complete at least 2 analyses to see trends</string>
+    <string name="spm">%1$.0f spm</string>
+    <string name="cm_unit">%1$.1f cm</string>
+    <string name="ms_unit">%1$.0f ms</string>
+    <string name="tap_for_detail">Tap chart for details</string>
+
     <!-- ── Plan days ─────────────────────────────────────────────────────── -->
     <string name="day_mon">Mon</string>
     <string name="day_tue">Tue</string>
@@ -156,4 +217,19 @@
     <string name="close">Close</string>
     <string name="couldnt_load_athletes">Couldn\'t Load Athletes</string>
     <string name="comparison_failed">Comparison Failed</string>
+
+    <!-- ── Feedback (RF-203) ─────────────────────────────────────────────── -->
+    <string name="tester_feedback">Tester Feedback</string>
+    <string name="feedback_subtitle">Help improve coaching quality</string>
+    <string name="feedback_comment_hint">Optional comment: what was wrong or useful?</string>
+    <string name="feedback_save">Save Feedback</string>
+    <string name="feedback_submitted">✓ Submitted</string>
+    <string name="feedback_submitting">Submitting…</string>
+    <string name="feedback_thank_you">Feedback received. Thank you!</string>
+    <string name="feedback_saved_offline">Saved offline — will sync later</string>
+    <string name="feedback_very_inaccurate">Very Inaccurate</string>
+    <string name="feedback_partly_accurate">Partly Accurate</string>
+    <string name="feedback_mostly_accurate">Mostly Accurate</string>
+    <string name="feedback_accurate">Accurate</string>
+    <string name="feedback_very_accurate">Very Accurate</string>
 </resources>

@@ -75,6 +75,16 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    // ── Test (JUnit5 + MockK + Turbine + Compose UI test) ───────────────────
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.androidx.compose.ui.test)
+    testImplementation(libs.room.testing)
+    androidTestImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
 // Room schema export directory for versioned migrations

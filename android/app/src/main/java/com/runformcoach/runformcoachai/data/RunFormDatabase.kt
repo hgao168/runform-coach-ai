@@ -8,18 +8,21 @@ import androidx.room.RoomDatabase
  *
  * Schema version history:
  *   version 1 — Initial schema (analysis_history, saved_plans, runner_profiles)
+ *   version 2 — Added pending_feedback table for offline feedback cache (RF-203)
  */
 @Database(
     entities = [
         AnalysisHistoryEntity::class,
         SavedPlanEntity::class,
-        RunnerProfileEntity::class
+        RunnerProfileEntity::class,
+        FeedbackEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class RunFormDatabase : RoomDatabase() {
     abstract fun analysisDao(): AnalysisDao
     abstract fun planDao(): PlanDao
     abstract fun profileDao(): ProfileDao
+    abstract fun feedbackDao(): FeedbackDao
 }

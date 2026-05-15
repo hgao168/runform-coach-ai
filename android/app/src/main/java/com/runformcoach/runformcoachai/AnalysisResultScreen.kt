@@ -19,11 +19,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,7 +45,12 @@ import androidx.compose.ui.unit.sp
 import java.util.Locale
 
 @Composable
-fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = null) {
+fun AnalysisResultScreen(
+    result: AnalysisResponse,
+    onDismiss: (() -> Unit)? = null,
+    feedbackViewModel: FeedbackViewModel? = null,
+    analysisId: String? = null
+) {
     val context = LocalContext.current
     val isChinese = Locale.getDefault().language == "zh"
 
@@ -102,6 +113,14 @@ fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = nu
             }
         }
 
+        // ── Feedback section (RF-203) ─────────────────────────────────────────
+        if (feedbackViewModel != null && analysisId != null) {
+            FeedbackSection(
+                viewModel = feedbackViewModel,
+                analysisId = analysisId
+            )
+        }
+
         // ── Dismiss ───────────────────────────────────────────────────────────
         onDismiss?.let {
             Button(
@@ -112,6 +131,169 @@ fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = nu
         }
     }
 }
+
+// ── Feedback composable (RF-203) ───────────────────────────────────────────────
+
+@Composable
+private fun FeedbackSection(
+    viewModel: FeedbackViewModel,
+    analysisId: String
+) {
+    val rating by viewModel.rating.collectAsState()
+    val comment by viewModel.comment.collectAsState()
+    val submissionState by viewModel.submissionState.collectAsState()
+
+    val isSubmitted = submissionState is FeedbackSubmissionState.Submitted ||
+            submissionState is FeedbackSubmissionState.SavedOffline
+
+    SectionTitle("Tester Feedback")
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Title row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Help improve coaching quality",
+                    color = AppColors.TextMuted,
+                    fontSize = 12.sp
+                )
+                if (isSubmitted) {
+                    Text(
+                        "✓ Submitted",
+                        color = AppColors.Mint,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            // 5-star rating row
+            StarRatingRow(
+                rating = rating,
+                enabled = !isSubmitted,
+                onRatingChanged = { viewModel.setRating(it) }
+            )
+
+            // Optional comment field
+            OutlinedTextField(
+                value = comment,
+                onValueChange = { viewModel.setComment(it) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSubmitted,
+                placeholder = {
+                    Text(
+                        "Optional comment: what was wrong or useful?",
+                        color = AppColors.TextMuted,
+                        fontSize = 13.sp
+                    )
+                },
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = Color.White,
+                    fontSize = 13.sp
+                ),
+                minLines = 2,
+                maxLines = 4,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppColors.Border,
+                    unfocusedBorderColor = AppColors.Border,
+                    disabledBorderColor = AppColors.Border.copy(alpha = 0.4f),
+                    focusedContainerColor = AppColors.Navy,
+                    unfocusedContainerColor = AppColors.Navy,
+                    disabledContainerColor = AppColors.Navy.copy(alpha = 0.5f),
+                    disabledTextColor = AppColors.TextMuted,
+                    cursorColor = AppColors.Mint
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            // Submission status message
+            when (val state = submissionState) {
+                is FeedbackSubmissionState.Submitting -> {
+                    Text(
+                        "Submitting…",
+                        color = AppColors.Cyan,
+                        fontSize = 12.sp
+                    )
+                }
+                is FeedbackSubmissionState.Submitted -> {
+                    Text(
+                        if (state.offlineSaved) "Saved offline — will sync later" else "Feedback received. Thank you!",
+                        color = AppColors.Mint,
+                        fontSize = 12.sp
+                    )
+                }
+                is FeedbackSubmissionState.SavedOffline -> {
+                    Text(
+                        state.message,
+                        color = AppColors.Orange,
+                        fontSize = 12.sp
+                    )
+                }
+                is FeedbackSubmissionState.Error -> {
+                    Text(
+                        state.message,
+                        color = AppColors.Red,
+                        fontSize = 12.sp
+                    )
+                }
+                else -> {}
+            }
+
+            // Submit button
+            if (!isSubmitted) {
+                Button(
+                    onClick = { viewModel.submitFeedback(analysisId) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = rating > 0 && submissionState !is FeedbackSubmissionState.Submitting,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.Mint,
+                        contentColor = Color.Black,
+                        disabledContainerColor = AppColors.Card,
+                        disabledContentColor = AppColors.TextMuted
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        "Save Feedback",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StarRatingRow(
+    rating: Int,
+    enabled: Boolean,
+    onRatingChanged: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        for (star in 1..5) {
+            val isFilled = star <= rating
+            Icon(
+                imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = "$star star${if (star > 1) "s" else ""}",
+                modifier = Modifier
+                    .size(36.dp)
+                    .padding(2.dp)
+                    .let { if (enabled) it.clickable { onRatingChanged(star) } else it },
+                tint = if (isFilled) AppColors.Yellow else AppColors.TextMuted
+            )
+        }
+    }
+}
+
+// ── Reusable composables ───────────────────────────────────────────────────────
 
 @Composable
 private fun ConfidenceRing(confidence: Double, modifier: Modifier = Modifier) {

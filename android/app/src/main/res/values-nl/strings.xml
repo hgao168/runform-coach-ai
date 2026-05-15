@@ -94,6 +94,67 @@
     <string name="min_unit">min</string>
     <string name="focus_prefix">Focus: %1$s</string>
 
+    <!-- ── Plan: mode tabs ───────────────────────────────────────────────── -->
+    <string name="plan_mode_weekly">Wekelijks</string>
+    <string name="plan_mode_marathon">Marathon</string>
+    <string name="plan_mode_race">Wedstrijdplan</string>
+
+    <!-- ── Plan: marathon setup ───────────────────────────────────────────── -->
+    <string name="marathon_race">Marathon Wedstrijd</string>
+    <string name="marathon_major">World Major</string>
+    <string name="marathon_target_time">Doeltijd (UU:MM)</string>
+    <string name="marathon_plan_weeks">Planduur</string>
+    <string name="marathon_custom">Aangepaste Marathon</string>
+    <string name="marathon_race_name">Wedstrijdnaam</string>
+    <string name="generate_weekly_plan">Weekplan</string>
+    <string name="generate_marathon_plan">Marathonplan</string>
+    <string name="generate_race_plan">Wedstrijdplan</string>
+
+    <!-- ── Plan: marathon detail ──────────────────────────────────────────── -->
+    <string name="marathon_plan_detail">Marathonplan Details</string>
+    <string name="phase_view">Faseweergave</string>
+    <string name="week_view">Weekweergave</string>
+    <string name="week_label">Week %1$d</string>
+    <string name="total_weeks">%1$d weken</string>
+    <string name="target_km">Doel: %1$.0f km</string>
+    <string name="long_run">Lange duurloop: %1$.0f km</string>
+    <string name="apply_week_km">Pas km van deze week toe</string>
+
+    <!-- ── Plan: saved plans ─────────────────────────────────────────────── -->
+    <string name="saved_plans">Opgeslagen Plannen</string>
+    <string name="no_saved_plans">Nog geen opgeslagen plannen</string>
+    <string name="go_to_plan_to_save">Genereer en bewaar een plan om het hier te zien</string>
+    <string name="delete_plan">Plan verwijderen</string>
+    <string name="delete_plan_confirm">Dit trainingsplan verwijderen?</string>
+    <string name="save_plan">Plan opslaan</string>
+    <string name="plan_saved">Plan opgeslagen!</string>
+
+    <!-- ── Plan: edit plan ───────────────────────────────────────────────── -->
+    <string name="edit_next_week">Volgende Week Bewerken</string>
+    <string name="edit_plan_subtitle">Pas je trainingsdagen van ma–zo aan</string>
+    <string name="add_training_day">Trainingsdag toevoegen</string>
+    <string name="training_day_label">Dag %1$d</string>
+    <string name="workout_description">Training omschrijving</string>
+    <string name="delete_day">Dag verwijderen</string>
+
+    <!-- ── Plan: training level ───────────────────────────────────────────── -->
+    <string name="training_level">Trainingsniveau</string>
+    <string name="plan_duration">Planduur</string>
+    <string name="auto_weeks">Auto</string>
+    <string name="x_weeks">%1$d weken</string>
+
+    <!-- ── History: trend chart ───────────────────────────────────────────── -->
+    <string name="trends">Trends</string>
+    <string name="cadence">Cadans</string>
+    <string name="vertical_oscillation">Verticale Osc.</string>
+    <string name="ground_contact_time">GCT</string>
+    <string name="no_trend_data">Nog geen trendgegevens</string>
+    <string name="need_more_analyses">Voltooi minstens 2 analyses om trends te zien</string>
+    <string name="spm">%1$.0f spm</string>
+    <string name="cm_unit">%1$.1f cm</string>
+    <string name="ms_unit">%1$.0f ms</string>
+    <string name="tap_for_detail">Tik op grafiek voor details</string>
+
     <!-- ── Plan days ─────────────────────────────────────────────────────── -->
     <string name="day_mon">Ma</string>
     <string name="day_tue">Di</string>
