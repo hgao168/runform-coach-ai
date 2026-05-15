@@ -260,4 +260,43 @@
     <string name="edit_save">Save Changes</string>
     <string name="edit_day_title">Edit Training Day</string>
     <string name="new_day_title">New Training Day</string>
+
+    <!-- ── Plan: edit form ────────────────────────────────────────────────── -->
+    <string name="edit_training_type">Training Type</string>
+    <string name="edit_distance_km">Distance (km)</string>
+    <string name="edit_duration_min">Duration (min)</string>
+
+    <!-- ── Plan: edit empty / selection ────────────────────────────────────── -->
+    <string name="edit_select_week">Select Week</string>
+    <string name="edit_no_workouts">No workouts in this week</string>
+    <string name="edit_add_first">Tap + to add a workout</string>
+
+    <!-- ── Video Compression (RF-206) ────────────────────────────────────── -->
+    <string name="compress_video">Compress Video</string>
+    <string name="compressing_video">Compressing video…</string>
+    <string name="compression_complete">Compression complete</string>
+    <string name="compression_size_reduced">Reduced from %1$s to %2$s</string>
+    <string name="skip_compression">Skip compression</string>
+    <string name="original_size">Original: %1$s</string>
+
+    <!-- ── Share (RF-207) ────────────────────────────────────────────────── -->
+    <string name="share">Share</string>
+    <string name="share_analysis_subject">RunForm analysis result — %1$d%% score</string>
+    <string name="share_analysis_body">My RunForm Coach AI analysis:\n• Score: %1$d%%\n• Summary: %2$s\n\nGet RunForm: https://runform.coach</string>
+    <string name="share_compare_subject">RunForm comparison — %1$s vs %2$s</string>
+    <string name="share_compare_body">My RunForm comparison:\n• I matched %1$s at %2$d%%\n• Top gap: %3$s\n\nGet RunForm: https://runform.coach</string>
+    <string name="share_download_link">https://runform.coach</string>
+
+    <!-- ── Profile Extended Fields (RF-208) ───────────────────────────────── -->
+    <string name="gear_fit">Gear &amp; Fit</string>
+    <string name="shoe_size">Shoe Size</string>
+    <string name="shoe_size_eu">EU</string>
+    <string name="shoe_size_us">US</string>
+    <string name="shoe_size_uk">UK</string>
+    <string name="leg_length">Leg Length</string>
+    <string name="shoe_brand">Shoe Brand</string>
+    <string name="shoe_brand_hint">e.g. Nike, Saucony, Brooks</string>
+    <string name="shoe_model">Shoe Model</string>
+    <string name="shoe_model_hint">e.g. Vaporfly, Endorphin Pro</string>
+    <string name="leg_length_cm">%1$.0f cm</string>
 </resources>

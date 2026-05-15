@@ -15,6 +15,14 @@ Page({
       analyzeBtn: t('analyzeBtn'),
       analyzing: t('analyzing'),
       uploadProgress: t('uploadProgress'),
+      // RF-308: Angle selection
+      cameraAngle: t('cameraAngle'),
+      angleSide: t('angleSide'),
+      angleRear: t('angleRear'),
+      angleFront: t('angleFront'),
+      angleSideDesc: t('angleSideDesc'),
+      angleRearDesc: t('angleRearDesc'),
+      angleFrontDesc: t('angleFrontDesc'),
     },
     tips: [
       { icon: '📷', text: t('isZh') ? '侧面或后方拍摄，全身入镜' : 'Film from the side or rear, full body in frame' },
@@ -27,6 +35,7 @@ Page({
     videoName: '',
     videoDurationText: '',
     videoSizeText: '',
+    cameraAngle: 'side',
     analyzing: false,
     uploadProgress: 0,
     compressing: false,
@@ -34,6 +43,10 @@ Page({
   },
 
   onLoad() {},
+
+  selectAngle(e) {
+    this.setData({ cameraAngle: e.currentTarget.dataset.angle })
+  },
 
   pickVideo() {
     wx.chooseMedia({
@@ -88,10 +101,12 @@ Page({
         })
 
         const uploadPath = compResult.path
+        const profile = storage.getProfile()
+        profile.cameraAngle = this.data.cameraAngle
         return api.analyzeVideo(
           uploadPath,
           backendLang,
-          storage.getProfile(),
+          profile,
           (progress) => {
             // Scale upload progress from 30% to 100%
             this.setData({ uploadProgress: 30 + Math.round(progress * 0.7) })

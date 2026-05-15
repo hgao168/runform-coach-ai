@@ -23,6 +23,14 @@ const strings = {
     videoGuideBody: '从侧面或后方拍摄，保持全身入镜，自然跑步速度，光线充足，建议 10–30 秒。',
     noVideoSelected: '请先选择视频',
     analysisError: '分析失败，请重试',
+    // RF-308: Angle selection
+    cameraAngle: '拍摄角度',
+    angleSide: '侧面',
+    angleRear: '后方',
+    angleFront: '前方',
+    angleSideDesc: '侧面拍摄，全身体态清晰',
+    angleRearDesc: '后方拍摄，观察步宽和骨盆',
+    angleFrontDesc: '前方拍摄，观察膝盖和脚部',
 
     // Result page
     resultTitle: '分析结果',
@@ -159,6 +167,19 @@ const strings = {
     // Share
     shareResult: '分享结果',
     shareTapHint: '请点击右上角分享',
+
+    // RF-305: Voice Coach
+    voiceCoach: '语音教练',
+    voiceCoachPlay: '播放语音播报',
+    voiceCoachStop: '停止播报',
+    voiceCoachMute: '静音',
+    voiceCoachUnmute: '取消静音',
+    voiceCoachDisabled: '语音已关闭',
+    voiceCoachEnable: '开启语音',
+    voiceCoachPlaying: '正在播报...',
+    voiceCoachPaused: '已暂停',
+    voiceCoachStopped: '播报完毕',
+    voiceCoachNoAudio: '语音文件未生成，请运行 tools/generate-voice-prompts.py',
   },
 
   en: {
@@ -177,6 +198,14 @@ const strings = {
     videoGuideBody: 'Film from side or rear, keep full body in frame, natural pace, good lighting, 10–30 seconds recommended.',
     noVideoSelected: 'Please select a video first',
     analysisError: 'Analysis failed, please try again',
+    // RF-308: Angle selection
+    cameraAngle: 'Camera Angle',
+    angleSide: 'Side',
+    angleRear: 'Rear',
+    angleFront: 'Front',
+    angleSideDesc: 'Side view — full body posture',
+    angleRearDesc: 'Rear view — stride width & pelvis',
+    angleFrontDesc: 'Front view — knees & foot strike',
     resultTitle: 'Analysis Result',
     confidence: 'Confidence',
     metrics: 'Form Metrics',
@@ -295,6 +324,19 @@ const strings = {
     // Share
     shareResult: 'Share Result',
     shareTapHint: 'Tap top-right to share',
+
+    // RF-305: Voice Coach
+    voiceCoach: 'Voice Coach',
+    voiceCoachPlay: 'Play Voice Feedback',
+    voiceCoachStop: 'Stop',
+    voiceCoachMute: 'Mute',
+    voiceCoachUnmute: 'Unmute',
+    voiceCoachDisabled: 'Voice off',
+    voiceCoachEnable: 'Enable Voice',
+    voiceCoachPlaying: 'Playing...',
+    voiceCoachPaused: 'Paused',
+    voiceCoachStopped: 'Finished',
+    voiceCoachNoAudio: 'Voice files not generated. Run tools/generate-voice-prompts.py',
   },
 }
 

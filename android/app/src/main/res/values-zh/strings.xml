@@ -260,4 +260,43 @@
     <string name="edit_save">保存修改</string>
     <string name="edit_day_title">编辑训练日</string>
     <string name="new_day_title">新建训练日</string>
+
+    <!-- ── Plan: edit form ────────────────────────────────────────────────── -->
+    <string name="edit_training_type">训练类型</string>
+    <string name="edit_distance_km">距离 (公里)</string>
+    <string name="edit_duration_min">时长 (分钟)</string>
+
+    <!-- ── Plan: edit empty / selection ────────────────────────────────────── -->
+    <string name="edit_select_week">选择周</string>
+    <string name="edit_no_workouts">本周无训练</string>
+    <string name="edit_add_first">点击 + 添加训练</string>
+
+    <!-- ── Video Compression (RF-206) ────────────────────────────────────── -->
+    <string name="compress_video">压缩视频</string>
+    <string name="compressing_video">正在压缩视频…</string>
+    <string name="compression_complete">压缩完成</string>
+    <string name="compression_size_reduced">从 %1$s 压缩到 %2$s</string>
+    <string name="skip_compression">跳过压缩</string>
+    <string name="original_size">原始：%1$s</string>
+
+    <!-- ── Share (RF-207) ────────────────────────────────────────────────── -->
+    <string name="share">分享</string>
+    <string name="share_analysis_subject">RunForm 跑步分析 — %1$d%% 评分</string>
+    <string name="share_analysis_body">我的 RunForm Coach AI 分析：\n• 评分：%1$d%%\n• 总结：%2$s\n\n获取 RunForm：https://runform.coach</string>
+    <string name="share_compare_subject">RunForm 对比 — %1$s vs %2$s</string>
+    <string name="share_compare_body">我的 RunForm 对比：\n• 与 %1$s 匹配度 %2$d%%\n• 主要差距：%3$s\n\n获取 RunForm：https://runform.coach</string>
+    <string name="share_download_link">https://runform.coach</string>
+
+    <!-- ── Profile Extended Fields (RF-208) ───────────────────────────────── -->
+    <string name="gear_fit">装备与适配</string>
+    <string name="shoe_size">鞋码</string>
+    <string name="shoe_size_eu">欧码</string>
+    <string name="shoe_size_us">美码</string>
+    <string name="shoe_size_uk">英码</string>
+    <string name="leg_length">腿长</string>
+    <string name="shoe_brand">跑鞋品牌</string>
+    <string name="shoe_brand_hint">例如：Nike, Saucony, Brooks</string>
+    <string name="shoe_model">跑鞋型号</string>
+    <string name="shoe_model_hint">例如：Vaporfly, Endorphin Pro</string>
+    <string name="leg_length_cm">%1$.0f 厘米</string>
 </resources>

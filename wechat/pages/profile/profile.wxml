@@ -25,6 +25,11 @@
     </view>
 
     <view class="field-row">
+      <text class="field-label">{{i.nickname}}</text>
+      <input class="input-field" value="{{form.nickname}}" placeholder="昵称" bindinput="onInput" data-key="nickname" />
+    </view>
+
+    <view class="field-row">
       <text class="field-label">{{i.level}}</text>
       <view class="level-chips">
         <view

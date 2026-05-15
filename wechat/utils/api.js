@@ -57,6 +57,7 @@ function analyzeVideo(filePath, language, profile, onProgress) {
       formData: {
         language: language || 'zh-Hans',
         profile_context: profileContext,
+        camera_angle: (profile && profile.cameraAngle) || 'side',
       },
       timeout: 120000,
       success(res) {

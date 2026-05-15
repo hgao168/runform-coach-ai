@@ -260,4 +260,33 @@
     <string name="edit_save">Wijzigingen opslaan</string>
     <string name="edit_day_title">Trainingsdag bewerken</string>
     <string name="new_day_title">Nieuwe trainingsdag</string>
+
+    <!-- ── Video Compression (RF-206) ────────────────────────────────────── -->
+    <string name="compress_video">Video comprimeren</string>
+    <string name="compressing_video">Video comprimeren…</string>
+    <string name="compression_complete">Compressie voltooid</string>
+    <string name="compression_size_reduced">Verminderd van %1$s naar %2$s</string>
+    <string name="skip_compression">Compressie overslaan</string>
+    <string name="original_size">Origineel: %1$s</string>
+
+    <!-- ── Share (RF-207) ────────────────────────────────────────────────── -->
+    <string name="share">Delen</string>
+    <string name="share_analysis_subject">RunForm analyse — %1$d%% score</string>
+    <string name="share_analysis_body">Mijn RunForm Coach AI analyse:\n• Score: %1$d%%\n• Samenvatting: %2$s\n\nDownload RunForm: https://runform.coach</string>
+    <string name="share_compare_subject">RunForm vergelijking — %1$s vs %2$s</string>
+    <string name="share_compare_body">Mijn RunForm vergelijking:\n• Ik kwam %1$d%% overeen met %2$s\n• Grootste verschil: %3$s\n\nDownload RunForm: https://runform.coach</string>
+    <string name="share_download_link">https://runform.coach</string>
+
+    <!-- ── Profile Extended Fields (RF-208) ───────────────────────────────── -->
+    <string name="gear_fit">Uitrusting &amp; Pasvorm</string>
+    <string name="shoe_size">Schoenmaat</string>
+    <string name="shoe_size_eu">EU</string>
+    <string name="shoe_size_us">US</string>
+    <string name="shoe_size_uk">UK</string>
+    <string name="leg_length">Beenlengte</string>
+    <string name="shoe_brand">Schoenmerk</string>
+    <string name="shoe_brand_hint">bijv. Nike, Saucony, Brooks</string>
+    <string name="shoe_model">Schoenmodel</string>
+    <string name="shoe_model_hint">bijv. Vaporfly, Endorphin Pro</string>
+    <string name="leg_length_cm">%1$.0f cm</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.runformcoach.runformcoachai
 
+import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -128,7 +130,22 @@ fun CompareResultScreen(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.width(48.dp))
+            // ── RF-207: Share button ───────────────────────────────────────
+            val context = LocalContext.current
+            IconButton(onClick = {
+                val scorePercent = (result.overallSimilarityScore * 100).toInt()
+                val topGap = result.topGaps.firstOrNull() ?: "N/A"
+                val subject = context.getString(R.string.share_compare_subject, "me", athleteName)
+                val body = context.getString(R.string.share_compare_body, athleteName, scorePercent, topGap)
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, subject)
+                    putExtra(Intent.EXTRA_TEXT, body)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
+            }) {
+                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share), tint = AppColors.Mint)
+            }
         }
 
         LazyColumn(

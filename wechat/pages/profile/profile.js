@@ -34,6 +34,7 @@ Page({
     i: {
       firstName: t('firstName'),
       lastName: t('lastName'),
+      nickname: t('nickname'),
       level: t('level'),
       weeklyKmLabel: t('weeklyKmLabel'),
       runDaysPerWeek: t('runDaysPerWeek'),
@@ -49,6 +50,7 @@ Page({
     form: {
       firstName: '',
       lastName: '',
+      nickname: '',
       level: 'intermediate',
       weeklyMileageKm: 30,
       runningDaysPerWeek: 3,
@@ -114,8 +116,8 @@ Page({
 
   _updateDisplay() {
     const f = this.data.form
-    const initial = (f.firstName?.[0] || f.lastName?.[0] || '?').toUpperCase()
-    const displayName = [f.firstName, f.lastName].filter(Boolean).join(' ') || '跑步者'
+    const initial = (f.nickname?.[0] || f.firstName?.[0] || f.lastName?.[0] || '?').toUpperCase()
+    const displayName = f.nickname || [f.firstName, f.lastName].filter(Boolean).join(' ') || '跑步者'
     this.setData({
       avatarInitial: initial,
       displayName,

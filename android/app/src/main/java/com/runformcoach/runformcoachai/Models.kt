@@ -1,6 +1,7 @@
 package com.runformcoach.runformcoachai
 
 import com.google.gson.annotations.SerializedName
+import kotlin.math.roundToInt
 
 // ── Analysis ──────────────────────────────────────────────────────────────────
 
@@ -49,7 +50,12 @@ data class TesterProfile(
     var weightKg: Double = 70.0,
     var target: String = "General Fitness",
     var injuryNote: String = "",
-    var weeklyExerciseHours: Double = 5.0
+    var weeklyExerciseHours: Double = 5.0,
+    // ── RF-208: Gear & Fit fields ─────────────────────────────────────────
+    var shoeSizeEU: Int = 42,
+    var legLengthCm: Double = 85.0,
+    var shoeBrand: String = "",
+    var shoeModel: String = ""
 ) {
     val displayName: String
         get() {
@@ -60,6 +66,22 @@ data class TesterProfile(
                 else -> "Runner"
             }
         }
+
+    companion object {
+        /** Convert EU shoe size to US men's. */
+        fun euToUS(eu: Int): Double = if (eu <= 37) (eu - 33).toDouble()
+            else (eu - 33.5).toDouble()
+
+        /** Convert EU shoe size to UK men's. */
+        fun euToUK(eu: Int): Double = if (eu <= 37) (eu - 34).toDouble()
+            else (eu - 34.5).toDouble()
+
+        /** Convert US shoe size back to EU. */
+        fun usToEU(us: Double): Int = (us + 33.5).roundToInt()
+
+        /** Convert UK shoe size back to EU. */
+        fun ukToEU(uk: Double): Int = (uk + 34.5).roundToInt()
+    }
 }
 
 val RUNNER_LEVELS = listOf("Beginner", "Intermediate", "Advanced")
