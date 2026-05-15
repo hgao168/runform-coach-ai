@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,8 @@ private val DAYS = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 fun PlanScreen(vm: AppViewModel) {
     val profile = vm.profile
 
+    var activeMode by rememberSaveable { mutableStateOf("weekly") } // "weekly" | "marathon" | "race"
+
     var weeklyKmText by rememberSaveable { mutableStateOf(profile.weeklyMileageKm.toInt().toString()) }
     var selectedTarget by rememberSaveable { mutableStateOf(profile.target) }
     var targetDropdownOpen by remember { mutableStateOf(false) }
@@ -66,15 +69,134 @@ fun PlanScreen(vm: AppViewModel) {
     val locale = Locale.getDefault()
     val language = if (locale.language == "zh") "zh" else "en"
 
+    Column(modifier = Modifier.fillMaxSize()) {
+        // ── Mode tabs ───────────────────────────────────────────────────────
+        PlanModeTabs(
+            activeMode = activeMode,
+            onModeChange = { activeMode = it }
+        )
+
+        // ── Content area ────────────────────────────────────────────────────
+        when (activeMode) {
+            "marathon" -> {
+                MarathonPlanScreen(language = language)
+            }
+            "race" -> {
+                // Race plan placeholder – delegates to MarathonPlanScreen-style race view
+                RacePlanPlaceholder()
+            }
+            else -> {
+                WeeklyPlanContent(vm, profile, weeklyKmText, selectedTarget, selectedDays, injuryFlag, language,
+                    onWeeklyKmChange = { weeklyKmText = it },
+                    onTargetChange = { selectedTarget = it },
+                    onDaysChange = { selectedDays = it },
+                    onInjuryChange = { injuryFlag = it }
+                )
+            }
+        }
+    }
+}
+
+// ── Mode tabs row ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun PlanModeTabs(activeMode: String, onModeChange: (String) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        PlanTab(
+            label = stringResource(R.string.plan_mode_weekly),
+            selected = activeMode == "weekly",
+            onClick = { onModeChange("weekly") },
+            modifier = Modifier.weight(1f)
+        )
+        PlanTab(
+            label = stringResource(R.string.plan_mode_marathon),
+            selected = activeMode == "marathon",
+            onClick = { onModeChange("marathon") },
+            modifier = Modifier.weight(1f)
+        )
+        PlanTab(
+            label = stringResource(R.string.plan_mode_race),
+            selected = activeMode == "race",
+            onClick = { onModeChange("race") },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun PlanTab(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) AppColors.Mint.copy(alpha = 0.18f) else AppColors.Card)
+            .border(1.dp, if (selected) AppColors.Mint.copy(alpha = 0.5f) else AppColors.Border, RoundedCornerShape(10.dp))
+            .clickable { onClick() }
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = if (selected) AppColors.Mint else AppColors.TextSecondary,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+        )
+    }
+}
+
+// ── Race plan placeholder ─────────────────────────────────────────────────────
+
+@Composable
+private fun RacePlanPlaceholder() {
+    Box(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                stringResource(R.string.race_plan_title),
+                color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.race_plan_subtitle),
+                color = AppColors.TextSecondary, fontSize = 14.sp
+            )
+        }
+    }
+}
+
+// ── Weekly plan content ───────────────────────────────────────────────────────
+
+@Composable
+private fun WeeklyPlanContent(
+    vm: AppViewModel,
+    profile: TesterProfile,
+    weeklyKmText: String,
+    selectedTarget: String,
+    selectedDays: Set<String>,
+    injuryFlag: Boolean,
+    language: String,
+    onWeeklyKmChange: (String) -> Unit,
+    onTargetChange: (String) -> Unit,
+    onDaysChange: (Set<String>) -> Unit,
+    onInjuryChange: (Boolean) -> Unit
+) {
+    var targetDropdownOpen by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Column {
-                Text("Training Plan", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Text("Get an AI-generated weekly plan", color = AppColors.TextSecondary, fontSize = 14.sp)
+                Text(stringResource(R.string.training_plan), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.plan_subtitle), color = AppColors.TextSecondary, fontSize = 14.sp)
             }
         }
 
@@ -82,7 +204,7 @@ fun PlanScreen(vm: AppViewModel) {
         item {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    SectionTitle("Plan Settings")
+                    SectionTitle(stringResource(R.string.plan_settings))
 
                     // Weekly km
                     OutlinedTextField(
