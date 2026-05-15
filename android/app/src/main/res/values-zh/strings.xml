@@ -217,4 +217,47 @@
     <string name="close">关闭</string>
     <string name="couldnt_load_athletes">无法加载运动员数据</string>
     <string name="comparison_failed">对比失败</string>
+
+    <!-- ── Feedback (RF-203) ─────────────────────────────────────────────── -->
+    <string name="tester_feedback">测试者反馈</string>
+    <string name="feedback_subtitle">帮助改进教练质量</string>
+    <string name="feedback_comment_hint">可选备注：哪里不对或有帮助？</string>
+    <string name="feedback_save">保存反馈</string>
+    <string name="feedback_submitted">✓ 已提交</string>
+    <string name="feedback_submitting">提交中…</string>
+    <string name="feedback_thank_you">反馈已收到。谢谢！</string>
+    <string name="feedback_saved_offline">已离线保存——将在有网络时同步</string>
+    <string name="feedback_very_inaccurate">非常不准确</string>
+    <string name="feedback_partly_accurate">部分准确</string>
+    <string name="feedback_mostly_accurate">基本准确</string>
+    <string name="feedback_accurate">准确</string>
+    <string name="feedback_very_accurate">非常准确</string>
+
+    <!-- ── Plan: marathon phases ──────────────────────────────────────────── -->
+    <string name="marathon_plan_title">马拉松训练计划</string>
+    <string name="marathon_plan_subtitle">AI生成的12–16周马拉松训练模块</string>
+    <string name="race_plan_title">比赛训练计划</string>
+    <string name="race_plan_subtitle">8–16周赛事专项训练模块</string>
+    <string name="phase_base">基础期</string>
+    <string name="phase_build">强化期</string>
+    <string name="phase_peak">巅峰期</string>
+    <string name="phase_taper">减量期</string>
+    <string name="select_race">选择赛事</string>
+    <string name="custom_race_hint">输入赛事名称</string>
+    <string name="target_time_hhmm">目标时间 (HH:MM)</string>
+    <string name="target_time_hint">3:45</string>
+    <string name="select_training_level">选择训练水平</string>
+
+    <!-- ── Plan: saved plans list ─────────────────────────────────────────── -->
+    <string name="plan_type_weekly_label">周计划</string>
+    <string name="plan_type_marathon_label">马拉松计划</string>
+    <string name="plan_type_race_label">比赛计划</string>
+    <string name="saved_plan_date">创建于 %1$s</string>
+
+    <!-- ── Plan: edit ─────────────────────────────────────────────────────── -->
+    <string name="done">完成</string>
+    <string name="back">返回</string>
+    <string name="edit_save">保存修改</string>
+    <string name="edit_day_title">编辑训练日</string>
+    <string name="new_day_title">新建训练日</string>
 </resources>

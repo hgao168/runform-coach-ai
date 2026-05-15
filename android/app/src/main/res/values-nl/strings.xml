@@ -217,4 +217,47 @@
     <string name="close">Sluiten</string>
     <string name="couldnt_load_athletes">Atleten laden mislukt</string>
     <string name="comparison_failed">Vergelijking mislukt</string>
+
+    <!-- ── Feedback (RF-203) ─────────────────────────────────────────────── -->
+    <string name="tester_feedback">Tester Feedback</string>
+    <string name="feedback_subtitle">Help de coachingskwaliteit verbeteren</string>
+    <string name="feedback_comment_hint">Optionele opmerking: wat was fout of nuttig?</string>
+    <string name="feedback_save">Feedback opslaan</string>
+    <string name="feedback_submitted">✓ Ingediend</string>
+    <string name="feedback_submitting">Indienen…</string>
+    <string name="feedback_thank_you">Feedback ontvangen. Dank je!</string>
+    <string name="feedback_saved_offline">Offline opgeslagen — wordt later gesynchroniseerd</string>
+    <string name="feedback_very_inaccurate">Zeer onnauwkeurig</string>
+    <string name="feedback_partly_accurate">Deels nauwkeurig</string>
+    <string name="feedback_mostly_accurate">Grotendeels nauwkeurig</string>
+    <string name="feedback_accurate">Nauwkeurig</string>
+    <string name="feedback_very_accurate">Zeer nauwkeurig</string>
+
+    <!-- ── Plan: marathon phases ──────────────────────────────────────────── -->
+    <string name="marathon_plan_title">Marathon Trainingsplan</string>
+    <string name="marathon_plan_subtitle">AI-gegenereerd marathonblok van 12–16 weken</string>
+    <string name="race_plan_title">Wedstrijdtrainingsplan</string>
+    <string name="race_plan_subtitle">Evenement-specifiek trainingsblok van 8–16 weken</string>
+    <string name="phase_base">Basisfase</string>
+    <string name="phase_build">Opbouwfase</string>
+    <string name="phase_peak">Piekfase</string>
+    <string name="phase_taper">Afbouwfase</string>
+    <string name="select_race">Selecteer wedstrijd</string>
+    <string name="custom_race_hint">Voer wedstrijdnaam in</string>
+    <string name="target_time_hhmm">Doeltijd (UU:MM)</string>
+    <string name="target_time_hint">3:45</string>
+    <string name="select_training_level">Selecteer trainingsniveau</string>
+
+    <!-- ── Plan: saved plans list ─────────────────────────────────────────── -->
+    <string name="plan_type_weekly_label">Weekplan</string>
+    <string name="plan_type_marathon_label">Marathonplan</string>
+    <string name="plan_type_race_label">Wedstrijdplan</string>
+    <string name="saved_plan_date">Aangemaakt %1$s</string>
+
+    <!-- ── Plan: edit ─────────────────────────────────────────────────────── -->
+    <string name="done">Klaar</string>
+    <string name="back">Terug</string>
+    <string name="edit_save">Wijzigingen opslaan</string>
+    <string name="edit_day_title">Trainingsdag bewerken</string>
+    <string name="new_day_title">Nieuwe trainingsdag</string>
 </resources>

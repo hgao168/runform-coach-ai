@@ -232,4 +232,32 @@
     <string name="feedback_mostly_accurate">Mostly Accurate</string>
     <string name="feedback_accurate">Accurate</string>
     <string name="feedback_very_accurate">Very Accurate</string>
+
+    <!-- ── Plan: marathon phases ──────────────────────────────────────────── -->
+    <string name="marathon_plan_title">Marathon Training Plan</string>
+    <string name="marathon_plan_subtitle">12–16 week AI-generated marathon block</string>
+    <string name="race_plan_title">Race Training Plan</string>
+    <string name="race_plan_subtitle">8–16 week event-specific training block</string>
+    <string name="phase_base">Base Phase</string>
+    <string name="phase_build">Build Phase</string>
+    <string name="phase_peak">Peak Phase</string>
+    <string name="phase_taper">Taper Phase</string>
+    <string name="select_race">Select Race</string>
+    <string name="custom_race_hint">Enter race name</string>
+    <string name="target_time_hhmm">Target Time (HH:MM)</string>
+    <string name="target_time_hint">3:45</string>
+    <string name="select_training_level">Select Training Level</string>
+
+    <!-- ── Plan: saved plans list ─────────────────────────────────────────── -->
+    <string name="plan_type_weekly_label">Weekly Plan</string>
+    <string name="plan_type_marathon_label">Marathon Plan</string>
+    <string name="plan_type_race_label">Race Plan</string>
+    <string name="saved_plan_date">Created %1$s</string>
+
+    <!-- ── Plan: edit ─────────────────────────────────────────────────────── -->
+    <string name="done">Done</string>
+    <string name="back">Back</string>
+    <string name="edit_save">Save Changes</string>
+    <string name="edit_day_title">Edit Training Day</string>
+    <string name="new_day_title">New Training Day</string>
 </resources>

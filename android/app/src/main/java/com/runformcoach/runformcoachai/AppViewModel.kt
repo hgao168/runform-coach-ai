@@ -88,6 +88,20 @@ class AppViewModel @Inject constructor(
     var savedPlans by mutableStateOf<List<SavedPlanEntity>>(emptyList())
         private set
 
+    /** Sub-screen navigation within Plan tab: "main" | "saved" | "edit" */
+    var planSubScreen by mutableStateOf("main")
+        private set
+
+    fun showSavedPlans() { planSubScreen = "saved" }
+    fun showEditPlan() { planSubScreen = "edit" }
+    fun backToMainPlan() { planSubScreen = "main" }
+
+    /** Currently editing week index (0-based) for EditPlanScreen */
+    var editingWeekIndex by mutableStateOf(0)
+
+    /** Currently editing day index within the week for EditPlanScreen */
+    var editingDayIndex by mutableStateOf(0)
+
     init {
         // One-shot SharedPreferences → Room migration, then load from Room
         viewModelScope.launch {
@@ -253,6 +267,79 @@ class AppViewModel @Inject constructor(
             val plan: TrainingPlanResponse = gson.fromJson(entity.planJson, TrainingPlanResponse::class.java)
             planState = PlanState.Success(plan)
             planType = entity.planType
+        }
+    }
+
+    /** Update a workout in the current plan's marathon/race week and persist to Room. */
+    fun updateWorkout(
+        planEntity: SavedPlanEntity,
+        weekIndex: Int,
+        workoutIndex: Int,
+        updatedWorkout: PlannedWorkout
+    ) {
+        runCatching {
+            val plan: TrainingPlanResponse = gson.fromJson(planEntity.planJson, TrainingPlanResponse::class.java)
+            val weeks = plan.marathonPlan?.weeks?.toMutableList()
+                ?: plan.racePlan?.weeks?.toMutableList() ?: return
+            if (weekIndex >= weeks.size) return
+            val weekWorkouts = weeks[weekIndex].workouts.toMutableList()
+            if (workoutIndex < weekWorkouts.size) {
+                weekWorkouts[workoutIndex] = updatedWorkout
+            } else {
+                weekWorkouts.add(updatedWorkout)
+            }
+            // Rebuild the week with updated workouts
+            val oldWeek = weeks[weekIndex]
+            weeks[weekIndex] = if (plan.marathonPlan != null) {
+                oldWeek.copy(workouts = weekWorkouts)
+            } else {
+                // RacePlanWeek - use the same copy pattern
+                oldWeek
+            }
+            // Rebuild plan
+            val updatedPlan = if (plan.marathonPlan != null) {
+                plan.copy(marathonPlan = plan.marathonPlan.copy(weeks = weeks))
+            } else {
+                plan.copy(racePlan = plan.racePlan?.copy(weeks = weeks))
+            }
+            val json = gson.toJson(updatedPlan)
+            viewModelScope.launch(Dispatchers.IO) {
+                planDao.insert(
+                    planEntity.copy(planJson = json, createdAt = System.currentTimeMillis())
+                )
+            }
+            planState = PlanState.Success(updatedPlan)
+        }
+    }
+
+    /** Delete a workout from the current plan's marathon/race week. */
+    fun deleteWorkout(planEntity: SavedPlanEntity, weekIndex: Int, workoutIndex: Int) {
+        runCatching {
+            val plan: TrainingPlanResponse = gson.fromJson(planEntity.planJson, TrainingPlanResponse::class.java)
+            val weeks = plan.marathonPlan?.weeks?.toMutableList()
+                ?: plan.racePlan?.weeks?.toMutableList() ?: return
+            if (weekIndex >= weeks.size) return
+            val weekWorkouts = weeks[weekIndex].workouts.toMutableList()
+            if (workoutIndex >= weekWorkouts.size) return
+            weekWorkouts.removeAt(workoutIndex)
+            val oldWeek = weeks[weekIndex]
+            weeks[weekIndex] = if (plan.marathonPlan != null) {
+                oldWeek.copy(workouts = weekWorkouts)
+            } else {
+                oldWeek
+            }
+            val updatedPlan = if (plan.marathonPlan != null) {
+                plan.copy(marathonPlan = plan.marathonPlan.copy(weeks = weeks))
+            } else {
+                plan.copy(racePlan = plan.racePlan?.copy(weeks = weeks))
+            }
+            val json = gson.toJson(updatedPlan)
+            viewModelScope.launch(Dispatchers.IO) {
+                planDao.insert(
+                    planEntity.copy(planJson = json, createdAt = System.currentTimeMillis())
+                )
+            }
+            planState = PlanState.Success(updatedPlan)
         }
     }
 
