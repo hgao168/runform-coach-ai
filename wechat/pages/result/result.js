@@ -1,6 +1,7 @@
 // pages/result/result.js
 const api = require('../../utils/api')
 const { t, isZh, backendLang, getVideoSearchUrl } = require('../../utils/i18n')
+const voiceCoach = require('../../utils/voice-coach')
 
 const STORAGE_KEY_PENDING_FEEDBACK = 'rf_pendingFeedback'
 
@@ -39,6 +40,25 @@ Page({
     feedbackSubmitting: false,
     feedbackSavedOffline: false,
     analysisId: '',            // ID from result for feedback target
+
+    // RF-305: Voice coach state
+    voiceEnabled: true,
+    voiceMuted: false,
+    voiceState: 'stopped',     // 'stopped' | 'playing' | 'paused'
+    voiceQueueLength: 0,
+    voiceCoachLabels: {
+      title: t('voiceCoach'),
+      play: t('voiceCoachPlay'),
+      stop: t('voiceCoachStop'),
+      mute: t('voiceCoachMute'),
+      unmute: t('voiceCoachUnmute'),
+      enable: t('voiceCoachEnable'),
+      disabled: t('voiceCoachDisabled'),
+      playing: t('voiceCoachPlaying'),
+      paused: t('voiceCoachPaused'),
+      stopped: t('voiceCoachStopped'),
+      noAudio: t('voiceCoachNoAudio'),
+    },
   },
 
   onLoad() {
@@ -51,11 +71,23 @@ Page({
 
     // Try to sync any pending offline feedback
     this._syncPendingFeedback()
+
+    // RF-305: Initialize voice coach
+    this._initVoiceCoach()
   },
 
   onShow() {
     // Re-check pending feedback sync when page comes to foreground
     this._syncPendingFeedback()
+
+    // Re-sync voice coach state
+    this._syncVoiceState()
+  },
+
+  onUnload() {
+    // RF-305: Clean up voice coach
+    voiceCoach.stopPrompt()
+    voiceCoach.onStateChange(null)
   },
 
   _parseResult(r) {
@@ -369,6 +401,102 @@ Page({
           },
         })
       })
+  },
+
+  // ──────────── RF-305: Voice Coach ────────────
+
+  /**
+   * Initialize voice coach: set language, register state callback,
+   * then auto-play metrics feedback.
+   */
+  _initVoiceCoach() {
+    // Set language based on system locale
+    voiceCoach.setLang(isZh ? 'zh' : 'en')
+
+    // Register state change callback
+    voiceCoach.onStateChange((state) => {
+      this.setData({
+        voiceState: state.state,
+        voiceMuted: state.muted,
+        voiceEnabled: state.enabled,
+        voiceQueueLength: state.queueLength,
+      })
+    })
+
+    // Restore persisted mute preference
+    try {
+      const muted = wx.getStorageSync('rf_voiceCoachMuted')
+      if (muted === true) {
+        voiceCoach.setMuted(true)
+      }
+    } catch (_) { /* ignore */ }
+
+    this._syncVoiceState()
+
+    // Auto-play feedback based on parsed metrics
+    const { metrics, insights } = this.data
+    if (metrics && metrics.length > 0) {
+      // Delay slightly so page transition finishes
+      setTimeout(() => {
+        voiceCoach.playMetricsFeedback(metrics)
+      }, 800)
+    }
+  },
+
+  /**
+   * Sync voice coach state from module into page data.
+   */
+  _syncVoiceState() {
+    const state = voiceCoach.getState()
+    this.setData({
+      voiceState: state.state,
+      voiceMuted: state.muted,
+      voiceEnabled: state.enabled,
+      voiceQueueLength: state.queueLength,
+    })
+  },
+
+  /**
+   * Toggle play/pause/restart voice coaching.
+   */
+  onVoiceCoachToggle() {
+    const { voiceState } = this.data
+    if (voiceState === 'playing') {
+      voiceCoach.pausePrompt()
+    } else if (voiceState === 'paused') {
+      voiceCoach.resumePrompt()
+    } else {
+      // Stopped or idle — replay metrics feedback
+      const { metrics } = this.data
+      voiceCoach.playMetricsFeedback(metrics)
+    }
+  },
+
+  /**
+   * Stop voice coaching and clear queue.
+   */
+  onVoiceCoachStop() {
+    voiceCoach.stopPrompt()
+  },
+
+  /**
+   * Toggle mute.
+   */
+  onVoiceCoachMuteToggle() {
+    const muted = !voiceCoach.isMuted()
+    voiceCoach.setMuted(muted)
+    // Persist preference
+    try {
+      wx.setStorageSync('rf_voiceCoachMuted', muted)
+    } catch (_) { /* ignore */ }
+  },
+
+  /**
+   * Enable/disable voice coach entirely.
+   */
+  onVoiceCoachEnableToggle() {
+    const enabled = !voiceCoach.isEnabled()
+    voiceCoach.setEnabled(enabled)
   },
 
   _wrapText(ctx, text, maxWidth) {

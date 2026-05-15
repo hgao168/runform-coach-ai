@@ -1,0 +1,86 @@
+{
+  "version": "1.0.0",
+  "description": "Voice coach prompts for WeChat mini-program. Each key maps to audio file: /assets/audio/{lang}/{key}.mp3",
+  "prompts": {
+    "cadence_low": {
+      "zh": "步频偏低，试试提高每分钟步数到170以上，小步快跑更高效。",
+      "en": "Cadence is low. Try increasing to over 170 steps per minute. Shorter, quicker strides are more efficient."
+    },
+    "cadence_high": {
+      "zh": "步频偏高，注意避免过度小步，保持自然节奏。",
+      "en": "Cadence is high. Avoid over-striding with tiny steps. Keep a natural rhythm."
+    },
+    "stride_short": {
+      "zh": "步幅偏短，可能限制了你的速度。尝试在保持步频的同时自然伸展。",
+      "en": "Stride is short, which may limit your speed. Try naturally extending while keeping cadence."
+    },
+    "stride_long": {
+      "zh": "步幅偏长，过度跨步可能增加受伤风险。让脚落在身体正下方。",
+      "en": "Stride is too long. Over-striding increases injury risk. Land with your foot beneath your body."
+    },
+    "oscillation_high": {
+      "zh": "垂直振幅偏高，说明有较多上下弹跳。尝试跑得更平稳，减少垂直方向的能量浪费。",
+      "en": "Vertical oscillation is high, meaning you're bouncing too much. Try running smoother to reduce wasted vertical energy."
+    },
+    "oscillation_low": {
+      "zh": "垂直振幅偏低，步态较为经济高效。继续保持平稳的跑姿！",
+      "en": "Vertical oscillation is low and efficient. Keep maintaining that smooth form!"
+    },
+    "gct_long": {
+      "zh": "触地时间偏长，说明脚在地面停留太久。尝试提高步频，加快脚步转换。",
+      "en": "Ground contact time is long. Your foot stays on the ground too long. Try increasing cadence for quicker turnover."
+    },
+    "gct_short": {
+      "zh": "触地时间偏短，弹性很好！继续保持快速的脚步转换。",
+      "en": "Ground contact time is short and springy. Keep up that fast foot turnover!"
+    },
+    "knee_lift_low": {
+      "zh": "膝盖抬起偏低，可能限制了你产生向前的动力。尝试在跑步时有意识地抬膝。",
+      "en": "Knee lift is low, which may limit forward propulsion. Try consciously lifting your knees while running."
+    },
+    "arm_swing_narrow": {
+      "zh": "手臂摆动幅度偏小，适当加大摆臂可以帮助保持平衡和节奏。",
+      "en": "Arm swing is narrow. A fuller arm swing helps maintain balance and rhythm."
+    },
+    "trunk_lean_forward": {
+      "zh": "躯干前倾过多，可能造成腰部压力。尝试保持自然挺直，从脚踝处微微前倾。",
+      "en": "You're leaning too far forward, which can strain your lower back. Keep a natural upright posture with a slight forward lean from the ankles."
+    },
+    "trunk_lean_backward": {
+      "zh": "躯干后仰会形成刹车效应。尝试从脚踝处微微前倾，利用重力帮助你前进。",
+      "en": "Leaning backward creates a braking effect. Try a slight forward lean from the ankles to use gravity."
+    },
+    "foot_strike_heel": {
+      "zh": "检测到脚跟着地模式，可能增加冲击力。尝试用中足或前足着地来缓冲。",
+      "en": "Heel strike detected, which may increase impact forces. Try landing midfoot or forefoot for better shock absorption."
+    },
+    "hip_drop": {
+      "zh": "检测到髋部下沉，核心力量可能不足。加强臀中肌和核心训练可以改善。",
+      "en": "Hip drop detected. Core and glute medius strength may need improvement. Try adding hip-strengthening exercises."
+    },
+    "shoulder_tension": {
+      "zh": "肩部紧张，放松肩膀可以帮助你节省能量，让呼吸更顺畅。",
+      "en": "Shoulders look tense. Relaxing them saves energy and helps you breathe more easily."
+    },
+    "general_good": {
+      "zh": "整体跑姿不错！各关键指标都在理想范围内。继续保持！",
+      "en": "Your overall running form looks good! Key metrics are within ideal ranges. Keep it up!"
+    },
+    "general_improve": {
+      "zh": "存在一些可以优化的地方。关注高优先级的提示，逐步改进你的跑姿。",
+      "en": "There are some areas to improve. Focus on the high-priority tips and gradually refine your form."
+    },
+    "welcome_result": {
+      "zh": "分析完成，来看看你的跑步姿态评估结果吧。",
+      "en": "Analysis complete. Let's review your running form assessment."
+    },
+    "compare_ready": {
+      "zh": "你可以与精英运动员进行对比，看看差距在哪里。",
+      "en": "You can compare with elite athletes to see where the gaps are."
+    },
+    "coaching_complete": {
+      "zh": "语音教练播报完毕。你可以随时点击指标查看详细分析和建议。",
+      "en": "Voice coaching complete. Tap any metric anytime for detailed analysis and tips."
+    }
+  }
+}

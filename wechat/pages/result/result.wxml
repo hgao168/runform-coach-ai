@@ -117,6 +117,66 @@
     </view>
   </view>
 
+  <!-- ──────── RF-305: Voice Coach ──────── -->
+  <view class="card voice-coach-card">
+    <view class="voice-coach-header">
+      <text class="section-title">🎙️ {{voiceCoachLabels.title}}</text>
+      <view class="voice-coach-status-badge" wx:if="{{voiceState === 'playing'}}">
+        <text class="voice-status-text playing">{{voiceCoachLabels.playing}}</text>
+      </view>
+      <view class="voice-coach-status-badge" wx:elif="{{voiceState === 'paused'}}">
+        <text class="voice-status-text paused">{{voiceCoachLabels.paused}}</text>
+      </view>
+      <view class="voice-coach-status-badge" wx:elif="{{voiceState === 'stopped' && voiceQueueLength === 0}}">
+        <text class="voice-status-text stopped">{{voiceCoachLabels.stopped}}</text>
+      </view>
+    </view>
+
+    <view class="voice-coach-controls" wx:if="{{voiceEnabled}}">
+      <!-- Play/Pause -->
+      <button
+        class="voice-btn voice-btn-play"
+        bindtap="onVoiceCoachToggle"
+        disabled="{{voiceMuted}}"
+      >
+        <text wx:if="{{voiceState === 'playing'}}">⏸️ {{voiceCoachLabels.playing}}</text>
+        <text wx:elif="{{voiceState === 'paused'}}">▶️ {{voiceCoachLabels.paused}}</text>
+        <text wx:else>▶️ {{voiceCoachLabels.play}}</text>
+      </button>
+
+      <!-- Stop -->
+      <button
+        class="voice-btn voice-btn-stop"
+        bindtap="onVoiceCoachStop"
+        disabled="{{voiceState === 'stopped'}}"
+      >
+        ⏹️ {{voiceCoachLabels.stop}}
+      </button>
+
+      <!-- Mute toggle -->
+      <button
+        class="voice-btn voice-btn-mute"
+        bindtap="onVoiceCoachMuteToggle"
+      >
+        <text wx:if="{{voiceMuted}}">🔇 {{voiceCoachLabels.unmute}}</text>
+        <text wx:else>🔊 {{voiceCoachLabels.mute}}</text>
+      </button>
+    </view>
+
+    <!-- Disabled state -->
+    <view class="voice-coach-disabled" wx:if="{{!voiceEnabled}}">
+      <text class="voice-disabled-text">🔕 {{voiceCoachLabels.disabled}}</text>
+      <button class="voice-btn voice-btn-enable" bindtap="onVoiceCoachEnableToggle">
+        {{voiceCoachLabels.enable}}
+      </button>
+    </view>
+
+    <!-- No audio files hint (dev mode) -->
+    <view class="voice-coach-no-audio-hint">
+      <text class="voice-no-audio-text">ℹ️ {{voiceCoachLabels.noAudio}}</text>
+    </view>
+  </view>
+
   <!-- Action buttons -->
   <view class="action-section">
     <button class="btn-secondary full-btn" bindtap="goCompare">{{i.compareWithElite}}</button>
