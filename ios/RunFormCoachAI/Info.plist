@@ -21,5 +21,11 @@
     <string>$(BACKEND_BASE_URL)</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
+    <key>NSMotionUsageDescription</key>
+    <string>Collect motion data (accelerometer, gyroscope) in real time during your run to analyze cadence, stride, and running form.</string>
+    <key>NSHealthShareUsageDescription</key>
+    <string>Sync your running workouts, cadence, heart rate, and distance data with Apple Health.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>Save your completed runs and running form metrics to Apple Health for a complete picture of your fitness.</string>
 </dict>
 </plist>

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ktlint)
 }
 
 android {
@@ -52,4 +53,16 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.gson)
     debugImplementation(libs.androidx.ui.tooling)
+}
+
+ktlint {
+    version.set("1.5.0")
+    verbose.set(true)
+    android.set(true)
+    outputToConsole.set(true)
+    ignoreErrors.set(false)
+    reporters {
+        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
+        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
+    }
 }
