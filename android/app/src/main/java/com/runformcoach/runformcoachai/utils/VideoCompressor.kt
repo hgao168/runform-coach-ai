@@ -246,6 +246,12 @@ object VideoCompressor {
         } catch (e: Exception) {
             // On any failure, try to copy the original
             try {
+                encoder.stop(); encoder.release()
+            } catch (_: Exception) {}
+            try {
+                decoder2.stop(); decoder2.release()
+            } catch (_: Exception) {}
+            try {
                 muxer.release()
                 extractor.release()
             } catch (_: Exception) {}

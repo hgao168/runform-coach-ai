@@ -191,11 +191,9 @@ public final class GaitAnalyzer: @unchecked Sendable {
             verticalOscillationStats = (mean: meanPos, stdDev: stdPos, trend: trend)
         }
 
-        // Decay velocity slowly to prevent unbounded drift during long sessions
-        // (velocity integrator reset every 30s worth of samples)
-        if frameCount % Int(samplingRate * 30) == 0 {
-            velocityZ *= 0.5
-        }
+        // Gentle per-frame velocity decay prevents unbounded drift without visible jumps.
+        // 0.9995 per frame at 60 Hz ≈ 3% decay per second — smooth and imperceptible.
+        velocityZ *= 0.9995
 
         // Emit snapshot (throttled: at most every 1.0s)
         let now = Date()

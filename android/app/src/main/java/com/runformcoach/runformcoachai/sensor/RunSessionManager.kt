@@ -210,6 +210,8 @@ class RunSessionManager @Inject constructor(
         viewModelScope.launch {
             cadenceDetector.currentCadence.collectLatest { cadence ->
                 if (cadence != null && _state.value == RunSessionState.running) {
+                    // Inject latest cadence into gait analyzer for snapshot enrichment
+                    gaitAnalyzer.latestCadenceSPM = cadence.currentSPM
                     val gait = gaitAnalyzer.currentSnapshot.value
                     audioCoach.evaluate(
                         cadence = cadence,

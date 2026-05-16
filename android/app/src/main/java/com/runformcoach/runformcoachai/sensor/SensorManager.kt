@@ -100,13 +100,16 @@ class SensorCaptureManager(context: Context) {
         }
 
         while (isRunning) {
+            // Atomically capture both sensor arrays to avoid cross-thread corruption
+            val accel = latestAccel
+            val gyro = latestGyro
             val frame = SensorFrame(
-                accelX = latestAccel[0],
-                accelY = latestAccel[1],
-                accelZ = latestAccel[2],
-                gyroX = latestGyro[0],
-                gyroY = latestGyro[1],
-                gyroZ = latestGyro[2],
+                accelX = accel[0],
+                accelY = accel[1],
+                accelZ = accel[2],
+                gyroX = gyro[0],
+                gyroY = gyro[1],
+                gyroZ = gyro[2],
                 timestampNanos = System.nanoTime()
             )
 

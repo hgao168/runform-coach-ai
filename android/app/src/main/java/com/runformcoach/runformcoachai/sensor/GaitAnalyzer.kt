@@ -78,8 +78,10 @@ class GaitAnalyzer(
     val windowSeconds: Double = maxOf(3.0, minOf(10.0, windowSeconds))
 
     // ── 公开状态 ──────────────────────────────────────────────────────────────
-
     private val _currentSnapshot = MutableStateFlow<GaitSnapshot?>(null)
+
+    /// Latest cadence SPM, injected by RunSessionManager from CadenceDetector.
+    @Volatile var latestCadenceSPM: Double = 0.0
     val currentSnapshot: StateFlow<GaitSnapshot?> = _currentSnapshot.asStateFlow()
 
     private val _verticalOscillationStats = MutableStateFlow<VerticalOscillationStats?>(null)
@@ -234,7 +236,7 @@ class GaitAnalyzer(
             verticalOscillationCm = vertOscCm,
             groundContactTimeMs = gctEstimate,
             trunkLeanDegrees = trunkLeanDeg,
-            cadenceSPM = 0.0,  // 由 RunSessionManager 填充
+            cadenceSPM = latestCadenceSPM,
             timestamp = now
         )
         _currentSnapshot.value = snapshot

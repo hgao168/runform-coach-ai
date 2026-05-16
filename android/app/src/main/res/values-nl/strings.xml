@@ -137,6 +137,13 @@
     <string name="workout_description">Training omschrijving</string>
     <string name="delete_day">Dag verwijderen</string>
 
+    <string name="edit_training_type">Trainingstype</string>
+    <string name="edit_distance_km">Afstand (km)</string>
+    <string name="edit_duration_min">Duur (min)</string>
+    <string name="edit_select_week">Selecteer Week</string>
+    <string name="edit_no_workouts">Geen trainingen deze week</string>
+    <string name="edit_add_first">Tik + om een training toe te voegen</string>
+
     <!-- ── Plan: training level ───────────────────────────────────────────── -->
     <string name="training_level">Trainingsniveau</string>
     <string name="plan_duration">Planduur</string>

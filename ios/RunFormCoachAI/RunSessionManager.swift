@@ -114,6 +114,8 @@ public final class RunSessionManager: @unchecked Sendable {
             alpha: 0.8,
             windowSeconds: config.sensorWindowSeconds
         )
+        // Sync samplingRate for accurate timestamp estimation
+        self.cadenceDetector.samplingRate = self.motionManager.samplingRate
 
         self.gaitAnalyzer = gaitAnalyzer ?? GaitAnalyzer(
             windowSeconds: config.sensorWindowSeconds,
@@ -175,6 +177,11 @@ public final class RunSessionManager: @unchecked Sendable {
     public func stop() {
         queue.async { [weak self] in
             guard let self, self.state != .idle, self.state != .stopped else { return }
+            // Accumulate any active pause before stopping
+            if let pauseStart = self.pauseStartDate {
+                self.totalPausedSeconds += Date().timeIntervalSince(pauseStart)
+                self.pauseStartDate = nil
+            }
             self.motionManager.stopUpdates()
             self.stopMetricsTimer()
             self.cadenceDetector.reset()

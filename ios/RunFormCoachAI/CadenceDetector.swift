@@ -30,6 +30,10 @@ public final class CadenceDetector: @unchecked Sendable {
     /// The analysis window duration in seconds.
     public let windowSeconds: TimeInterval
 
+    /// Actual sampling rate used for timestamp estimation (Hz, default 60).
+    /// Set to match CoreMotionManager.samplingRate for accurate SPM.
+    public var samplingRate: Double = 60.0
+
     // MARK: - State
 
     /// Most recent cadence estimate.
@@ -142,7 +146,7 @@ public final class CadenceDetector: @unchecked Sendable {
             let curr = filteredHistory[i] - mean
             if prev < 0 && curr >= 0 {
                 // Upward zero-crossing = step detected
-                let stepTime = Double(sampleCount - (filteredHistory.count - i)) / 60.0
+                let stepTime = Double(sampleCount - (filteredHistory.count - i)) / samplingRate
                 // Prevent double-counting: enforce minimum 0.15s between steps (~400 SPM max)
                 if let last = lastStepTime {
                     let interval = max(0.15, stepTime - last)
