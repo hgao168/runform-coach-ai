@@ -350,3 +350,59 @@ class CompareResponse(BaseModel):
     top_gaps: List[str]
     coaching_narrative: str
     overall_similarity_score: float
+
+
+# ── Run Session schemas ─────────────────────────────────────────────────────
+
+class RunSessionCreate(BaseModel):
+    ios_user_id: str
+    start_time: str  # ISO 8601
+    end_time: Optional[str] = None  # ISO 8601
+    duration_sec: Optional[float] = None
+    avg_cadence: Optional[float] = None
+    avg_vertical_oscillation: Optional[float] = None
+    avg_gct: Optional[float] = None
+    metrics_json: Optional[dict] = None
+
+
+class RunSessionResponse(BaseModel):
+    id: int
+    user_id: int
+    ios_user_id: Optional[str] = None
+    start_time: str
+    end_time: Optional[str] = None
+    duration_sec: Optional[float] = None
+    avg_cadence: Optional[float] = None
+    avg_vertical_oscillation: Optional[float] = None
+    avg_gct: Optional[float] = None
+    metrics_json: Optional[dict] = None
+    created_at: str
+
+
+class SessionTrendsResponse(BaseModel):
+    ios_user_id: str
+    session_count: int
+    cadence: List[Optional[float]]
+    vertical_oscillation: List[Optional[float]]
+    gct: List[Optional[float]]
+
+
+class SessionCompareRequest(BaseModel):
+    ios_user_id: str
+    session_id_a: int
+    session_id_b: int
+
+
+class SessionMetricPair(BaseModel):
+    metric: str
+    session_a_value: Optional[float] = None
+    session_b_value: Optional[float] = None
+    delta: Optional[float] = None
+    delta_pct: Optional[float] = None
+
+
+class SessionCompareResponse(BaseModel):
+    ios_user_id: str
+    session_a: RunSessionResponse
+    session_b: RunSessionResponse
+    comparisons: List[SessionMetricPair]

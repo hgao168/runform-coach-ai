@@ -13,7 +13,7 @@ from sqlalchemy import delete, select
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
 from .athletes import compare_with_athlete, get_all_athletes
 from .db import check_database, get_db_session
-from .db_models import OAuthConnection, StravaRun, StravaWeeklyStat, User
+from .db_models import OAuthConnection, RunSession, StravaRun, StravaWeeklyStat, User
 from .schemas import (
     AnalyzeProfileContext,
     AnalysisResponse,
@@ -25,6 +25,11 @@ from .schemas import (
     PoseMetricsInput,
     ProfileSaveRequest,
     ProfileSaveResponse,
+    RunSessionCreate,
+    RunSessionResponse,
+    SessionCompareRequest,
+    SessionCompareResponse,
+    SessionTrendsResponse,
     StravaCallbackResponse,
     StravaConnectResponse,
     StravaDisconnectRequest,
@@ -252,6 +257,250 @@ def submit_feedback(payload: FeedbackSubmitRequest) -> FeedbackSubmitResponse:
         accepted=True,
         message="Thank you! Your feedback helps us improve coaching accuracy.",
     )
+
+
+# ── Run Session CRUD ─────────────────────────────────────────────────────────
+
+
+def _resolve_user(session, ios_user_id: str):
+    """Look up a User by ios_user_id or raise 404."""
+    user = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
+    if user is None:
+        raise HTTPException(status_code=404, detail=f"User '{ios_user_id}' not found.")
+    return user
+
+
+def _session_to_response(session_row: RunSession, ios_user_id: str | None = None) -> RunSessionResponse:
+    return RunSessionResponse(
+        id=session_row.id,
+        user_id=session_row.user_id,
+        ios_user_id=ios_user_id,
+        start_time=session_row.start_time.isoformat(),
+        end_time=session_row.end_time.isoformat() if session_row.end_time else None,
+        duration_sec=session_row.duration_sec,
+        avg_cadence=session_row.avg_cadence,
+        avg_vertical_oscillation=session_row.avg_vertical_oscillation,
+        avg_gct=session_row.avg_gct,
+        metrics_json=session_row.metrics_json,
+        created_at=session_row.created_at.isoformat(),
+    )
+
+
+@app.post("/sessions", response_model=RunSessionResponse, status_code=201)
+def create_session(payload: RunSessionCreate) -> RunSessionResponse:
+    """Create a new run session with metrics snapshot."""
+    from datetime import datetime as _dt
+    from datetime import timezone as _tz
+
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, payload.ios_user_id)
+
+            start_dt = _dt.fromisoformat(payload.start_time)
+            end_dt = _dt.fromisoformat(payload.end_time) if payload.end_time else None
+
+            run = RunSession(
+                user_id=user.id,
+                start_time=start_dt,
+                end_time=end_dt,
+                duration_sec=payload.duration_sec,
+                avg_cadence=payload.avg_cadence,
+                avg_vertical_oscillation=payload.avg_vertical_oscillation,
+                avg_gct=payload.avg_gct,
+                metrics_json=payload.metrics_json,
+            )
+            session.add(run)
+            session.commit()
+            session.refresh(run)
+
+        return _session_to_response(run, ios_user_id=payload.ios_user_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to create session: {exc}") from exc
+
+
+@app.get("/sessions", response_model=list[RunSessionResponse])
+def list_sessions(
+    ios_user_id: str = Query(..., min_length=3),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> list[RunSessionResponse]:
+    """List run sessions for a user, paginated, newest first."""
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, ios_user_id)
+            rows = session.execute(
+                select(RunSession)
+                .where(RunSession.user_id == user.id)
+                .order_by(RunSession.start_time.desc())
+                .limit(limit)
+                .offset(offset)
+            ).scalars().all()
+        return [_session_to_response(r, ios_user_id=ios_user_id) for r in rows]
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to list sessions: {exc}") from exc
+
+
+@app.get("/sessions/trends", response_model=SessionTrendsResponse)
+def session_trends(
+    ios_user_id: str = Query(..., min_length=3),
+    metrics: str = Query("cadence,oscillation,gct"),
+    limit: int = Query(20, ge=1, le=100),
+) -> SessionTrendsResponse:
+    """Return trend arrays for key metrics across the most recent sessions."""
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, ios_user_id)
+            rows = session.execute(
+                select(RunSession)
+                .where(RunSession.user_id == user.id)
+                .order_by(RunSession.start_time.desc())
+                .limit(limit)
+            ).scalars().all()
+
+        requested = {m.strip().lower() for m in metrics.split(",")}
+        cadence_vals = []
+        osc_vals = []
+        gct_vals = []
+
+        for r in reversed(rows):  # chronological order
+            if "cadence" in requested:
+                cadence_vals.append(r.avg_cadence)
+            if "oscillation" in requested:
+                osc_vals.append(r.avg_vertical_oscillation)
+            if "gct" in requested:
+                gct_vals.append(r.avg_gct)
+
+        return SessionTrendsResponse(
+            ios_user_id=ios_user_id,
+            session_count=len(rows),
+            cadence=cadence_vals,
+            vertical_oscillation=osc_vals,
+            gct=gct_vals,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to compute trends: {exc}") from exc
+
+
+@app.post("/sessions/compare", response_model=SessionCompareResponse)
+def compare_sessions(payload: SessionCompareRequest) -> SessionCompareResponse:
+    """Compare two run sessions side-by-side."""
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, payload.ios_user_id)
+
+            a = session.scalar(
+                select(RunSession).where(
+                    RunSession.id == payload.session_id_a,
+                    RunSession.user_id == user.id,
+                )
+            )
+            b = session.scalar(
+                select(RunSession).where(
+                    RunSession.id == payload.session_id_b,
+                    RunSession.user_id == user.id,
+                )
+            )
+
+            if a is None:
+                raise HTTPException(status_code=404, detail=f"Session {payload.session_id_a} not found.")
+            if b is None:
+                raise HTTPException(status_code=404, detail=f"Session {payload.session_id_b} not found.")
+
+        def _delta_pct(va, vb) -> float | None:
+            if va is not None and vb is not None and vb != 0:
+                return round((va - vb) / abs(vb) * 100, 1)
+            return None
+
+        comparisons = [
+            SessionMetricPair(
+                metric="avg_cadence",
+                session_a_value=a.avg_cadence,
+                session_b_value=b.avg_cadence,
+                delta=round(a.avg_cadence - b.avg_cadence, 1) if a.avg_cadence is not None and b.avg_cadence is not None else None,
+                delta_pct=_delta_pct(a.avg_cadence, b.avg_cadence),
+            ),
+            SessionMetricPair(
+                metric="avg_vertical_oscillation",
+                session_a_value=a.avg_vertical_oscillation,
+                session_b_value=b.avg_vertical_oscillation,
+                delta=round(a.avg_vertical_oscillation - b.avg_vertical_oscillation, 4) if a.avg_vertical_oscillation is not None and b.avg_vertical_oscillation is not None else None,
+                delta_pct=_delta_pct(a.avg_vertical_oscillation, b.avg_vertical_oscillation),
+            ),
+            SessionMetricPair(
+                metric="avg_gct",
+                session_a_value=a.avg_gct,
+                session_b_value=b.avg_gct,
+                delta=round(a.avg_gct - b.avg_gct, 4) if a.avg_gct is not None and b.avg_gct is not None else None,
+                delta_pct=_delta_pct(a.avg_gct, b.avg_gct),
+            ),
+            SessionMetricPair(
+                metric="duration_sec",
+                session_a_value=a.duration_sec,
+                session_b_value=b.duration_sec,
+                delta=round(a.duration_sec - b.duration_sec, 1) if a.duration_sec is not None and b.duration_sec is not None else None,
+                delta_pct=_delta_pct(a.duration_sec, b.duration_sec),
+            ),
+        ]
+
+        return SessionCompareResponse(
+            ios_user_id=payload.ios_user_id,
+            session_a=_session_to_response(a, ios_user_id=payload.ios_user_id),
+            session_b=_session_to_response(b, ios_user_id=payload.ios_user_id),
+            comparisons=comparisons,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to compare sessions: {exc}") from exc
+
+
+@app.get("/sessions/{session_id}", response_model=RunSessionResponse)
+def get_session(session_id: int, ios_user_id: str = Query(..., min_length=3)) -> RunSessionResponse:
+    """Get a single run session by ID with full metrics."""
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, ios_user_id)
+            run = session.scalar(
+                select(RunSession).where(
+                    RunSession.id == session_id,
+                    RunSession.user_id == user.id,
+                )
+            )
+            if run is None:
+                raise HTTPException(status_code=404, detail=f"Session {session_id} not found.")
+        return _session_to_response(run, ios_user_id=ios_user_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to get session: {exc}") from exc
+
+
+@app.delete("/sessions/{session_id}", status_code=204)
+def delete_session(session_id: int, ios_user_id: str = Query(..., min_length=3)):
+    """Delete a run session."""
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, ios_user_id)
+            run = session.scalar(
+                select(RunSession).where(
+                    RunSession.id == session_id,
+                    RunSession.user_id == user.id,
+                )
+            )
+            if run is None:
+                raise HTTPException(status_code=404, detail=f"Session {session_id} not found.")
+            session.delete(run)
+            session.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to delete session: {exc}") from exc
 
 
 @app.get("/integrations/strava/connect", response_model=StravaConnectResponse)
