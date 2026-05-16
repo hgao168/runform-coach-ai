@@ -30,6 +30,10 @@ jobs:
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
+      - name: Run Android Lint
+        working-directory: android
+        run: ./gradlew lintDebug
+
       - name: Run unit tests
         working-directory: android
         run: ./gradlew testDebugUnitTest

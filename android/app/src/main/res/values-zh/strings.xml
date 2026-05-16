@@ -299,4 +299,29 @@
     <string name="shoe_model">跑鞋型号</string>
     <string name="shoe_model_hint">例如：Vaporfly, Endorphin Pro</string>
     <string name="leg_length_cm">%1$.0f 厘米</string>
+
+    <!-- ── Live Running Dashboard (RF-605) ────────────────────────────────── -->
+    <string name="dashboard_cadence">步频</string>
+    <string name="dashboard_vertical_osc">垂直振幅</string>
+    <string name="dashboard_ground_contact">触地时间</string>
+    <string name="dashboard_trunk_lean">躯干倾角</string>
+    <string name="dashboard_prompt_history">教练提示</string>
+    <string name="dashboard_pause">暂停</string>
+    <string name="dashboard_resume">继续</string>
+    <string name="dashboard_stop">停止</string>
+    <string name="dashboard_start">开始</string>
+    <string name="dashboard_permission_body_sensors">需要身体传感器权限才能获取实时跑步指标。</string>
+    <string name="dashboard_permission_foreground">需要前台服务权限。</string>
+    <string name="dashboard_grant_permission">授予权限</string>
+    <string name="dashboard_ready_to_run">准备跑步</string>
+    <string name="dashboard_permission_denied">权限被拒绝</string>
+    <string name="dashboard_no_prompts_yet">暂无教练提示</string>
+    <string name="dashboard_spm">%1$.0f 步/分</string>
+    <string name="dashboard_cm">%1$.1f 厘米</string>
+    <string name="dashboard_ms">%1$.0f 毫秒</string>
+    <string name="dashboard_deg">%1$.1f°</string>
+    <string name="dashboard_elapsed_format">%1$02d:%2$02d</string>
+    <string name="dashboard_running">跑步中</string>
+    <string name="dashboard_paused_label">已暂停</string>
+    <string name="dashboard_stopped_label">已停止</string>
 </resources>

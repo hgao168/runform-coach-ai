@@ -37,6 +37,13 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Run SwiftLint
+        run: swiftlint --config ios/.swiftlint.yml --strict
+        continue-on-error: true
+
       - name: Run XCTest
         run: |
           xcodebuild test \

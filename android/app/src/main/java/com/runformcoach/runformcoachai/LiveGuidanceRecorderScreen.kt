@@ -72,6 +72,7 @@ fun LiveGuidanceRecorderScreen(
     // Wire recording-complete callback to dismiss + hand off to analysis
     DisposableEffect(Unit) {
         viewModel.onRecordingComplete = { uri ->
+            // TODO: RF-801 – Record stub: hand off recording URI to analysis flow
             // The parent (AppViewModel) can observe this to start analysis
         }
         onDispose { viewModel.onRecordingComplete = null }

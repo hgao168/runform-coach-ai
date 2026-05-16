@@ -296,4 +296,29 @@
     <string name="shoe_model">Schoenmodel</string>
     <string name="shoe_model_hint">bijv. Vaporfly, Endorphin Pro</string>
     <string name="leg_length_cm">%1$.0f cm</string>
+
+    <!-- ── Live Running Dashboard (RF-605) ────────────────────────────────── -->
+    <string name="dashboard_cadence">Cadans</string>
+    <string name="dashboard_vertical_osc">Vert. Osc.</string>
+    <string name="dashboard_ground_contact">Grondcontact</string>
+    <string name="dashboard_trunk_lean">Romphoek</string>
+    <string name="dashboard_prompt_history">Coach Aanwijzingen</string>
+    <string name="dashboard_pause">Pauzeren</string>
+    <string name="dashboard_resume">Hervatten</string>
+    <string name="dashboard_stop">Stoppen</string>
+    <string name="dashboard_start">Starten</string>
+    <string name="dashboard_permission_body_sensors">Toestemming voor lichaamssensoren is vereist voor live loopgegevens.</string>
+    <string name="dashboard_permission_foreground">Toestemming voor voorgrondservice is vereist.</string>
+    <string name="dashboard_grant_permission">Toestemming geven</string>
+    <string name="dashboard_ready_to_run">Klaar om te lopen</string>
+    <string name="dashboard_permission_denied">Toestemming geweigerd</string>
+    <string name="dashboard_no_prompts_yet">Nog geen coach aanwijzingen</string>
+    <string name="dashboard_spm">%1$.0f spm</string>
+    <string name="dashboard_cm">%1$.1f cm</string>
+    <string name="dashboard_ms">%1$.0f ms</string>
+    <string name="dashboard_deg">%1$.1f°</string>
+    <string name="dashboard_elapsed_format">%1$02d:%2$02d</string>
+    <string name="dashboard_running">Bezig</string>
+    <string name="dashboard_paused_label">Gepauzeerd</string>
+    <string name="dashboard_stopped_label">Gestopt</string>
 </resources>

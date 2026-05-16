@@ -13,7 +13,12 @@
 -dontwarn okio.**
 
 # ── Gson ──────────────────────────────────────────────────────────────────────
+# Keep all classes that use @SerializedName (global rule for Gson serialization)
 -keepclassmembers class com.runformcoach.runformcoachai.** {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+# Keep entire classes with @SerializedName-annotated fields so Gson can reflect
+-keep,includedescriptorclasses class com.runformcoach.runformcoachai.** {
     @com.google.gson.annotations.SerializedName <fields>;
 }
 -keep class com.runformcoach.runformcoachai.AnalysisResponse { *; }
@@ -32,9 +37,14 @@
 -keep class com.runformcoach.runformcoachai.CompareRequest { *; }
 -keep class com.runformcoach.runformcoachai.CompareResponse { *; }
 -keep class com.runformcoach.runformcoachai.AthleteListItem { *; }
+-keep class com.runformcoach.runformcoachai.AthleteProfile { *; }
+-keep class com.runformcoach.runformcoachai.PoseMetrics { *; }
+-keep class com.runformcoach.runformcoachai.MetricComparison { *; }
+-keep class com.runformcoach.runformcoachai.MarathonPhaseLink { *; }
 -keep class com.runformcoach.runformcoachai.FeedbackRequest { *; }
 -keep class com.runformcoach.runformcoachai.FeedbackResponse { *; }
 -keep class com.runformcoach.runformcoachai.AnalysisHistoryItem { *; }
+-keep class com.runformcoach.runformcoachai.FeedbackRating { *; }
 
 # ── Room ──────────────────────────────────────────────────────────────────────
 -keep class * extends androidx.room.RoomDatabase

@@ -299,4 +299,29 @@
     <string name="shoe_model">Shoe Model</string>
     <string name="shoe_model_hint">e.g. Vaporfly, Endorphin Pro</string>
     <string name="leg_length_cm">%1$.0f cm</string>
+
+    <!-- ── Live Running Dashboard (RF-605) ────────────────────────────────── -->
+    <string name="dashboard_cadence">Cadence</string>
+    <string name="dashboard_vertical_osc">Vert. Osc.</string>
+    <string name="dashboard_ground_contact">Ground Contact</string>
+    <string name="dashboard_trunk_lean">Trunk Lean</string>
+    <string name="dashboard_prompt_history">Coach Prompts</string>
+    <string name="dashboard_pause">Pause</string>
+    <string name="dashboard_resume">Resume</string>
+    <string name="dashboard_stop">Stop</string>
+    <string name="dashboard_start">Start</string>
+    <string name="dashboard_permission_body_sensors">Body sensor permission is required for live running metrics.</string>
+    <string name="dashboard_permission_foreground">Foreground service permission is required.</string>
+    <string name="dashboard_grant_permission">Grant Permission</string>
+    <string name="dashboard_ready_to_run">Ready to run</string>
+    <string name="dashboard_permission_denied">Permission denied</string>
+    <string name="dashboard_no_prompts_yet">No coach prompts yet</string>
+    <string name="dashboard_spm">%1$.0f spm</string>
+    <string name="dashboard_cm">%1$.1f cm</string>
+    <string name="dashboard_ms">%1$.0f ms</string>
+    <string name="dashboard_deg">%1$.1f°</string>
+    <string name="dashboard_elapsed_format">%1$02d:%2$02d</string>
+    <string name="dashboard_running">Running</string>
+    <string name="dashboard_paused_label">Paused</string>
+    <string name="dashboard_stopped_label">Stopped</string>
 </resources>
