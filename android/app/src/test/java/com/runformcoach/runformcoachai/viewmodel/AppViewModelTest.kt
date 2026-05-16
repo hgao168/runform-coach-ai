@@ -48,6 +48,7 @@ class AppViewModelTest {
     private val database: RunFormDatabase = mockk()
     private val analysisDao: AnalysisDao = mockk()
     private val profileDao: ProfileDao = mockk()
+    private val planDao: PlanDao = mockk()
 
     private lateinit var viewModel: AppViewModel
 
@@ -59,7 +60,7 @@ class AppViewModelTest {
         coEvery { analysisDao.observeAll() } returns emptyFlow()
         coEvery { analysisDao.countByUser() } returns 0
 
-        viewModel = AppViewModel(appContext, api, database, analysisDao, profileDao)
+        viewModel = AppViewModel(appContext, api, database, analysisDao, profileDao, planDao)
     }
 
     @AfterEach
@@ -175,7 +176,7 @@ class AppViewModelTest {
         coEvery { profileDao.getByUser() } returns null
 
         // Re-create ViewModel so init picks up the flow
-        viewModel = AppViewModel(appContext, api, database, analysisDao, profileDao)
+        viewModel = AppViewModel(appContext, api, database, analysisDao, profileDao, planDao)
         advanceUntilIdle()
 
         assertEquals(1, viewModel.history.size)
@@ -228,7 +229,7 @@ class AppViewModelTest {
         coEvery { profileDao.getByUser() } returns entity
         coEvery { analysisDao.observeAll() } returns emptyFlow()
 
-        viewModel = AppViewModel(appContext, api, database, analysisDao, profileDao)
+        viewModel = AppViewModel(appContext, api, database, analysisDao, profileDao, planDao)
         advanceUntilIdle()
 
         assertEquals("Jane", viewModel.profile.firstName)
@@ -240,7 +241,7 @@ class AppViewModelTest {
         coEvery { profileDao.getByUser() } returns null
         coEvery { analysisDao.observeAll() } returns emptyFlow()
 
-        viewModel = AppViewModel(appContext, api, database, analysisDao, profileDao)
+        viewModel = AppViewModel(appContext, api, database, analysisDao, profileDao, planDao)
         advanceUntilIdle()
 
         // Default TesterProfile values

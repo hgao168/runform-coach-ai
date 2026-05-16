@@ -134,7 +134,7 @@ object VideoCompressor {
                 encoder.configure(byteBufferEncoderFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
                 encoder.start()
 
-                val muxerStarted = false
+                var muxerStarted = false
                 var trackIndex = -1
                 val bufferInfo = MediaCodec.BufferInfo()
                 var done = false
@@ -209,6 +209,7 @@ object VideoCompressor {
                             if (!muxerStarted) {
                                 trackIndex = muxer.addTrack(encoder.outputFormat)
                                 muxer.start()
+                                muxerStarted = true
                             }
                             encodedData.position(encBufferInfo.offset)
                             encodedData.limit(encBufferInfo.offset + encBufferInfo.size)

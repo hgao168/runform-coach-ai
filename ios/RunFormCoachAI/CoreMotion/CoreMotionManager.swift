@@ -56,6 +56,9 @@ public final class CoreMotionManager: @unchecked Sendable {
 
     // MARK: - Private
 
+    // Lock for thread-safe accel+gyro pairing in callbacks.
+    private let syncLock = os_unfair_lock_t.allocate(capacity: 1)
+
     private let motionManager: CMMotionManager
     private let samplingQueue: OperationQueue
     private let queue = DispatchQueue(label: "com.runformcoachai.coremotion.sync")
@@ -79,6 +82,13 @@ public final class CoreMotionManager: @unchecked Sendable {
         opQueue.maxConcurrentOperationCount = 1
         opQueue.qualityOfService = .userInteractive
         self.samplingQueue = opQueue
+
+        syncLock.initialize(to: os_unfair_lock())
+    }
+
+    deinit {
+        syncLock.deinitialize(count: 1)
+        syncLock.deallocate()
     }
 
     // MARK: - Public API
@@ -104,9 +114,6 @@ public final class CoreMotionManager: @unchecked Sendable {
             var lastAccel: (x: Double, y: Double, z: Double, ts: TimeInterval)?
             var lastGyro: (x: Double, y: Double, z: Double, ts: TimeInterval)?
 
-            let lock = os_unfair_lock_t.allocate(capacity: 1)
-            lock.initialize(to: os_unfair_lock())
-
             motionManager.startAccelerometerUpdates(
                 to: samplingQueue
             ) { [weak self] accelData, error in
@@ -119,7 +126,7 @@ public final class CoreMotionManager: @unchecked Sendable {
                 }
                 guard let accel = accelData else { return }
 
-                os_unfair_lock_lock(lock)
+                os_unfair_lock_lock(self.syncLock)
                 lastAccel = (accel.acceleration.x, accel.acceleration.y,
                              accel.acceleration.z, accel.timestamp)
                 // Try to emit fused frame
@@ -135,7 +142,7 @@ public final class CoreMotionManager: @unchecked Sendable {
                     )
                     self.deliver(frame)
                 }
-                os_unfair_lock_unlock(lock)
+                os_unfair_lock_unlock(self.syncLock)
             }
 
             motionManager.startGyroUpdates(
@@ -150,7 +157,7 @@ public final class CoreMotionManager: @unchecked Sendable {
                 }
                 guard let gyro = gyroData else { return }
 
-                os_unfair_lock_lock(lock)
+                os_unfair_lock_lock(self.syncLock)
                 lastGyro = (gyro.rotationRate.x, gyro.rotationRate.y,
                             gyro.rotationRate.z, gyro.timestamp)
                 // Try to emit fused frame
@@ -166,7 +173,7 @@ public final class CoreMotionManager: @unchecked Sendable {
                     )
                     self.deliver(frame)
                 }
-                os_unfair_lock_unlock(lock)
+                os_unfair_lock_unlock(self.syncLock)
             }
         }
     }

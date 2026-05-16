@@ -207,6 +207,8 @@ public final class RunSessionManager: @unchecked Sendable {
         // Wire: CadenceDetector → AudioCoach evaluation
         cadenceDetector.onCadenceUpdate = { [weak self] cadence in
             guard let self else { return }
+            // Inject latest cadence into gait analyzer for snapshot enrichment
+            self.gaitAnalyzer.latestCadenceSPM = cadence.currentSPM
             let gait = self.gaitAnalyzer.currentSnapshot
             let elapsed = self.elapsedSeconds
             self.audioCoach.evaluate(

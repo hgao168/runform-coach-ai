@@ -64,6 +64,9 @@ class SensorCaptureManager(context: Context) {
 
     @Volatile private var isRunning = false
 
+    /** Signal that start() has been called; callbackFlow waits on this. */
+    private val started = java.util.concurrent.atomic.AtomicBoolean(false)
+
     private val sensorListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
             when (event.sensor.type) {
@@ -90,6 +93,11 @@ class SensorCaptureManager(context: Context) {
     fun sensorFrames(): Flow<SensorFrame> = callbackFlow {
         var frameCount = 0L
         val startRealtime = System.currentTimeMillis()
+
+        // Wait until start() is called before beginning emission
+        while (!started.get()) {
+            kotlinx.coroutines.delay(50)
+        }
 
         while (isRunning) {
             val frame = SensorFrame(
@@ -150,6 +158,7 @@ class SensorCaptureManager(context: Context) {
         }
 
         isRunning = true
+        started.set(true)
     }
 
     /**
@@ -161,6 +170,7 @@ class SensorCaptureManager(context: Context) {
         }
         sensorManager.unregisterListener(sensorListener)
         isRunning = false
+        started.set(false)
         Log.i(TAG, "传感器已全部取消注册")
     }
 

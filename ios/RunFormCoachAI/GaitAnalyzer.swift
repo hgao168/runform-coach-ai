@@ -30,6 +30,9 @@ public final class GaitAnalyzer: @unchecked Sendable {
     /// Most recent gait snapshot.
     public private(set) var currentSnapshot: GaitSnapshot?
 
+    /// Latest cadence SPM value, injected by RunSessionManager from CadenceDetector.
+    public var latestCadenceSPM: Double = 0.0
+
     /// Rolling statistics for the current window.
     public private(set) var verticalOscillationStats: (mean: Double, stdDev: Double, trend: Double)?
 
@@ -201,7 +204,7 @@ public final class GaitAnalyzer: @unchecked Sendable {
         }
         lastSnapshotTime = now
 
-        let cadenceForSnapshot: Double = 0.0  // filled by RunSessionManager
+        let cadenceForSnapshot: Double = latestCadenceSPM
 
         let snapshot = GaitSnapshot(
             verticalOscillationCm: vertOscCm,
