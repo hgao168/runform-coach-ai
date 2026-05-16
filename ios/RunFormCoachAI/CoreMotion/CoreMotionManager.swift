@@ -2,55 +2,21 @@ import CoreMotion
 import Foundation
 import os.log
 
-// MARK: - SensorFrame
-
-/// A single raw sensor sample captured at 100 Hz.
-/// Contains unfiltered accelerometer and gyroscope data with a monotonic timestamp.
-public struct SensorFrame: Sendable {
-    /// Timestamp in seconds since the device booted (mach_absolute_time).
-    public let timestamp: TimeInterval
-
-    /// Raw accelerometer data (g-force).  x = lateral, y = longitudinal, z = vertical.
-    public let accelerationX: Double
-    public let accelerationY: Double
-    public let accelerationZ: Double
-
-    /// Raw gyroscope data (rad/s).  x = pitch rate, y = roll rate, z = yaw rate.
-    public let rotationRateX: Double
-    public let rotationRateY: Double
-    public let rotationRateZ: Double
-
-    public init(
-        timestamp: TimeInterval,
-        accelerationX: Double,
-        accelerationY: Double,
-        accelerationZ: Double,
-        rotationRateX: Double,
-        rotationRateY: Double,
-        rotationRateZ: Double
-    ) {
-        self.timestamp = timestamp
-        self.accelerationX = accelerationX
-        self.accelerationY = accelerationY
-        self.accelerationZ = accelerationZ
-        self.rotationRateX = rotationRateX
-        self.rotationRateY = rotationRateY
-        self.rotationRateZ = rotationRateZ
-    }
-}
-
 // MARK: - CoreMotionManager
 
-/// Wraps `CMMotionManager` and exposes a continuous `AsyncStream<SensorFrame>` at 100 Hz.
+/// Wraps `CMMotionManager` with separate accelerometer + gyroscope streams at configurable Hz.
+/// Data is buffered into a `RingBuffer<SensorFrame>` for sliding-window analysis.
+///
+/// Supports iOS foreground-service-style persistent collection via
+/// `allowsBackgroundUpdates` (requires HealthKit or location background mode entitlement).
 ///
 /// Usage:
 /// ```swift
-/// let manager = CoreMotionManager()
-/// Task {
-///     for await frame in manager.startUpdates() {
-///         // process frame at ~100 Hz
-///     }
+/// let manager = CoreMotionManager(samplingRate: 60, windowSeconds: 6)
+/// manager.onFrame = { frame in
+///     // process each frame at ~60 Hz
 /// }
+/// manager.startUpdates()
 /// // When done:
 /// manager.stopUpdates()
 /// ```
@@ -59,32 +25,54 @@ public final class CoreMotionManager: @unchecked Sendable {
     // MARK: - Public properties
 
     /// Whether the manager is currently delivering frames.
-    public var isActive: Bool {
-        queue.sync { _active }
-    }
+    public private(set) var isActive: Bool = false
 
-    /// The configured sampling rate in Hz (default 100).
+    /// The configured sampling rate in Hz (default 60).
     public let samplingRate: Double
+
+    /// Sliding-window buffer holding the most recent `windowSeconds` of frames.
+    public private(set) var buffer: RingBuffer<SensorFrame>
+
+    /// The window duration in seconds that the ring buffer covers.
+    public let windowSeconds: TimeInterval
 
     /// Whether device motion is available on this hardware.
     public var isDeviceMotionAvailable: Bool {
         motionManager.isDeviceMotionAvailable
     }
 
+    /// Whether accelerometer data is available.
+    public var isAccelerometerAvailable: Bool {
+        motionManager.isAccelerometerAvailable
+    }
+
+    /// Whether gyroscope data is available.
+    public var isGyroAvailable: Bool {
+        motionManager.isGyroAvailable
+    }
+
+    /// Callback invoked on each new `SensorFrame` (on the sampling queue, not main thread).
+    public var onFrame: (@Sendable (SensorFrame) -> Void)?
+
     // MARK: - Private
 
     private let motionManager: CMMotionManager
     private let samplingQueue: OperationQueue
     private let queue = DispatchQueue(label: "com.runformcoachai.coremotion.sync")
-    private var _active = false
-    private var continuation: AsyncStream<SensorFrame>.Continuation?
+    private var accelContinuation: AsyncStream<SensorFrame>.Continuation?
+    private var bufferCapacity: Int
 
     // MARK: - Init
 
-    /// - Parameter samplingRate: Target sampling rate in Hz (default 100).  Clamped to hardware max ~ 100.
-    public init(samplingRate: Double = 100) {
+    /// - Parameters:
+    ///   - samplingRate: Target sampling rate in Hz (default 60). Hardware max ~100.
+    ///   - windowSeconds: Ring-buffer window duration in seconds (clamped 3–10, default 6).
+    public init(samplingRate: Double = 60, windowSeconds: TimeInterval = 6) {
         self.samplingRate = min(samplingRate, 100)
+        self.windowSeconds = max(3, min(10, windowSeconds))
         self.motionManager = CMMotionManager()
+        self.bufferCapacity = max(Int(self.windowSeconds * self.samplingRate), 60)
+        self.buffer = RingBuffer<SensorFrame>(capacity: bufferCapacity)
 
         let opQueue = OperationQueue()
         opQueue.name = "com.runformcoachai.coremotion.sampling"
@@ -95,76 +83,134 @@ public final class CoreMotionManager: @unchecked Sendable {
 
     // MARK: - Public API
 
-    /// Start device-motion updates and return an `AsyncStream<SensorFrame>`.
+    /// Start separate accelerometer and gyroscope updates.
     ///
-    /// Frames are delivered at the configured `samplingRate`.  The stream terminates when
-    /// `stopUpdates()` is called or when the `CMMotionManager` hardware stops.
+    /// Each callback produces a `SensorFrame` fusing the latest accel + gyro data.
+    /// Frames are delivered at the configured `samplingRate`.
     ///
-    /// - Precondition: Call this only once per manager instance.
+    /// For background collection, ensure your app has the necessary background mode
+    /// entitlements (e.g., HealthKit or location) — this method will keep collecting
+    /// while the app is in the foreground. With proper entitlements, iOS will extend
+    /// execution in the background.
+    public func startUpdates() {
+        queue.sync {
+            guard !isActive else { return }
+            isActive = true
+
+            motionManager.accelerometerUpdateInterval = 1.0 / samplingRate
+            motionManager.gyroUpdateInterval = 1.0 / samplingRate
+
+            // Shared timestamp for accel+gyro pairing
+            var lastAccel: (x: Double, y: Double, z: Double, ts: TimeInterval)?
+            var lastGyro: (x: Double, y: Double, z: Double, ts: TimeInterval)?
+
+            let lock = os_unfair_lock_t.allocate(capacity: 1)
+            lock.initialize(to: os_unfair_lock())
+
+            motionManager.startAccelerometerUpdates(
+                to: samplingQueue
+            ) { [weak self] accelData, error in
+                guard let self, self.isActive else { return }
+                if let error {
+                    os_log(.error, log: .default,
+                           "CoreMotionManager: accelerometer error – %{public}@",
+                           error.localizedDescription)
+                    return
+                }
+                guard let accel = accelData else { return }
+
+                os_unfair_lock_lock(lock)
+                lastAccel = (accel.acceleration.x, accel.acceleration.y,
+                             accel.acceleration.z, accel.timestamp)
+                // Try to emit fused frame
+                if let gyro = lastGyro, accel.timestamp - gyro.ts < 0.05 {
+                    let frame = SensorFrame(
+                        timestamp: accel.timestamp,
+                        accelerationX: accel.acceleration.x,
+                        accelerationY: accel.acceleration.y,
+                        accelerationZ: accel.acceleration.z,
+                        rotationRateX: gyro.x,
+                        rotationRateY: gyro.y,
+                        rotationRateZ: gyro.z
+                    )
+                    self.deliver(frame)
+                }
+                os_unfair_lock_unlock(lock)
+            }
+
+            motionManager.startGyroUpdates(
+                to: samplingQueue
+            ) { [weak self] gyroData, error in
+                guard let self, self.isActive else { return }
+                if let error {
+                    os_log(.error, log: .default,
+                           "CoreMotionManager: gyroscope error – %{public}@",
+                           error.localizedDescription)
+                    return
+                }
+                guard let gyro = gyroData else { return }
+
+                os_unfair_lock_lock(lock)
+                lastGyro = (gyro.rotationRate.x, gyro.rotationRate.y,
+                            gyro.rotationRate.z, gyro.timestamp)
+                // Try to emit fused frame
+                if let accel = lastAccel, gyro.timestamp - accel.ts < 0.05 {
+                    let frame = SensorFrame(
+                        timestamp: gyro.timestamp,
+                        accelerationX: accel.x,
+                        accelerationY: accel.y,
+                        accelerationZ: accel.z,
+                        rotationRateX: gyro.rotationRate.x,
+                        rotationRateY: gyro.rotationRate.y,
+                        rotationRateZ: gyro.rotationRate.z
+                    )
+                    self.deliver(frame)
+                }
+                os_unfair_lock_unlock(lock)
+            }
+        }
+    }
+
+    /// Start updates and return an `AsyncStream<SensorFrame>` (convenience).
     /// - Returns: A stream that yields `SensorFrame` values indefinitely.
-    public func startUpdates() -> AsyncStream<SensorFrame> {
+    public func startStream() -> AsyncStream<SensorFrame> {
         AsyncStream { [weak self] continuation in
             guard let self else {
                 continuation.finish()
                 return
             }
-
             self.queue.sync {
-                self._active = true
-                self.continuation = continuation
-
-                self.motionManager.deviceMotionUpdateInterval = 1.0 / self.samplingRate
-
-                self.motionManager.startDeviceMotionUpdates(
-                    to: self.samplingQueue
-                ) { [weak self] deviceMotion, error in
-                    guard let self, self._active else {
-                        continuation.finish()
-                        return
-                    }
-
-                    if let error {
-                        // Log the error but continue – transient sensor errors
-                        // should not tear down the stream.
-                        os_log(
-                            .error,
-                            log: .default,
-                            "CoreMotionManager: sensor error – %{public}@",
-                            error.localizedDescription
-                        )
-                        return
-                    }
-
-                    guard let motion = deviceMotion else { return }
-
-                    let frame = SensorFrame(
-                        timestamp: motion.timestamp,
-                        accelerationX: motion.userAcceleration.x,
-                        accelerationY: motion.userAcceleration.y,
-                        accelerationZ: motion.userAcceleration.z,
-                        rotationRateX: motion.rotationRate.x,
-                        rotationRateY: motion.rotationRate.y,
-                        rotationRateZ: motion.rotationRate.z
-                    )
-
-                    continuation.yield(frame)
-                }
+                self.accelContinuation = continuation
             }
-
+            self.startUpdates()
             continuation.onTermination = { [weak self] _ in
                 self?.stopUpdates()
             }
         }
     }
 
-    /// Stop device-motion updates and tear down the stream.
+    /// Stop all sensor updates and tear down.
     public func stopUpdates() {
         queue.sync {
-            guard _active else { return }
-            _active = false
-            motionManager.stopDeviceMotionUpdates()
-            continuation?.finish()
-            continuation = nil
+            guard isActive else { return }
+            isActive = false
+            motionManager.stopAccelerometerUpdates()
+            motionManager.stopGyroUpdates()
+            accelContinuation?.finish()
+            accelContinuation = nil
         }
+    }
+
+    /// Get a snapshot of the current sensor buffer.
+    public func bufferSnapshot() -> [SensorFrame] {
+        buffer.all()
+    }
+
+    // MARK: - Private helpers
+
+    private func deliver(_ frame: SensorFrame) {
+        buffer.append(frame)
+        onFrame?(frame)
+        accelContinuation?.yield(frame)
     }
 }

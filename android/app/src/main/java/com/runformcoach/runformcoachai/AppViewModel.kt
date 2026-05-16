@@ -17,6 +17,7 @@ import com.runformcoach.runformcoachai.data.RunFormDatabase
 import com.runformcoach.runformcoachai.data.RunnerProfileEntity
 import com.runformcoach.runformcoachai.data.SavedPlanEntity
 import com.runformcoach.runformcoachai.di.VideoPartFactory
+import com.runformcoach.runformcoachai.utils.VideoCompressor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,23 @@ class AppViewModel @Inject constructor(
     var captureVideoUri by mutableStateOf<Uri?>(null)
     var selectedMode by mutableStateOf("side")   // side / rear / front
     var analysisState by mutableStateOf<AnalysisState>(AnalysisState.Idle)
+
+    // ── RF-206: Video Compression ──────────────────────────────────────────────
+
+    /** Whether the video should be compressed before upload. */
+    var shouldCompress by mutableStateOf(true)
+
+    /** Compression progress 0.0..1.0 (only meaningful when compressing). */
+    var compressionProgress by mutableStateOf(0f)
+
+    /** Whether compression is currently in progress. */
+    var isCompressing by mutableStateOf(false)
+
+    /** Compression result message (e.g. size reduction info). */
+    var compressionMessage by mutableStateOf("")
+
+    /** Path to the compressed file (set after compression completes). */
+    private var compressedFilePath: String? = null
 
     // ── Profile Tab ───────────────────────────────────────────────────────────
 
@@ -114,19 +132,65 @@ class AppViewModel @Inject constructor(
 
     // ── Analyze ───────────────────────────────────────────────────────────────
 
+    /** Compress the selected video before analysis. Call this from the UI. */
+    fun compressAndAnalyze() {
+        val uri = selectedVideoUri ?: return
+        isCompressing = true
+        compressionProgress = 0f
+        compressionMessage = ""
+        viewModelScope.launch {
+            try {
+                val originalSize = withContext(Dispatchers.IO) {
+                    appContext.contentResolver.openInputStream(uri)?.use { it.available().toLong() } ?: 0L
+                }
+                val compressedFile = VideoCompressor.compress(
+                    context = appContext,
+                    inputUri = uri,
+                    onProgress = { progress ->
+                        compressionProgress = progress
+                    }
+                )
+                compressedFilePath = compressedFile.absolutePath
+                val compressedSize = compressedFile.length()
+                val reduction = if (originalSize > 0) {
+                    ((1.0 - compressedSize.toDouble() / originalSize) * 100).toInt()
+                } else 0
+
+                compressionMessage = "Reduced from ${formatBytes(originalSize)} to ${formatBytes(compressedSize)}"
+                isCompressing = false
+                compressionProgress = 1f
+            } catch (e: Exception) {
+                // Compression failed — proceed with original
+                compressedFilePath = null
+                compressionMessage = "Compression skipped: ${e.message}"
+                isCompressing = false
+                compressionProgress = 1f
+            }
+        }
+    }
+
+    /** Start the actual analysis after compression (or skip). */
     fun analyzeVideo() {
         val uri = selectedVideoUri ?: return
         analysisState = AnalysisState.Loading
         viewModelScope.launch {
             try {
+                val sourceUri = if (compressedFilePath != null) {
+                    Uri.fromFile(File(compressedFilePath!!))
+                } else {
+                    uri
+                }
                 val videoFile = withContext(Dispatchers.IO) {
-                    copyUriToTempFile(appContext, uri)
+                    copyUriToTempFile(appContext, sourceUri)
                 }
                 val videoPart = VideoPartFactory.buildVideoPart(videoFile)
                 val modePart = VideoPartFactory.buildModePart(selectedMode)
                 val result = api.analyzeVideo(videoPart, modePart)
                 analysisState = AnalysisState.Success(result)
-                saveAnalysisToRoom(videoFile.name, uri.toString(), result)
+                saveAnalysisToRoom(videoFile.name, sourceUri.toString(), result)
+                // Clean up compressed file
+                compressedFilePath?.let { File(it).delete() }
+                compressedFilePath = null
                 withContext(Dispatchers.IO) { videoFile.delete() }
             } catch (e: Exception) {
                 analysisState = AnalysisState.Error(e.message ?: "Unknown error")
@@ -137,6 +201,19 @@ class AppViewModel @Inject constructor(
     fun resetAnalysis() {
         analysisState = AnalysisState.Idle
         selectedVideoUri = null
+        compressedFilePath?.let { File(it).delete() }
+        compressedFilePath = null
+        compressionProgress = 0f
+        isCompressing = false
+        compressionMessage = ""
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        return when {
+            bytes >= 1_000_000 -> String.format("%.1f MB", bytes / 1_000_000.0)
+            bytes >= 1_000 -> String.format("%.0f KB", bytes / 1_000.0)
+            else -> "$bytes B"
+        }
     }
 
     // ── History (Room-backed) ─────────────────────────────────────────────────

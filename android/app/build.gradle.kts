@@ -5,11 +5,31 @@ plugins {
     alias(libs.plugins.ktlint)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
     namespace = "com.runformcoach.runformcoachai"
     compileSdk = 36
+
+    // ── RF-214: Keystore signing config ─────────────────────────────────
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    val keystoreProperties = java.util.Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(keystorePropertiesFile.inputStream())
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.runformcoach.runformcoachai"
@@ -27,7 +47,12 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://runform-coach-ai-staging.up.railway.app/\"")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             buildConfigField("String", "API_BASE_URL", "\"https://api.runformcoach.com/\"")
         }
     }
@@ -75,6 +100,20 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    // ── CameraX (RF-209: Live Guidance Recording) ──────────────────────
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+
+    // ── ML Kit Pose Detection (RF-209) ─────────────────────────────────
+    implementation(libs.mlkit.pose.detection)
+
+    // ── Firebase (RF-215: Crashlytics + Analytics) ─────────────────────
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.analytics)
 
     // ── Test (JUnit5 + MockK + Turbine + Compose UI test) ───────────────────
     testImplementation(libs.junit.jupiter)
