@@ -1,0 +1,63 @@
+# RunForm Google Play Data Safety Section
+
+## Data Collection & Purpose
+
+### 1. Health & Fitness Data
+**Types collected:**
+- Motion sensor data (accelerometer, gyroscope) for cadence, ground contact time, vertical oscillation, trunk posture
+- Running session metrics (cadence, duration, gait summary)
+
+**Purpose:** App functionality — real-time coaching and form analysis
+**Data processed on-device:** Raw sensor data is processed entirely on-device
+**Data shared with third parties:** No
+
+### 2. Location
+**Types collected:**
+- Approximate location (GPS during runs, optional)
+
+**Purpose:** App functionality — route tracking and pace calculation
+**User control:** Opt-in; can be disabled in device settings
+**Data shared with third parties:** No
+
+### 3. Personal Info / Identifiers
+**Types collected:**
+- User ID (account identifier)
+- Device ID (for crash reporting and analytics)
+
+**Purpose:** App functionality (authentication, data sync), Analytics (feature usage, crash reporting)
+**Data shared with third parties:** Firebase Crashlytics (crash reporting), Firebase Analytics (anonymous usage data)
+
+### 4. App Activity / Usage Data
+**Types collected:**
+- Screens visited, features used, session duration
+- Training plan preferences
+- Feedback history
+
+**Purpose:** Analytics, Product personalization
+**Data shared with third parties:** Firebase Analytics (aggregated, anonymized)
+
+### 5. Photos & Videos
+**Types collected:**
+- Running videos uploaded by users for form analysis
+
+**Purpose:** App functionality — biomechanical pose estimation and analysis
+**Storage:** Securely stored on backend servers; users can delete anytime
+**Data shared with third parties:** No
+
+### 6. App Info & Performance
+**Types collected:**
+- Crash logs (Firebase Crashlytics)
+- App performance diagnostics
+
+**Purpose:** Analytics — improve app stability
+**Data shared with third parties:** Firebase Crashlytics
+
+## Data Security
+- Encryption in transit: Yes (HTTPS/TLS)
+- Encryption at rest: Yes
+- Data deletion: Users may request full account and data deletion via support@runformcoach.com or in-app settings
+
+## Data Sharing
+- No user data is sold
+- Data is not shared with advertisers or data brokers
+- Firebase services are used for crash reporting and anonymous analytics only
