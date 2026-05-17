@@ -341,8 +341,10 @@
 
 | 编号 | 文件 | 类型 | 字数 | 状态 |
 |------|------|------|------|------|
-| XHS-1 | `marketing/content/xiaohongshu-post-1-form-check.md` | 跑姿对比 | ~500 | ✅ 已写完，对应 Week 1 周一 |
-| XHS-2 | `marketing/content/xiaohongshu-post-2-cadence-knee.md` | 步频科普 | ~400 | ✅ 已写完，对应 Week 1 周三 |
+| XHS-1 | `marketing/content/xiaohongshu-post-1-form-check.md` | 跑姿对比 | ~500 | ✅ 已写完 |
+| XHS-2 | `marketing/content/xiaohongshu-post-2-cadence-knee.md` | 步频科普 | ~400 | ✅ 已写完 |
+| XHS-R1 | `marketing/content/xhs-ready-post-1-form-check.md` | 跑姿对比 | ✅ **可直接发布**（含图片映射+CheckList） |
+| XHS-R2 | `marketing/content/xhs-ready-post-2-cadence-knee.md` | 步频科普 | ✅ **可直接发布**（含图片映射+CheckList） |
 | WX-1 | `marketing/content/wechat-article-1-running-form.md` | 跑姿科普 | 中英双语 | ✅ 已写完 |
 | WX-2 | `marketing/content/wechat-article-2-marathon-plan.md` | 训练计划 | 中英双语 | ✅ 已写完 |
 
