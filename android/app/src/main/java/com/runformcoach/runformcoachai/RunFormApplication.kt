@@ -14,6 +14,9 @@ class RunFormApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // RF-921: StrictMode (debug builds only) — must be before any init
+        StartupOptimizer.installStrictMode()
+
         // RF-921: Profile-aware, traced, deferred-init cold start
         StartupOptimizer.installTraceSections()
         StartupOptimizer.onApplicationCreate(this) {

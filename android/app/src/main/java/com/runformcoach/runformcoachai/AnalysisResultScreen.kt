@@ -2,6 +2,7 @@ package com.runformcoach.runformcoachai
 
 import android.content.Intent
 import android.net.Uri
+import android.view.ViewGroup
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +47,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 import java.util.Locale
 
 @Composable
@@ -150,6 +156,9 @@ fun AnalysisResultScreen(
                 analysisId = analysisId
             )
         }
+
+        // ── AdMob Banner (RF-962) ───────────────────────────────────────────
+        BannerAdView(modifier = Modifier.fillMaxWidth())
 
         // ── Dismiss ───────────────────────────────────────────────────────────
         onDismiss?.let {
@@ -437,4 +446,38 @@ private fun qualityBarColor(score: Double): Color = when {
     score >= 0.7 -> AppColors.Mint
     score >= 0.4 -> AppColors.Orange
     else -> AppColors.Red
+}
+
+// ── AdMob Banner Ad (RF-962) ──────────────────────────────────────────────────
+
+/**
+ * Test ad unit ID. Replace with production ad unit ID before release.
+ * See: https://developers.google.com/admob/android/test-ads
+ */
+private const val BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
+
+/**
+ * A simple Banner Ad wrapped for Jetpack Compose using AndroidView.
+ * Uses a fixed AdSize.BANNER (320x50 dp).
+ */
+@Composable
+private fun BannerAdView(modifier: Modifier = Modifier) {
+    val adView = remember {
+        AdView(LocalContext.current).apply {
+            setAdSize(AdSize.BANNER)
+            adUnitId = BANNER_AD_UNIT_ID
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    AndroidView(
+        factory = {
+            adView.loadAd(AdRequest.Builder().build())
+            adView
+        },
+        modifier = modifier
+    )
 }

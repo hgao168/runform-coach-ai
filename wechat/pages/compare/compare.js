@@ -1,6 +1,7 @@
 // pages/compare/compare.js
 const api = require('../../utils/api')
 const { t, isZh, backendLang } = require('../../utils/i18n')
+const ShareCard = require('../../utils/share-card')
 
 function parseAthletes(raw) {
   if (!Array.isArray(raw)) return []
@@ -228,7 +229,60 @@ Page({
     wx.switchTab({ url: '/pages/analyze/analyze' })
   },
 
-  // ──────────── RF-304: Share ────────────
+  // ──────────── RF-913: Share card ────────────
+
+  generateShareImage() {
+    const { selectedAthlete, comparisonRows } = this.data
+    const userMetrics = this._lastAnalysisResult
+      ? extractUserMetrics(this._lastAnalysisResult)
+      : null
+
+    ShareCard.generate({
+      canvasId: 'shareCanvas',
+      scenario: 'compare',
+      data: {
+        athleteName: selectedAthlete ? selectedAthlete.name : '',
+        athleteStats: selectedAthlete ? selectedAthlete.stats : [],
+        userMetrics,
+        comparisonRows,
+      },
+      pageInstance: this,
+      onSuccess: (tempFilePath) => {
+        this._shareImagePath = tempFilePath
+        wx.showToast({ title: isZh ? '分享图已生成' : 'Share image ready', icon: 'success' })
+      },
+      onFail: (err) => {
+        console.error('[compare] ShareCard generate failed:', err)
+      },
+    })
+  },
+
+  saveShareToAlbum() {
+    if (this._shareImagePath) {
+      ShareCard.saveToAlbum(this._shareImagePath)
+    } else {
+      const { selectedAthlete, comparisonRows } = this.data
+
+      ShareCard.generate({
+        canvasId: 'shareCanvas',
+        scenario: 'compare',
+        data: {
+          athleteName: selectedAthlete ? selectedAthlete.name : '',
+          athleteStats: selectedAthlete ? selectedAthlete.stats : [],
+          userMetrics: this._lastAnalysisResult ? extractUserMetrics(this._lastAnalysisResult) : null,
+          comparisonRows,
+        },
+        pageInstance: this,
+        onSuccess: (tempFilePath) => {
+          this._shareImagePath = tempFilePath
+          ShareCard.saveToAlbum(tempFilePath)
+        },
+        onFail: () => {
+          wx.showToast({ title: isZh ? '生成分享图失败' : 'Share image failed', icon: 'none' })
+        },
+      })
+    }
+  },
 
   onShareAppMessage() {
     const { selectedAthlete, comparisonRows } = this.data
@@ -248,7 +302,8 @@ Page({
     }
 
     const path = '/pages/compare/compare'
+    const imageUrl = this._shareImagePath || ''
 
-    return { title, path, imageUrl: '' }
+    return { title, path, imageUrl }
   },
 })

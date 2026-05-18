@@ -1,6 +1,7 @@
 // pages/history/history.js
 const storage = require('../../utils/storage')
 const { t, isZh } = require('../../utils/i18n')
+const ShareCard = require('../../utils/share-card')
 
 function scoreColor(score) {
   const pct = Math.round((score || 0) * 100)
@@ -454,6 +455,122 @@ Page({
         }
       },
     })
+  },
+
+  // ──────────── RF-913: Share card ────────────
+
+  /**
+   * Generate share image for the most recent history record.
+   */
+  generateShareImage() {
+    const { items, trendLabels, trendDatasets } = this.data
+    if (items.length === 0) {
+      wx.showToast({ title: isZh ? '暂无记录可分享' : 'No records to share', icon: 'none' })
+      return
+    }
+
+    const latest = items[0] // items are newest-first
+    const metrics = latest.result
+      ? Object.entries(latest.result.form_metrics || latest.result.metrics || {})
+          .map(([key, val]) => {
+            const numVal = typeof val === 'number' ? val : (val?.score ?? 0)
+            const pct = Math.round(Math.min(Math.max(numVal, 0), 1) * 100)
+            let color = '#00f5a0'
+            if (pct < 40) color = '#ff4757'
+            else if (pct < 65) color = '#ff9f30'
+            return {
+              label: key.replace(/_/g, ' '),
+              pct,
+              valueText: `${pct}%`,
+              color,
+            }
+          })
+      : []
+
+    ShareCard.generate({
+      canvasId: 'shareCanvas',
+      scenario: 'history',
+      data: {
+        confidencePct: parseInt(latest.scoreDisplay) || 0,
+        dateDisplay: latest.dateDisplay,
+        overallAssessment: latest.summary,
+        metrics,
+        analysisCount: items.length,
+      },
+      pageInstance: this,
+      onSuccess: (tempFilePath) => {
+        this._shareImagePath = tempFilePath
+        wx.showToast({ title: isZh ? '分享图已生成' : 'Share image ready', icon: 'success' })
+      },
+      onFail: (err) => {
+        console.error('[history] ShareCard generate failed:', err)
+      },
+    })
+  },
+
+  saveShareToAlbum() {
+    const { items } = this.data
+    if (items.length === 0) {
+      wx.showToast({ title: isZh ? '暂无记录可分享' : 'No records to share', icon: 'none' })
+      return
+    }
+
+    if (this._shareImagePath) {
+      ShareCard.saveToAlbum(this._shareImagePath)
+    } else {
+      const latest = items[0]
+      const metrics = latest.result
+        ? Object.entries(latest.result.form_metrics || latest.result.metrics || {})
+            .map(([key, val]) => {
+              const numVal = typeof val === 'number' ? val : (val?.score ?? 0)
+              const pct = Math.round(Math.min(Math.max(numVal, 0), 1) * 100)
+              let color = '#00f5a0'
+              if (pct < 40) color = '#ff4757'
+              else if (pct < 65) color = '#ff9f30'
+              return { label: key.replace(/_/g, ' '), pct, valueText: `${pct}%`, color }
+            })
+        : []
+
+      ShareCard.generate({
+        canvasId: 'shareCanvas',
+        scenario: 'history',
+        data: {
+          confidencePct: parseInt(latest.scoreDisplay) || 0,
+          dateDisplay: latest.dateDisplay,
+          overallAssessment: latest.summary,
+          metrics,
+          analysisCount: items.length,
+        },
+        pageInstance: this,
+        onSuccess: (tempFilePath) => {
+          this._shareImagePath = tempFilePath
+          ShareCard.saveToAlbum(tempFilePath)
+        },
+        onFail: () => {
+          wx.showToast({ title: isZh ? '生成分享图失败' : 'Share image failed', icon: 'none' })
+        },
+      })
+    }
+  },
+
+  onShareAppMessage() {
+    const { items } = this.data
+    const lang = isZh
+
+    let title
+    if (items.length === 0) {
+      title = lang ? 'RunForm 跑步教练' : 'RunForm Coach AI'
+    } else {
+      const latest = items[0]
+      title = lang
+        ? `📊 我的跑姿历史 — ${latest.scoreDisplay} | 共 ${items.length} 条记录`
+        : `📊 My RunForm History — ${latest.scoreDisplay} | ${items.length} records`
+    }
+
+    const path = '/pages/history/history'
+    const imageUrl = this._shareImagePath || ''
+
+    return { title, path, imageUrl }
   },
 
   goAnalyze() {

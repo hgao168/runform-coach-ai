@@ -2,6 +2,7 @@
 const api = require('../../utils/api')
 const { t, isZh, backendLang, getVideoSearchUrl } = require('../../utils/i18n')
 const voiceCoach = require('../../utils/voice-coach')
+const ShareCard = require('../../utils/share-card')
 
 const STORAGE_KEY_PENDING_FEEDBACK = 'rf_pendingFeedback'
 
@@ -59,6 +60,9 @@ Page({
       stopped: t('voiceCoachStopped'),
       noAudio: t('voiceCoachNoAudio'),
     },
+
+    // RF-963: Rewarded video ad
+    rewardedAdAvailable: false,
   },
 
   onLoad() {
@@ -74,6 +78,9 @@ Page({
 
     // RF-305: Initialize voice coach
     this._initVoiceCoach()
+
+    // RF-963: Initialize rewarded video ad
+    this._initRewardedAd()
   },
 
   onShow() {
@@ -399,216 +406,104 @@ Page({
     return 'analysis'
   },
 
-  // ──────────── RF-941: Enhanced Canvas share image ────────────
+  // ──────────── RF-913: Share card via utility ────────────
 
   /**
-   * Generate a share image using Canvas.
-   * RF-941: Enhanced version with avatar, key metrics, and mini-program QR code placeholder.
-   * Call this before sharing to attach a custom image.
+   * Generate a share image using the ShareCard utility.
    */
   generateShareImage() {
     const { confidencePct, overallAssessment, metrics, insights } = this.data
-    const query = wx.createSelectorQuery()
-    query.select('#shareCanvas')
-      .fields({ node: true, size: true })
-      .exec((res) => {
-        if (!res || !res[0] || !res[0].node) {
-          wx.showToast({ title: 'Canvas not available', icon: 'none' })
-          return
-        }
-        const canvas = res[0].node
-        const ctx = canvas.getContext('2d')
-        const dpr = wx.getSystemInfoSync().pixelRatio
-        const w = 375  // Standard share card width
-        const h = 500  // Taller for more content
-        canvas.width = w * dpr
-        canvas.height = h * dpr
-        ctx.scale(dpr, dpr)
 
-        // ── Background ──
-        // Dark gradient background
-        const bgGrad = ctx.createLinearGradient(0, 0, 0, h)
-        bgGrad.addColorStop(0, '#0a0a0f')
-        bgGrad.addColorStop(0.5, '#12121a')
-        bgGrad.addColorStop(1, '#0a0a0f')
-        ctx.fillStyle = bgGrad
-        ctx.fillRect(0, 0, w, h)
+    ShareCard.generate({
+      canvasId: 'shareCanvas',
+      scenario: 'analysis',
+      data: { confidencePct, overallAssessment, metrics, insights },
+      pageInstance: this,
+      onSuccess: (tempFilePath) => {
+        this._shareImagePath = tempFilePath
+        wx.showToast({ title: isZh ? '分享图已生成' : 'Share image ready', icon: 'success' })
+      },
+      onFail: (err) => {
+        console.error('[result] ShareCard generate failed:', err)
+        wx.showToast({ title: isZh ? '生成分享图失败' : 'Share image failed', icon: 'none' })
+      },
+    })
+  },
 
-        // Accent band at top
-        ctx.fillStyle = '#00f5a0'
-        ctx.fillRect(0, 0, w, 4)
-
-        let y = 32
-
-        // ── Avatar placeholder (circle) + app name ──
-        ctx.fillStyle = '#00f5a0'
-        ctx.beginPath()
-        ctx.arc(32, y + 18, 16, 0, Math.PI * 2)
-        ctx.fill()
-
-        ctx.fillStyle = '#0a0a0f'
-        ctx.font = 'bold 10px -apple-system, sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText('🏃', 32, y + 22)
-
-        ctx.textAlign = 'left'
-        ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 16px -apple-system, sans-serif'
-        ctx.fillText(isZh ? 'RunForm 跑步教练' : 'RunForm Coach AI', 56, y + 14)
-
-        ctx.fillStyle = 'rgba(255,255,255,0.4)'
-        ctx.font = '11px -apple-system, sans-serif'
-        ctx.fillText(isZh ? 'AI 跑姿分析' : 'AI Run Analysis', 56, y + 32)
-
-        y += 58
-
-        // ── Divider ──
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)'
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        ctx.moveTo(24, y)
-        ctx.lineTo(w - 24, y)
-        ctx.stroke()
-
-        y += 20
-
-        // ── Score card ──
-        // Score background
-        ctx.fillStyle = 'rgba(0,245,160,0.08)'
-        ctx.beginPath()
-        ctx.roundRect(24, y, w - 48, 100, 12)
-        ctx.fill()
-
-        // Score number
-        ctx.fillStyle = '#00f5a0'
-        ctx.font = 'bold 56px -apple-system, sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText(`${confidencePct}`, w / 2, y + 56)
-
-        ctx.fillStyle = 'rgba(255,255,255,0.6)'
-        ctx.font = '13px -apple-system, sans-serif'
-        ctx.fillText(isZh ? '跑姿评分' : 'FORM SCORE', w / 2, y + 82)
-
-        y += 120
-
-        // ── Key metrics in a row ──
-        const keyMetrics = metrics.slice(0, 4)
-        if (keyMetrics.length > 0) {
-          ctx.textAlign = 'left'
-          const colW = (w - 48) / Math.min(keyMetrics.length, 4)
-          keyMetrics.forEach((m, i) => {
-            const cx = 24 + i * colW + colW / 2
-            const pct = m.pct
-
-            // Small circle progress
-            const radius = 16
-            // Background circle
-            ctx.beginPath()
-            ctx.arc(cx, y + 20, radius, 0, Math.PI * 2)
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)'
-            ctx.lineWidth = 3
-            ctx.stroke()
-
-            // Progress arc
-            ctx.beginPath()
-            const startAngle = -Math.PI / 2
-            const endAngle = startAngle + (Math.PI * 2 * pct) / 100
-            ctx.arc(cx, y + 20, radius, startAngle, endAngle)
-            ctx.strokeStyle = m.color || '#00f5a0'
-            ctx.lineWidth = 3
-            ctx.stroke()
-
-            // Label
-            ctx.fillStyle = 'rgba(255,255,255,0.7)'
-            ctx.font = '10px -apple-system, sans-serif'
-            ctx.textAlign = 'center'
-            const shortLabel = m.label.length > 8 ? m.label.slice(0, 7) + '…' : m.label
-            ctx.fillText(shortLabel, cx, y + 52)
-
-            // Value
-            ctx.fillStyle = '#ffffff'
-            ctx.font = 'bold 12px -apple-system, sans-serif'
-            ctx.fillText(m.valueText, cx, y + 68)
-          })
-          y += 82
-        }
-
-        // ── Top insight ──
-        if (insights && insights.length > 0) {
-          const topInsight = insights[0]
-          ctx.textAlign = 'left'
-          ctx.fillStyle = 'rgba(255,255,255,0.4)'
-          ctx.font = '11px -apple-system, sans-serif'
-          ctx.fillText(isZh ? '关键发现' : 'KEY FINDING', 24, y + 14)
-
-          ctx.fillStyle = '#ffffff'
-          ctx.font = '13px -apple-system, sans-serif'
-          const insightText = topInsight.title.length > 36
-            ? topInsight.title.slice(0, 36) + '...'
-            : topInsight.title
-          ctx.fillText(insightText, 24, y + 34)
-          y += 50
-        } else if (overallAssessment) {
-          ctx.textAlign = 'left'
-          ctx.fillStyle = 'rgba(255,255,255,0.4)'
-          ctx.font = '11px -apple-system, sans-serif'
-          ctx.fillText(isZh ? '综合评估' : 'ASSESSMENT', 24, y + 14)
-
-          ctx.fillStyle = '#ffffff'
-          ctx.font = '13px -apple-system, sans-serif'
-          const short = overallAssessment.length > 40
-            ? overallAssessment.slice(0, 40) + '...'
-            : overallAssessment
-          ctx.fillText(short, 24, y + 34)
-          y += 50
-        }
-
-        // ── Divider ──
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)'
-        ctx.beginPath()
-        ctx.moveTo(24, y)
-        ctx.lineTo(w - 24, y)
-        ctx.stroke()
-        y += 16
-
-        // ── Footer: CTA + QR code placeholder ──
-        ctx.textAlign = 'left'
-        ctx.fillStyle = 'rgba(255,255,255,0.6)'
-        ctx.font = '12px -apple-system, sans-serif'
-        ctx.fillText(isZh ? '扫码测测你的跑姿 →' : 'Scan to analyze your form →', 24, y + 14)
-
-        // Mini-program QR code placeholder (right side)
-        ctx.textAlign = 'right'
-        ctx.fillStyle = 'rgba(0,245,160,0.15)'
-        ctx.fillRect(w - 56, y - 4, 40, 40)
-        ctx.fillStyle = 'rgba(0,245,160,0.5)'
-        ctx.font = '10px -apple-system, sans-serif'
-        ctx.fillText('QR', w - 36, y + 20)
-
-        y += 56
-
-        // ── Bottom branding ──
-        ctx.textAlign = 'center'
-        ctx.fillStyle = 'rgba(255,255,255,0.2)'
-        ctx.font = '9px -apple-system, sans-serif'
-        ctx.fillText(
-          isZh ? 'Powered by RunForm · movenova.ai' : 'Powered by RunForm · movenova.ai',
-          w / 2,
-          y + 10
-        )
-
-        // ── Export ──
-        wx.canvasToTempFilePath({
-          canvas,
-          success: (tempRes) => {
-            this._shareImagePath = tempRes.tempFilePath
-            wx.showToast({ title: isZh ? '分享图已生成' : 'Share image ready', icon: 'success' })
-          },
-          fail: (err) => {
-            console.error('Canvas export failed:', err)
-          },
-        })
+  /**
+   * RF-913: Save generated share image to photo album.
+   */
+  saveShareToAlbum() {
+    if (this._shareImagePath) {
+      ShareCard.saveToAlbum(this._shareImagePath)
+    } else {
+      // Generate first, then save
+      const { confidencePct, overallAssessment, metrics, insights } = this.data
+      ShareCard.generate({
+        canvasId: 'shareCanvas',
+        scenario: 'analysis',
+        data: { confidencePct, overallAssessment, metrics, insights },
+        pageInstance: this,
+        onSuccess: (tempFilePath) => {
+          this._shareImagePath = tempFilePath
+          ShareCard.saveToAlbum(tempFilePath)
+        },
+        onFail: () => {
+          wx.showToast({ title: isZh ? '生成分享图失败' : 'Share image failed', icon: 'none' })
+        },
       })
+    }
+  },
+
+  // ──────────── RF-963: Rewarded Video Ad ────────────
+
+  /**
+   * Initialize rewarded video ad.
+   * Uses WeChat native rewarded video ad API.
+   * Replace adUnitId with the real one from WeChat MP admin panel.
+   */
+  _initRewardedAd() {
+    try {
+      // Test adUnitId for development — replace with real ID in production
+      const adUnitId = 'adunit-xxxxxxxxxxxxxxxx' // TODO: replace with real ad unit ID
+      this._rewardedAd = wx.createRewardedVideoAd({ adUnitId })
+
+      this._rewardedAd.onLoad(() => {
+        console.log('[result] Rewarded video ad loaded')
+        this.setData({ rewardedAdAvailable: true })
+      })
+
+      this._rewardedAd.onError((err) => {
+        console.error('[result] Rewarded video ad error:', err)
+        this.setData({ rewardedAdAvailable: false })
+      })
+
+      this._rewardedAd.onClose((res) => {
+        if (res && res.isEnded) {
+          // User watched to the end — could grant reward here
+          wx.showToast({ title: isZh ? '感谢观看！' : 'Thanks for watching!', icon: 'success' })
+        } else {
+          wx.showToast({ title: isZh ? '观看中断，可随时重试' : 'Interrupted, try again anytime', icon: 'none' })
+        }
+      })
+    } catch (e) {
+      console.error('[result] Failed to create rewarded video ad:', e)
+      this.setData({ rewardedAdAvailable: false })
+    }
+  },
+
+  /**
+   * Show rewarded video ad. Called when user taps the ad button.
+   */
+  showRewardedAd() {
+    if (!this._rewardedAd) return
+    this._rewardedAd.show().catch(() => {
+      // Retry on failure: re-load then show
+      this._rewardedAd.load().then(() => this._rewardedAd.show()).catch((err) => {
+        console.error('[result] Rewarded ad show failed:', err)
+        wx.showToast({ title: isZh ? '广告暂不可用' : 'Ad unavailable', icon: 'none' })
+      })
+    })
   },
 
   // ──────────── RF-305: Voice Coach ────────────

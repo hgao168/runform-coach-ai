@@ -155,6 +155,18 @@
       📤 {{i.shareResult}}
     </button>
 
+    <!-- RF-913: Save share image to album -->
+    <button class="btn-secondary" style="width: 100%; height: 96rpx; font-size: 30rpx; border-radius: 28rpx; margin-top: 20rpx;" bindtap="saveShareToAlbum">
+      🖼️ {{isZh ? '保存到相册' : 'Save to Album'}}
+    </button>
+
   </view>
+
+  <!-- RF-913: Hidden canvas for share image generation -->
+  <canvas
+    type="2d"
+    id="shareCanvas"
+    style="position: fixed; left: -9999rpx; top: -9999rpx; width: 600rpx; height: 928rpx;"
+  />
 
 </view>

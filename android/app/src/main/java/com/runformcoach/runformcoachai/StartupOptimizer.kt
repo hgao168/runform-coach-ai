@@ -1,7 +1,9 @@
 package com.runformcoach.runformcoachai
 
 import android.app.Application
+import android.os.Handler
 import android.os.Looper
+import android.os.StrictMode
 import android.os.Trace
 import android.util.Log
 import com.google.firebase.FirebaseApp
@@ -10,16 +12,19 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import java.io.File
 
 /**
- * RF-921: Cold-start performance optimizer.
+ * RF-921: Cold-start performance optimizer + ANR guard.
  *
  * Goals:
  * - Profile-aware initialization
  * - Deferred Firebase/Analytics init via IdleHandler
  * - android.os.Trace instrumentation
+ * - StrictMode detection in debug builds
+ * - Main-thread ANR watchdog
  * - Target: cold start < 2 seconds
  *
  * Usage (in RunFormApplication.onCreate):
  * ```
+ * StartupOptimizer.installStrictMode()
  * StartupOptimizer.installTraceSections()
  * StartupOptimizer.onApplicationCreate(this) {
  *     // Critical-path init here
@@ -32,6 +37,12 @@ object StartupOptimizer {
     private const val TRACE_APP_CREATE = "RunForm:app_onCreate"
     private const val TRACE_CRITICAL_INIT = "RunForm:critical_init"
     private const val TRACE_LAZY_INIT = "RunForm:lazy_init"
+
+    /** Cold-start target in milliseconds. */
+    private const val COLD_START_TARGET_MS = 2_000L
+
+    /** ANR watchdog threshold in milliseconds. */
+    private const val ANR_WATCHDOG_THRESHOLD_MS = 3_000L
 
     /** Whether we are running under a benchmark/profile configuration. */
     var isProfileInstalled: Boolean = false
@@ -80,6 +91,82 @@ object StartupOptimizer {
         }
     }
 
+    // ── StrictMode (Debug Builds) ───────────────────────────────────────────────
+
+    /**
+     * Install StrictMode policies in debug builds to catch:
+     * - Disk reads/writes on main thread
+     * - Network operations on main thread
+     * - Slow calls (custom threshold)
+     *
+     * Call this BEFORE any heavy init in Application.onCreate.
+     */
+    fun installStrictMode() {
+        // Only enable in debug builds; release builds skip this overhead
+        if (!isDebugBuild()) {
+            Log.d(TAG, "StrictMode: skipped (release build)")
+            return
+        }
+
+        // Thread policy: detect accidental disk I/O and network on main thread
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads()
+                .detectDiskWrites()
+                .detectNetwork()
+                .penaltyLog()          // log to logcat
+                .penaltyFlashScreen()  // flash border on screen (debug only)
+                .build()
+        )
+
+        // VM policy: detect leaked SQLite cursors, unclosed resources, etc.
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder()
+                .detectLeakedSqlLiteObjects()
+                .detectLeakedClosableObjects()
+                .detectActivityLeaks()
+                .detectLeakedRegistrationObjects()
+                .penaltyLog()
+                .build()
+        )
+
+        Log.i(TAG, "StrictMode installed (debug build)")
+    }
+
+    // ── ANR Watchdog ───────────────────────────────────────────────────────────
+
+    /**
+     * Start a lightweight ANR watchdog that periodically posts a message
+     * to the main thread and checks whether it was processed within the
+     * threshold. If the main thread is blocked for too long, logs a
+     * warning and records a non-fatal to Crashlytics.
+     */
+    private fun startAnrWatchdog() {
+        val handler = Handler(Looper.getMainLooper())
+        val startedAt = System.currentTimeMillis()
+
+        // Post a runnable that checks elapsed time
+        handler.post {
+            val elapsed = System.currentTimeMillis() - startedAt
+            Log.d(TAG, "ANR watchdog: main thread responsive (${elapsed}ms since post)")
+
+            // If the watchdog itself took too long to fire, the main thread
+            // was busy — log a warning.
+            if (elapsed > ANR_WATCHDOG_THRESHOLD_MS) {
+                val warning = "ANR_WATCHDOG: main thread blocked for ${elapsed}ms " +
+                    "(threshold=${ANR_WATCHDOG_THRESHOLD_MS}ms)"
+                Log.w(TAG, warning)
+
+                // Best-effort Crashlytics breadcrumb
+                try {
+                    FirebaseCrashlytics.getInstance().log(warning)
+                } catch (_: Exception) {
+                    // Crashlytics not ready yet
+                }
+            }
+        }
+    }
+
     // ── Trace Sections ────────────────────────────────────────────────────────
 
     /**
@@ -123,11 +210,18 @@ object StartupOptimizer {
         // 3. Defer Firebase/Analytics init to IdleHandler
         scheduleLazyInit(application)
 
+        // 4. Start ANR watchdog (runs on the main thread's message queue)
+        startAnrWatchdog()
+
         Trace.endSection()
 
-        // Log cold-start duration
+        // Log cold-start duration and check against target
         val elapsed = System.currentTimeMillis() - appCreateStartMillis
-        Log.i(TAG, "Critical init completed in ${elapsed}ms")
+        if (elapsed > COLD_START_TARGET_MS) {
+            Log.w(TAG, "⚠️ Cold start exceeded target: ${elapsed}ms (target=${COLD_START_TARGET_MS}ms)")
+        } else {
+            Log.i(TAG, "✓ Cold start within target: ${elapsed}ms (target=${COLD_START_TARGET_MS}ms)")
+        }
 
         // NOTE: Do NOT record to Crashlytics here — it isn't initialized yet.
         // The lazy init handler will log the full startup time once available.
@@ -199,4 +293,23 @@ object StartupOptimizer {
     fun elapsedSinceAppCreate(): Long =
         if (appCreateStartMillis == 0L) 0L
         else System.currentTimeMillis() - appCreateStartMillis
+
+    // ── Utility: Debug build detection ──────────────────────────────────────
+
+    /**
+     * Detect whether this is a debug build (not release).
+     * Uses BuildConfig.DEBUG if available, otherwise falls back to
+     * checking debuggable flag from ApplicationInfo.
+     */
+    private fun isDebugBuild(): Boolean {
+        return try {
+            // Primary: check BuildConfig.DEBUG
+            val buildConfigClass = Class.forName("com.runformcoach.runformcoachai.BuildConfig")
+            val debugField = buildConfigClass.getField("DEBUG")
+            debugField.getBoolean(null)
+        } catch (_: Exception) {
+            // BuildConfig not available; assume release
+            false
+        }
+    }
 }

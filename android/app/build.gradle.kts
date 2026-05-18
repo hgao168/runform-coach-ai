@@ -115,6 +115,9 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.analytics)
 
+    // ── AdMob (RF-962: Banner ads on analysis result) ─────────────────
+    implementation(libs.play.services.ads)
+
     // ── Test (JUnit5 + MockK + Turbine + Compose UI test) ───────────────────
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

@@ -23,6 +23,7 @@ coroutines-test = "1.8.1"
 camerax = "1.4.1"
 mlkit-pose-detection = "18.0.0-beta5"
 firebase-bom = "33.12.0"
+play-services-ads = "23.6.0"
 
 [libraries]
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
@@ -81,6 +82,9 @@ mlkit-pose-detection = { group = "com.google.mlkit", name = "pose-detection", ve
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+
+# ── AdMob (RF-962) ───────────────────────────────────────────────────────
+play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "play-services-ads" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

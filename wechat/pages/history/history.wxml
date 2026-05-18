@@ -82,6 +82,24 @@
       </view>
       <text class="chevron">›</text>
     </view>
+
+    <!-- RF-913: Share & Save buttons -->
+    <view class="action-section">
+      <button class="btn-mint-outline full-btn" style="margin-top: 8rpx;" open-type="share">
+        📤 {{isZh ? '分享记录' : 'Share Records'}}
+      </button>
+
+      <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="saveShareToAlbum">
+        🖼️ {{isZh ? '保存到相册' : 'Save to Album'}}
+      </button>
+    </view>
   </view>
+
+  <!-- RF-913: Hidden canvas for share image generation -->
+  <canvas
+    type="2d"
+    id="shareCanvas"
+    style="position: fixed; left: -9999rpx; top: -9999rpx; width: 600rpx; height: 928rpx;"
+  />
 
 </view>

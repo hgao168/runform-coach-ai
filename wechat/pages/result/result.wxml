@@ -185,6 +185,23 @@
     <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" open-type="share">
       📤 {{i.shareResult}}
     </button>
+
+    <!-- RF-913: Save share image to album -->
+    <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="saveShareToAlbum">
+      🖼️ {{isZh ? '保存到相册' : 'Save to Album'}}
+    </button>
+  </view>
+
+  <!-- RF-963: Rewarded video ad -->
+  <view class="card ad-card" wx:if="{{rewardedAdAvailable}}">
+    <view class="ad-header">
+      <text class="ad-icon">🎬</text>
+      <text class="ad-title">{{isZh ? '观看广告支持我们' : 'Watch ad to support us'}}</text>
+    </view>
+    <text class="ad-desc">{{isZh ? '观看一段短视频广告，帮助我们持续优化教练服务 🙏' : 'Watch a short video ad to help us improve coaching 🙏'}}</text>
+    <button class="btn-ad" bindtap="showRewardedAd">
+      ▶️ {{isZh ? '观看广告' : 'Watch Ad'}}
+    </button>
   </view>
 
   <!-- RF-304: Hidden canvas for share image generation (2D Canvas) -->
