@@ -238,6 +238,25 @@ final class APIClient {
         }
     }
 
+    func fetchSessions() async throws -> [RunSessionResponse] {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("sessions")
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 20
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([RunSessionResponse].self, from: data)
+        }
+    }
+
     func saveProfile(iosUserID: String, profile: TesterProfile) async throws -> ProfileSaveResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("profile")

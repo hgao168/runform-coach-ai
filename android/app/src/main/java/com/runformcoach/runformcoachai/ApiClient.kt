@@ -37,4 +37,10 @@ interface RunFormApi {
     /** Submit user feedback rating for an analysis. RF-203 */
     @POST("feedback")
     suspend fun submitFeedback(@Body request: FeedbackRequest): FeedbackResponse
+
+    // ── Weekly Trends (RF-912) ─────────────────────────────────────────────────
+
+    /** Fetch 4-week training trend data for the weekly insight report. */
+    @GET("sessions/trends")
+    suspend fun fetchWeeklyTrends(): WeeklyTrendsResponse
 }

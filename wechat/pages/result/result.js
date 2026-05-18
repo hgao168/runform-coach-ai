@@ -294,42 +294,120 @@ Page({
    * WeChat custom share card.
    * Called when user taps the share button (open-type="share") or
    * the native share menu in the top-right corner.
+   *
+   * RF-941: Dynamic share title with form metrics.
+   * Template: "我步频 X SPM，跑姿评分 X 分，来测测你的？"
    */
   onShareAppMessage() {
-    const { confidencePct, overallAssessment, analysisId } = this.data
+    const { confidencePct, overallAssessment, analysisId, metrics } = this.data
     const lang = isZh
 
-    // Build share title from analysis summary
-    let title = lang
-      ? `RunForm 跑步姿态分析 — ${confidencePct}%`
-      : `RunForm Run Analysis — ${confidencePct}%`
+    // RF-941: Build dynamic share title based on available metrics
+    const cadenceMetric = metrics.find((m) =>
+      m.label.toLowerCase().includes('cadence') || m.label.includes('步频')
+    )
+    const cadence = cadenceMetric ? cadenceMetric.pct : null
+    const score = confidencePct
 
-    if (overallAssessment) {
-      const short = overallAssessment.length > 40
-        ? overallAssessment.slice(0, 40) + '...'
-        : overallAssessment
-      title = lang
-        ? `🏃 RunForm分析: ${short}`
-        : `🏃 RunForm: ${short}`
+    // Determine share scenario for template selection
+    const scenario = this._detectShareScenario()
+
+    let title = ''
+    if (lang) {
+      // Chinese — three scenario templates
+      switch (scenario) {
+        case 'analysis':
+          title = cadence
+            ? `🏃 我步频 ${cadence} SPM，跑姿评分 ${score} 分，来测测你的？`
+            : `🏃 我的跑姿评分 ${score} 分，AI 分析了我的跑步姿态，来测测你的？`
+          break
+        case 'weekly':
+          title = cadence
+            ? `📊 本周跑姿数据：步频 ${cadence} SPM，综合 ${score} 分。你的数据如何？`
+            : `📊 本周跑姿报告：综合评分 ${score} 分。来看看你的数据？`
+          break
+        case 'kipchoge':
+          title = cadence
+            ? `⚡ 我的步频 ${cadence} SPM，Kipchoge 是 180 SPM。来对比你的跑姿？`
+            : `⚡ 我的跑姿 vs Kipchoge：评分 ${score} 分。你也来对比一下？`
+          break
+        default:
+          title = cadence
+            ? `🏃 RunForm：步频 ${cadence} SPM，跑姿评分 ${score} 分`
+            : `🏃 RunForm 跑步姿态分析 — ${score}%`
+      }
+    } else {
+      // English — three scenario templates
+      switch (scenario) {
+        case 'analysis':
+          title = cadence
+            ? `🏃 My cadence: ${cadence} SPM, form score: ${score}%. Test yours?`
+            : `🏃 My running form scored ${score}% — AI analyzed my gait. Test yours?`
+          break
+        case 'weekly':
+          title = cadence
+            ? `📊 Weekly run report: cadence ${cadence} SPM, overall ${score}%. How's yours?`
+            : `📊 Weekly running report: overall score ${score}%. See your data?`
+          break
+        case 'kipchoge':
+          title = cadence
+            ? `⚡ My cadence ${cadence} SPM vs Kipchoge 180 SPM. Compare yours?`
+            : `⚡ My form vs Kipchoge: scored ${score}%. Compare your run?`
+          break
+        default:
+          title = cadence
+            ? `🏃 RunForm: cadence ${cadence} SPM, form score ${score}%`
+            : `🏃 RunForm Run Analysis — ${score}%`
+      }
     }
 
     const path = `/pages/result/result?analysis_id=${encodeURIComponent(analysisId)}`
 
+    // RF-941: Use custom share image if available, else default
+    const imageUrl = this._shareImagePath || ''
+
     return {
       title,
       path,
-      imageUrl: '', // Uses default screenshot
+      imageUrl,
     }
   },
 
-  // ──────────── RF-304: Canvas share image (optional) ────────────
+  /**
+   * RF-941: Detect the share scenario to pick the right template.
+   * - 'analysis':  just completed an analysis (confidence > 0)
+   * - 'weekly':    viewing historical / weekly report
+   * - 'kipchoge':  coming from compare page (Kipchoge comparison)
+   */
+  _detectShareScenario() {
+    // Check if user came from compare page (Kipchoge scenario)
+    const pages = getCurrentPages()
+    if (pages.length >= 2) {
+      const prevRoute = pages[pages.length - 2].route || ''
+      if (prevRoute.includes('compare')) {
+        return 'kipchoge'
+      }
+    }
+
+    // Check if this is a weekly report (analysisId suggests historical)
+    const { analysisId } = this.data
+    if (analysisId && analysisId.startsWith('weekly_')) {
+      return 'weekly'
+    }
+
+    // Default: fresh analysis
+    return 'analysis'
+  },
+
+  // ──────────── RF-941: Enhanced Canvas share image ────────────
 
   /**
    * Generate a share image using Canvas.
+   * RF-941: Enhanced version with avatar, key metrics, and mini-program QR code placeholder.
    * Call this before sharing to attach a custom image.
    */
   generateShareImage() {
-    const { confidencePct, overallAssessment, metrics } = this.data
+    const { confidencePct, overallAssessment, metrics, insights } = this.data
     const query = wx.createSelectorQuery()
     query.select('#shareCanvas')
       .fields({ node: true, size: true })
@@ -341,55 +419,185 @@ Page({
         const canvas = res[0].node
         const ctx = canvas.getContext('2d')
         const dpr = wx.getSystemInfoSync().pixelRatio
-        const w = 300
-        const h = 400
+        const w = 375  // Standard share card width
+        const h = 500  // Taller for more content
         canvas.width = w * dpr
         canvas.height = h * dpr
         ctx.scale(dpr, dpr)
 
-        // Background
-        ctx.fillStyle = '#0a0a0f'
+        // ── Background ──
+        // Dark gradient background
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h)
+        bgGrad.addColorStop(0, '#0a0a0f')
+        bgGrad.addColorStop(0.5, '#12121a')
+        bgGrad.addColorStop(1, '#0a0a0f')
+        ctx.fillStyle = bgGrad
         ctx.fillRect(0, 0, w, h)
 
-        // Card background
-        ctx.fillStyle = 'rgba(0,245,160,0.1)'
+        // Accent band at top
+        ctx.fillStyle = '#00f5a0'
+        ctx.fillRect(0, 0, w, 4)
+
+        let y = 32
+
+        // ── Avatar placeholder (circle) + app name ──
+        ctx.fillStyle = '#00f5a0'
         ctx.beginPath()
-        ctx.roundRect(16, 16, w - 32, h - 32, 16)
+        ctx.arc(32, y + 18, 16, 0, Math.PI * 2)
         ctx.fill()
 
-        // Title
+        ctx.fillStyle = '#0a0a0f'
+        ctx.font = 'bold 10px -apple-system, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText('🏃', 32, y + 22)
+
+        ctx.textAlign = 'left'
         ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 20px -apple-system, sans-serif'
-        ctx.fillText('RunForm Coach AI', 32, 56)
+        ctx.font = 'bold 16px -apple-system, sans-serif'
+        ctx.fillText(isZh ? 'RunForm 跑步教练' : 'RunForm Coach AI', 56, y + 14)
 
-        // Score
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'
+        ctx.font = '11px -apple-system, sans-serif'
+        ctx.fillText(isZh ? 'AI 跑姿分析' : 'AI Run Analysis', 56, y + 32)
+
+        y += 58
+
+        // ── Divider ──
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(24, y)
+        ctx.lineTo(w - 24, y)
+        ctx.stroke()
+
+        y += 20
+
+        // ── Score card ──
+        // Score background
+        ctx.fillStyle = 'rgba(0,245,160,0.08)'
+        ctx.beginPath()
+        ctx.roundRect(24, y, w - 48, 100, 12)
+        ctx.fill()
+
+        // Score number
         ctx.fillStyle = '#00f5a0'
-        ctx.font = 'bold 64px -apple-system, sans-serif'
-        ctx.fillText(`${confidencePct}%`, 32, 140)
+        ctx.font = 'bold 56px -apple-system, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText(`${confidencePct}`, w / 2, y + 56)
 
-        // Summary
-        ctx.fillStyle = 'rgba(255,255,255,0.8)'
-        ctx.font = '14px -apple-system, sans-serif'
-        const lines = this._wrapText(ctx, overallAssessment, w - 64)
-        lines.forEach((line, i) => {
-          ctx.fillText(line, 32, 176 + i * 22)
-        })
+        ctx.fillStyle = 'rgba(255,255,255,0.6)'
+        ctx.font = '13px -apple-system, sans-serif'
+        ctx.fillText(isZh ? '跑姿评分' : 'FORM SCORE', w / 2, y + 82)
 
-        // Metrics
-        let y = 176 + lines.length * 22 + 24
-        ctx.fillStyle = 'rgba(255,255,255,0.5)'
+        y += 120
+
+        // ── Key metrics in a row ──
+        const keyMetrics = metrics.slice(0, 4)
+        if (keyMetrics.length > 0) {
+          ctx.textAlign = 'left'
+          const colW = (w - 48) / Math.min(keyMetrics.length, 4)
+          keyMetrics.forEach((m, i) => {
+            const cx = 24 + i * colW + colW / 2
+            const pct = m.pct
+
+            // Small circle progress
+            const radius = 16
+            // Background circle
+            ctx.beginPath()
+            ctx.arc(cx, y + 20, radius, 0, Math.PI * 2)
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)'
+            ctx.lineWidth = 3
+            ctx.stroke()
+
+            // Progress arc
+            ctx.beginPath()
+            const startAngle = -Math.PI / 2
+            const endAngle = startAngle + (Math.PI * 2 * pct) / 100
+            ctx.arc(cx, y + 20, radius, startAngle, endAngle)
+            ctx.strokeStyle = m.color || '#00f5a0'
+            ctx.lineWidth = 3
+            ctx.stroke()
+
+            // Label
+            ctx.fillStyle = 'rgba(255,255,255,0.7)'
+            ctx.font = '10px -apple-system, sans-serif'
+            ctx.textAlign = 'center'
+            const shortLabel = m.label.length > 8 ? m.label.slice(0, 7) + '…' : m.label
+            ctx.fillText(shortLabel, cx, y + 52)
+
+            // Value
+            ctx.fillStyle = '#ffffff'
+            ctx.font = 'bold 12px -apple-system, sans-serif'
+            ctx.fillText(m.valueText, cx, y + 68)
+          })
+          y += 82
+        }
+
+        // ── Top insight ──
+        if (insights && insights.length > 0) {
+          const topInsight = insights[0]
+          ctx.textAlign = 'left'
+          ctx.fillStyle = 'rgba(255,255,255,0.4)'
+          ctx.font = '11px -apple-system, sans-serif'
+          ctx.fillText(isZh ? '关键发现' : 'KEY FINDING', 24, y + 14)
+
+          ctx.fillStyle = '#ffffff'
+          ctx.font = '13px -apple-system, sans-serif'
+          const insightText = topInsight.title.length > 36
+            ? topInsight.title.slice(0, 36) + '...'
+            : topInsight.title
+          ctx.fillText(insightText, 24, y + 34)
+          y += 50
+        } else if (overallAssessment) {
+          ctx.textAlign = 'left'
+          ctx.fillStyle = 'rgba(255,255,255,0.4)'
+          ctx.font = '11px -apple-system, sans-serif'
+          ctx.fillText(isZh ? '综合评估' : 'ASSESSMENT', 24, y + 14)
+
+          ctx.fillStyle = '#ffffff'
+          ctx.font = '13px -apple-system, sans-serif'
+          const short = overallAssessment.length > 40
+            ? overallAssessment.slice(0, 40) + '...'
+            : overallAssessment
+          ctx.fillText(short, 24, y + 34)
+          y += 50
+        }
+
+        // ── Divider ──
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+        ctx.beginPath()
+        ctx.moveTo(24, y)
+        ctx.lineTo(w - 24, y)
+        ctx.stroke()
+        y += 16
+
+        // ── Footer: CTA + QR code placeholder ──
+        ctx.textAlign = 'left'
+        ctx.fillStyle = 'rgba(255,255,255,0.6)'
         ctx.font = '12px -apple-system, sans-serif'
-        metrics.slice(0, 4).forEach((m) => {
-          ctx.fillText(`${m.label}: ${m.valueText}`, 32, y)
-          y += 20
-        })
+        ctx.fillText(isZh ? '扫码测测你的跑姿 →' : 'Scan to analyze your form →', 24, y + 14)
 
-        // Footer
-        ctx.fillStyle = 'rgba(255,255,255,0.3)'
+        // Mini-program QR code placeholder (right side)
+        ctx.textAlign = 'right'
+        ctx.fillStyle = 'rgba(0,245,160,0.15)'
+        ctx.fillRect(w - 56, y - 4, 40, 40)
+        ctx.fillStyle = 'rgba(0,245,160,0.5)'
         ctx.font = '10px -apple-system, sans-serif'
-        ctx.fillText('Powered by RunForm Coach AI', 32, h - 24)
+        ctx.fillText('QR', w - 36, y + 20)
 
-        // Export
+        y += 56
+
+        // ── Bottom branding ──
+        ctx.textAlign = 'center'
+        ctx.fillStyle = 'rgba(255,255,255,0.2)'
+        ctx.font = '9px -apple-system, sans-serif'
+        ctx.fillText(
+          isZh ? 'Powered by RunForm · movenova.ai' : 'Powered by RunForm · movenova.ai',
+          w / 2,
+          y + 10
+        )
+
+        // ── Export ──
         wx.canvasToTempFilePath({
           canvas,
           success: (tempRes) => {

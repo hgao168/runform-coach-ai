@@ -1,23 +1,25 @@
 package com.runformcoach.runformcoachai
 
 import android.app.Application
-import com.google.firebase.FirebaseApp
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.HiltAndroidApp
 
+/**
+ * RF-215 / RF-921: Application entry point with cold-start optimization.
+ *
+ * Firebase initialization is deferred to [StartupOptimizer]'s IdleHandler
+ * so the first frame renders before Firebase blocks the main thread.
+ */
 @HiltAndroidApp
 class RunFormApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // RF-215: Initialise Firebase
-        FirebaseApp.initializeApp(this)
-
-        // RF-215: Global uncaught exception → Crashlytics non-fatal
-        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
-        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            FirebaseCrashlytics.getInstance().recordException(throwable)
-            defaultHandler?.uncaughtException(thread, throwable)
+        // RF-921: Profile-aware, traced, deferred-init cold start
+        StartupOptimizer.installTraceSections()
+        StartupOptimizer.onApplicationCreate(this) {
+            // Critical-path initialization (Hilt injects dependencies here)
+            // Room DB is initialized by Hilt when first injected.
+            // No Firebase/analytics here — deferred to IdleHandler.
         }
     }
 }

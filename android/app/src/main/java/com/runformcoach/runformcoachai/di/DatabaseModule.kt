@@ -2,6 +2,7 @@ package com.runformcoach.runformcoachai.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import com.runformcoach.runformcoachai.data.AnalysisDao
 import com.runformcoach.runformcoachai.data.FeedbackDao
 import com.runformcoach.runformcoachai.data.PlanDao
@@ -26,6 +27,10 @@ object DatabaseModule {
             RunFormDatabase::class.java,
             "runform.db"
         )
+            // RF-921: Enable WAL mode for concurrent reads during cold start.
+            // WAL allows reads to proceed while writes are in-flight,
+            // reducing UI jank during DB-heavy operations.
+            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
             .fallbackToDestructiveMigration() // acceptable for v1→v2; remove for v3+
             .build()
     }
