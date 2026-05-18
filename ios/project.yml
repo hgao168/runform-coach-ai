@@ -19,6 +19,11 @@ configs:
   Release:
     type: release
 
+packages:
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
+    from: "11.0.0"
+
 targets:
   RunFormCoachAI:
     type: application
@@ -51,6 +56,7 @@ targets:
           SWIFT_OPTIMIZATION_LEVEL: "-O"
     dependencies:
       - target: RunFormCoachAI
+      - package: GoogleMobileAds
     preBuildScripts:
       - name: SwiftLint
         script: |

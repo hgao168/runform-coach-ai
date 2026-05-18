@@ -27,5 +27,7 @@
     <string>Sync your running workouts, cadence, heart rate, and distance data with Apple Health.</string>
     <key>NSHealthUpdateUsageDescription</key>
     <string>Save your completed runs and running form metrics to Apple Health for a complete picture of your fitness.</string>
+    <key>GADApplicationIdentifier</key>
+    <string>ca-app-pub-3940256099942544~1458002511</string>
 </dict>
 </plist>
