@@ -36,6 +36,7 @@ const strings = {
     resultTitle: '分析结果',
     confidence: '置信度',
     metrics: '动作评估',
+    insightsTitle: '姿态分析',
     strengthFocus: '强化重点',
     explanation: '说明',
     watchTutorial: '搜索训练视频',
@@ -168,6 +169,17 @@ const strings = {
     shareResult: '分享结果',
     shareTapHint: '请点击右上角分享',
 
+    // RF-913: Save share image
+    saveToAlbum: '保存到相册',
+
+    // RF-963: Rewarded video ad
+    adWatchTitle: '观看广告支持我们',
+    adWatchDesc: '观看一段短视频广告，帮助我们持续优化教练服务 🙏',
+    adWatchButton: '观看广告',
+
+    // Feedback submitting state
+    feedbackSubmitting: '提交中...',
+
     // RF-305: Voice Coach
     voiceCoach: '语音教练',
     voiceCoachPlay: '播放语音播报',
@@ -209,6 +221,7 @@ const strings = {
     resultTitle: 'Analysis Result',
     confidence: 'Confidence',
     metrics: 'Form Metrics',
+    insightsTitle: 'Posture Analysis',
     strengthFocus: 'Strength Focus',
     explanation: 'Explanation',
     watchTutorial: 'Search Exercise Video',
@@ -324,6 +337,17 @@ const strings = {
     // Share
     shareResult: 'Share Result',
     shareTapHint: 'Tap top-right to share',
+
+    // RF-913: Save share image
+    saveToAlbum: 'Save to Album',
+
+    // RF-963: Rewarded video ad
+    adWatchTitle: 'Watch ad to support us',
+    adWatchDesc: 'Watch a short video ad to help us improve coaching 🙏',
+    adWatchButton: 'Watch Ad',
+
+    // Feedback submitting state
+    feedbackSubmitting: 'Submitting...',
 
     // RF-305: Voice Coach
     voiceCoach: 'Voice Coach',

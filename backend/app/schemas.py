@@ -406,3 +406,36 @@ class SessionCompareResponse(BaseModel):
     session_a: RunSessionResponse
     session_b: RunSessionResponse
     comparisons: List[SessionMetricPair]
+
+
+# ── Weekly Insight schemas ─────────────────────────────────────────────────
+
+class WeeklyInsightMetric(BaseModel):
+    """Week-over-week change for a single metric."""
+    metric: str                          # e.g. 'avg_cadence', 'avg_oscillation', 'avg_gct', 'distance', 'session_count'
+    label: str                           # human-readable label
+    current_week_avg: Optional[float] = None
+    previous_week_avg: Optional[float] = None
+    delta: Optional[float] = None        # absolute change
+    delta_pct: Optional[float] = None    # percentage change
+    trend: str = 'stable'                # 'improving' | 'declining' | 'stable'
+
+
+class WeeklyInsightBadge(BaseModel):
+    """Achievement badge earned this week."""
+    id: str                              # e.g. 'consistency_streak', 'cadence_milestone'
+    name: str
+    description: str
+    icon: str = ''                       # emoji or icon name
+
+
+class WeeklyInsightResponse(BaseModel):
+    """Aggregated weekly insight for the iOS/Android weekly report screen."""
+    ios_user_id: str
+    week_start: str                      # ISO date of the current week's Monday
+    week_end: str                        # ISO date of the current week's Sunday
+    current_week_session_count: int
+    previous_week_session_count: int
+    metrics: List[WeeklyInsightMetric]   # cadence, oscillation, gct, distance, sessions
+    ai_coach_advice: str                 # AI-generated coaching narrative
+    badges: List[WeeklyInsightBadge] = []

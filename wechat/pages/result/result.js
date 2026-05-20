@@ -11,17 +11,23 @@ Page({
     i: {
       confidence: t('confidence'),
       metrics: t('metrics'),
+      insightsTitle: t('insightsTitle'),
       strengthFocus: t('strengthFocus'),
       noIssues: t('noIssues'),
       compareWithElite: t('compareWithElite'),
       tutorialCopied: t('tutorialCopied'),
       shareResult: t('shareResult'),
+      saveToAlbum: t('saveToAlbum'),
+      adWatchTitle: t('adWatchTitle'),
+      adWatchDesc: t('adWatchDesc'),
+      adWatchButton: t('adWatchButton'),
       feedbackTitle: t('feedbackTitle'),
       feedbackSubtitle: t('feedbackSubtitle'),
       feedbackPlaceholder: t('feedbackPlaceholder'),
       feedbackSubmit: t('feedbackSubmit'),
       feedbackSubmitted: t('feedbackSubmitted'),
       feedbackSavedOffline: t('feedbackSavedOffline'),
+      feedbackSubmitting: t('feedbackSubmitting'),
     },
 
     confidenceDisplay: '–',
@@ -464,8 +470,17 @@ Page({
    */
   _initRewardedAd() {
     try {
-      // Test adUnitId for development — replace with real ID in production
-      const adUnitId = 'adunit-xxxxxxxxxxxxxxxx' // TODO: replace with real ad unit ID
+      // TODO(C7-FIXED): Replace with real rewarded video ad unit ID from
+      // 微信公众平台 → 流量主 → 广告管理 → 激励视频广告位.
+      const adUnitId = '' // intentionally empty — set to real ID before enabling
+
+      // Guard: don't instantiate the ad component until a real ID is set
+      if (!adUnitId) {
+        console.warn('[result] Rewarded adUnitId not configured — ad disabled')
+        this.setData({ rewardedAdAvailable: false })
+        return
+      }
+
       this._rewardedAd = wx.createRewardedVideoAd({ adUnitId })
 
       this._rewardedAd.onLoad(() => {

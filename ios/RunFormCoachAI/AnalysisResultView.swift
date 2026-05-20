@@ -14,7 +14,11 @@ struct AnalysisResultView: View {
             metricsSection
             issuesSection
 
+#if DEBUG
             AdBannerView(adUnitID: AdBannerView.testAdUnitID)
+#else
+            AdBannerView(adUnitID: AdBannerView.productionAdUnitID)
+#endif
                 .frame(height: 50)
         }
         .sheet(isPresented: $showCompare) {

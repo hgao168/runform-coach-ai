@@ -40,6 +40,9 @@ from .schemas import (
     StravaSyncResponse,
     TrainingPlanInput,
     TrainingPlanResponse,
+    WeeklyInsightBadge,
+    WeeklyInsightMetric,
+    WeeklyInsightResponse,
 )
 from .strava_sync import sync_strava_runs_for_user
 from .strava_summary import build_strava_summary
@@ -502,6 +505,171 @@ def delete_session(session_id: int, ios_user_id: str = Query(..., min_length=3))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to delete session: {exc}") from exc
 
+
+# ── Weekly Insight ────────────────────────────────────────────────────────
+
+@app.get("/api/v1/weekly-insight", response_model=WeeklyInsightResponse)
+def weekly_insight(ios_user_id: str = Query(..., min_length=3)) -> WeeklyInsightResponse:
+    """Return this-week vs last-week comparison, AI coach advice, and badges.
+
+    Compatible with iOS RF-911 and Android RF-912 WeeklyInsight screens.
+    Aggregates session metrics over the current and previous calendar week
+    (Monday–Sunday) and derives trends plus a coaching narrative.
+    """
+    from datetime import datetime, timedelta, timezone as _tz
+
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, ios_user_id)
+
+            # Determine current calendar week (Monday–Sunday)
+            now = datetime.now(tz=_tz.utc)
+            monday = now - timedelta(days=now.weekday())
+            monday = monday.replace(hour=0, minute=0, second=0, microsecond=0)
+            sunday = monday + timedelta(days=6, hours=23, minutes=59, seconds=59)
+            prev_monday = monday - timedelta(days=7)
+            prev_sunday = monday - timedelta(seconds=1)
+
+            # Fetch all sessions from the last 30 days (covers both weeks generously)
+            cutoff = prev_monday - timedelta(days=7)
+            all_rows = session.execute(
+                select(RunSession)
+                .where(
+                    RunSession.user_id == user.id,
+                    RunSession.start_time >= cutoff,
+                )
+                .order_by(RunSession.start_time.asc())
+            ).scalars().all()
+
+        # Split into this-week and last-week
+        this_week = [r for r in all_rows if monday <= r.start_time <= sunday]
+        last_week = [r for r in all_rows if prev_monday <= r.start_time <= prev_sunday]
+
+        def _avg(values, attr):
+            vals = [getattr(v, attr) for v in values if getattr(v, attr) is not None]
+            return round(sum(vals) / len(vals), 2) if vals else None
+
+        def _delta_pct(cur, prev):
+            if cur is not None and prev is not None and prev != 0:
+                return round((cur - prev) / abs(prev) * 100, 1)
+            return None
+
+        def _trend(delta_pct_val, metric_name):
+            if delta_pct_val is None:
+                return 'stable'
+            # For cadence ↑ is improving; for oscillation/GCT ↓ is improving
+            higher_is_better = metric_name in ('avg_cadence', 'distance', 'session_count')
+            if delta_pct_val > 0:
+                return 'improving' if higher_is_better else 'declining'
+            elif delta_pct_val < 0:
+                return 'declining' if higher_is_better else 'improving'
+            return 'stable'
+
+        # Compute this-week and last-week averages
+        tw_cadence = _avg(this_week, 'avg_cadence')
+        tw_osc = _avg(this_week, 'avg_vertical_oscillation')
+        tw_gct = _avg(this_week, 'avg_gct')
+        tw_distance = sum(r.duration_sec or 0 for r in this_week)  # proxy: total seconds
+        tw_sessions = len(this_week)
+
+        lw_cadence = _avg(last_week, 'avg_cadence')
+        lw_osc = _avg(last_week, 'avg_vertical_oscillation')
+        lw_gct = _avg(last_week, 'avg_gct')
+        lw_distance = sum(r.duration_sec or 0 for r in last_week)
+        lw_sessions = len(last_week)
+
+        metrics = [
+            WeeklyInsightMetric(
+                metric='avg_cadence', label='Cadence (spm)',
+                current_week_avg=tw_cadence, previous_week_avg=lw_cadence,
+                delta=round(tw_cadence - lw_cadence, 1) if tw_cadence is not None and lw_cadence is not None else None,
+                delta_pct=_delta_pct(tw_cadence, lw_cadence),
+                trend=_trend(_delta_pct(tw_cadence, lw_cadence), 'avg_cadence'),
+            ),
+            WeeklyInsightMetric(
+                metric='avg_vertical_oscillation', label='Vert. Osc. (cm)',
+                current_week_avg=tw_osc, previous_week_avg=lw_osc,
+                delta=round(tw_osc - lw_osc, 4) if tw_osc is not None and lw_osc is not None else None,
+                delta_pct=_delta_pct(tw_osc, lw_osc),
+                trend=_trend(_delta_pct(tw_osc, lw_osc), 'avg_vertical_oscillation'),
+            ),
+            WeeklyInsightMetric(
+                metric='avg_gct', label='GCT (ms)',
+                current_week_avg=tw_gct, previous_week_avg=lw_gct,
+                delta=round(tw_gct - lw_gct, 4) if tw_gct is not None and lw_gct is not None else None,
+                delta_pct=_delta_pct(tw_gct, lw_gct),
+                trend=_trend(_delta_pct(tw_gct, lw_gct), 'avg_gct'),
+            ),
+            WeeklyInsightMetric(
+                metric='session_count', label='Sessions',
+                current_week_avg=float(tw_sessions), previous_week_avg=float(lw_sessions),
+                delta=float(tw_sessions - lw_sessions),
+                delta_pct=_delta_pct(float(tw_sessions), float(lw_sessions)),
+                trend=_trend(_delta_pct(float(tw_sessions), float(lw_sessions)) if lw_sessions else None, 'session_count'),
+            ),
+        ]
+
+        # AI coach advice — rule-based narrative from trends
+        improving = [m for m in metrics if m.trend == 'improving']
+        declining = [m for m in metrics if m.trend == 'declining']
+
+        if not this_week:
+            advice = "No sessions recorded this week. Get out there and log your first run to see your weekly insights!"
+        elif not last_week:
+            advice = "This is your first week with RunForm — great start! Keep logging sessions to unlock trend comparisons next week."
+        elif improving and not declining:
+            labels = ', '.join(m.label for m in improving)
+            advice = f"Great progress this week! Your {labels} show clear improvement. Keep up the consistent training."
+        elif declining and not improving:
+            labels = ', '.join(m.label for m in declining)
+            advice = f"Your {labels} have dipped this week. Consider adding an extra recovery day or checking your running form. Consistency beats intensity."
+        elif improving and declining:
+            up_labels = ', '.join(m.label for m in improving)
+            down_labels = ', '.join(m.label for m in declining)
+            advice = f"Mixed trends: {up_labels} are improving, but {down_labels} need attention. Focus on form drills and stay consistent with your weekly volume."
+        else:
+            advice = "Steady week! All metrics are holding stable. Stay consistent with your training and consider adding one quality session."
+
+        # Badges — simple rule-based awards
+        badges = []
+        if tw_sessions >= 3:
+            badges.append(WeeklyInsightBadge(
+                id='consistency_3', name='Consistency Star', icon='⭐',
+                description='Logged 3+ sessions this week',
+            ))
+        if tw_sessions >= 5:
+            badges.append(WeeklyInsightBadge(
+                id='consistency_5', name='Dedicated Runner', icon='🏃',
+                description='Logged 5+ sessions this week',
+            ))
+        if tw_cadence and tw_cadence >= 170:
+            badges.append(WeeklyInsightBadge(
+                id='cadence_170', name='High Cadence', icon='⚡',
+                description=f'Average cadence {tw_cadence:.0f} spm — elite territory!',
+            ))
+        if lw_sessions == 0 and tw_sessions >= 1:
+            badges.append(WeeklyInsightBadge(
+                id='first_week', name='First Week', icon='🎉',
+                description='Welcome to RunForm! Your first tracked week.',
+            ))
+
+        return WeeklyInsightResponse(
+            ios_user_id=ios_user_id,
+            week_start=monday.date().isoformat(),
+            week_end=sunday.date().isoformat(),
+            current_week_session_count=tw_sessions,
+            previous_week_session_count=lw_sessions,
+            metrics=metrics,
+            ai_coach_advice=advice,
+            badges=badges,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to compute weekly insight: {exc}") from exc
+
+
+# ── Strava Integration ─────────────────────────────────────────────────────
 
 @app.get("/integrations/strava/connect", response_model=StravaConnectResponse)
 @_strava_endpoint("Failed to create Strava connect URL")

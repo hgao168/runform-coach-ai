@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -89,7 +90,7 @@ fun WeeklyInsightScreen(
                         CircularProgressIndicator(color = AppColors.Mint)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "Loading your weekly insights...",
+                            stringResource(R.string.weekly_insights_loading),
                             color = AppColors.TextSecondary,
                             fontSize = 14.sp
                         )
@@ -104,7 +105,7 @@ fun WeeklyInsightScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            "⚠️ Could not load trends",
+                            stringResource(R.string.weekly_insights_error_title),
                             color = AppColors.Orange,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
@@ -119,7 +120,7 @@ fun WeeklyInsightScreen(
                         Spacer(Modifier.height(16.dp))
                         // Retry button styled as a text link
                         Text(
-                            "Tap to retry →",
+                            stringResource(R.string.weekly_insights_retry),
                             color = AppColors.Mint,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
@@ -133,7 +134,7 @@ fun WeeklyInsightScreen(
                 val data = s.data
 
                 // ── 1. This Week vs Last Week comparisons ───────────────────────
-                SectionTitle("Week-over-Week Comparison")
+                SectionTitle(stringResource(R.string.weekly_insights_week_over_week))
 
                 // Cadence card
                 DeltaMetricCard(
@@ -169,7 +170,7 @@ fun WeeklyInsightScreen(
                 )
 
                 // ── 2. Weekly mileage / session stats ──────────────────────────
-                SectionTitle("Weekly Stats")
+                SectionTitle(stringResource(R.string.weekly_insights_stats))
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -195,7 +196,7 @@ fun WeeklyInsightScreen(
 
                 // ── 3. Achievement Badges ──────────────────────────────────────
                 if (data.badges.isNotEmpty()) {
-                    SectionTitle("Badges Earned This Week")
+                    SectionTitle(stringResource(R.string.weekly_insights_badges))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -208,7 +209,7 @@ fun WeeklyInsightScreen(
 
                 // ── 4. AI Coaching Suggestion ──────────────────────────────────
                 data.aiSuggestion?.let { suggestion ->
-                    SectionTitle("AI Coach Says")
+                    SectionTitle(stringResource(R.string.weekly_insights_ai_coach))
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
                         cornerRadius = 12
@@ -231,7 +232,7 @@ fun WeeklyInsightScreen(
 
                 // ── 5. Weekly Trend Mini-Bars ──────────────────────────────────
                 if (data.weeklyTrends.size >= 2) {
-                    SectionTitle("4-Week Trends")
+                    SectionTitle(stringResource(R.string.weekly_insights_4week_trends))
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         WeeklyTrendMiniBars(data.weeklyTrends)
                     }

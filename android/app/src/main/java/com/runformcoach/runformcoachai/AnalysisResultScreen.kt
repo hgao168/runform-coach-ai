@@ -103,7 +103,7 @@ fun AnalysisResultScreen(
             ) {
                 ConfidenceRing(confidence = result.confidence, modifier = Modifier.size(90.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Overall Score", color = AppColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.overall_score), color = AppColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     Text("${(result.confidence * 100).toInt()}%", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     Text(result.summary, color = AppColors.TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
@@ -120,7 +120,7 @@ fun AnalysisResultScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Video Quality", color = AppColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.video_quality), color = AppColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                         Text("${(qualityScore * 100).toInt()}%", color = qualityBarColor(qualityScore), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
                     MetricBar(progress = qualityScore.toFloat(), color = qualityBarColor(qualityScore))
@@ -133,7 +133,7 @@ fun AnalysisResultScreen(
 
         // ── Movement Metrics ──────────────────────────────────────────────────
         if (result.metrics.isNotEmpty()) {
-            SectionTitle("Movement Metrics")
+            SectionTitle(stringResource(R.string.movement_metrics_title))
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     result.metrics.forEach { metric -> MetricRow(metric) }
@@ -143,7 +143,7 @@ fun AnalysisResultScreen(
 
         // ── Strength Focus ────────────────────────────────────────────────────
         if (result.issues.isNotEmpty()) {
-            SectionTitle("Strength Focus")
+            SectionTitle(stringResource(R.string.strength_focus_title))
             result.issues.forEach { issue ->
                 IssueCard(issue = issue, isChinese = isChinese, context = context)
             }
@@ -166,7 +166,7 @@ fun AnalysisResultScreen(
                 onClick = it,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AppColors.Card, contentColor = AppColors.TextSecondary)
-            ) { Text("Analyze New Video") }
+            ) { Text(stringResource(R.string.analyze_new_video)) }
         }
     }
 }
@@ -185,7 +185,7 @@ private fun FeedbackSection(
     val isSubmitted = submissionState is FeedbackSubmissionState.Submitted ||
             submissionState is FeedbackSubmissionState.SavedOffline
 
-    SectionTitle("Tester Feedback")
+    SectionTitle(stringResource(R.string.tester_feedback))
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Title row
@@ -195,7 +195,7 @@ private fun FeedbackSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Help improve coaching quality",
+                    stringResource(R.string.feedback_subtitle),
                     color = AppColors.TextMuted,
                     fontSize = 12.sp
                 )
@@ -224,7 +224,7 @@ private fun FeedbackSection(
                 enabled = !isSubmitted,
                 placeholder = {
                     Text(
-                        "Optional comment: what was wrong or useful?",
+                        stringResource(R.string.feedback_comment_hint),
                         color = AppColors.TextMuted,
                         fontSize = 13.sp
                     )
@@ -296,7 +296,7 @@ private fun FeedbackSection(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        "Save Feedback",
+                        stringResource(R.string.feedback_save),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
                     )
@@ -407,7 +407,7 @@ private fun IssueCard(issue: Issue, isChinese: Boolean, context: android.content
             }
             Text(issue.explanation, color = AppColors.TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
             if (issue.recommendedExercises.isNotEmpty()) {
-                SectionTitle("Exercises")
+                SectionTitle(stringResource(R.string.exercises))
                 issue.recommendedExercises.forEach { ex ->
                     ExerciseCard(exercise = ex, isChinese = isChinese, context = context)
                 }
@@ -451,10 +451,13 @@ private fun qualityBarColor(score: Double): Color = when {
 // ── AdMob Banner Ad (RF-962) ──────────────────────────────────────────────────
 
 /**
- * Test ad unit ID. Replace with production ad unit ID before release.
+ * Test ad unit ID for debug builds.
+ * TODO: Replace production ad unit ID placeholder before release.
  * See: https://developers.google.com/admob/android/test-ads
  */
-private const val BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
+private const val BANNER_AD_UNIT_ID_TEST = "ca-app-pub-3940256099942544/6300978111"
+// TODO: Replace with production ad unit ID before release
+private const val BANNER_AD_UNIT_ID_PRODUCTION = "ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx"
 
 /**
  * A simple Banner Ad wrapped for Jetpack Compose using AndroidView.
@@ -465,7 +468,7 @@ private fun BannerAdView(modifier: Modifier = Modifier) {
     val adView = remember {
         AdView(LocalContext.current).apply {
             setAdSize(AdSize.BANNER)
-            adUnitId = BANNER_AD_UNIT_ID
+            adUnitId = if (com.runformcoach.runformcoachai.BuildConfig.DEBUG) BANNER_AD_UNIT_ID_TEST else BANNER_AD_UNIT_ID_PRODUCTION
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT

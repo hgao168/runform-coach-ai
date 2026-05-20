@@ -324,4 +324,37 @@
     <string name="dashboard_running">Running</string>
     <string name="dashboard_paused_label">Paused</string>
     <string name="dashboard_stopped_label">Stopped</string>
+
+    <!-- ── Weekly Insights (RF-912) ──────────────────────────────────────── -->
+    <string name="weekly_insights_title">Weekly Insights</string>
+    <string name="weekly_insights_subtitle">Your training trends at a glance</string>
+    <string name="weekly_insights_loading">Loading your weekly insights...</string>
+    <string name="weekly_insights_error_title">⚠️ Could not load trends</string>
+    <string name="weekly_insights_retry">Tap to retry →</string>
+    <string name="weekly_insights_week_over_week">Week-over-Week Comparison</string>
+    <string name="weekly_insights_cadence">Cadence</string>
+    <string name="weekly_insights_spm_unit">SPM</string>
+    <string name="weekly_insights_cadence_desc">Higher cadence reduces overstride risk</string>
+    <string name="weekly_insights_vertical_oscillation">Vertical Oscillation</string>
+    <string name="weekly_insights_cm_unit">cm</string>
+    <string name="weekly_insights_oscillation_desc">Lower oscillation = more efficient stride</string>
+    <string name="weekly_insights_ground_contact_time">Ground Contact Time</string>
+    <string name="weekly_insights_ms_unit">ms</string>
+    <string name="weekly_insights_gct_desc">Shorter GCT = faster turnover</string>
+    <string name="weekly_insights_stats">Weekly Stats</string>
+    <string name="weekly_insights_distance">Distance</string>
+    <string name="weekly_insights_sessions">Sessions</string>
+    <string name="weekly_insights_duration">Duration</string>
+    <string name="weekly_insights_badges">Badges Earned This Week</string>
+    <string name="weekly_insights_ai_coach">AI Coach Says</string>
+    <string name="weekly_insights_4week_trends">4-Week Trends</string>
+    <string name="weekly_insights_improving">Improving</string>
+    <string name="weekly_insights_declining">Declining</string>
+    <string name="weekly_insights_stable">Stable</string>
+    <string name="weekly_insights_last_week">Last week: %1$.1f %2$s</string>
+    <string name="weekly_insights_trend_cadence">Cadence (SPM)</string>
+    <string name="weekly_insights_trend_amplitude">Vert. Osc. (cm)</string>
+    <string name="weekly_insights_trend_gct">GCT (ms)</string>
+    <string name="weekly_insights_trend_distance">Distance (km)</string>
+    <string name="refresh">Refresh</string>
 </resources>

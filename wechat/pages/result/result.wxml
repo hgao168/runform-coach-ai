@@ -27,7 +27,7 @@
 
   <!-- Issues / Insights -->
   <view class="card" wx:if="{{insights.length > 0}}">
-    <text class="section-title">⚠️ 姿态分析</text>
+    <text class="section-title">⚠️ {{i.insightsTitle}}</text>
     <view wx:for="{{insights}}" wx:key="index" class="insight-item">
       <view class="insight-badge" style="background: {{item.color}}20; border-color: {{item.color}}40;">
         <text class="insight-severity" style="color: {{item.color}};">{{item.severityText}}</text>
@@ -100,7 +100,7 @@
       disabled="{{feedbackRating === 0 || feedbackSubmitting}}"
       loading="{{feedbackSubmitting}}"
     >
-      {{feedbackSubmitting ? '提交中...' : i.feedbackSubmit}}
+      {{feedbackSubmitting ? i.feedbackSubmitting : i.feedbackSubmit}}
     </button>
 
     <!-- Offline saved hint -->
@@ -188,7 +188,7 @@
 
     <!-- RF-913: Save share image to album -->
     <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="saveShareToAlbum">
-      🖼️ {{isZh ? '保存到相册' : 'Save to Album'}}
+      🖼️ {{i.saveToAlbum}}
     </button>
   </view>
 
@@ -196,11 +196,11 @@
   <view class="card ad-card" wx:if="{{rewardedAdAvailable}}">
     <view class="ad-header">
       <text class="ad-icon">🎬</text>
-      <text class="ad-title">{{isZh ? '观看广告支持我们' : 'Watch ad to support us'}}</text>
+      <text class="ad-title">{{i.adWatchTitle}}</text>
     </view>
-    <text class="ad-desc">{{isZh ? '观看一段短视频广告，帮助我们持续优化教练服务 🙏' : 'Watch a short video ad to help us improve coaching 🙏'}}</text>
+    <text class="ad-desc">{{i.adWatchDesc}}</text>
     <button class="btn-ad" bindtap="showRewardedAd">
-      ▶️ {{isZh ? '观看广告' : 'Watch Ad'}}
+      ▶️ {{i.adWatchButton}}
     </button>
   </view>
 

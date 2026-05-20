@@ -321,4 +321,37 @@
     <string name="dashboard_running">Bezig</string>
     <string name="dashboard_paused_label">Gepauzeerd</string>
     <string name="dashboard_stopped_label">Gestopt</string>
+
+    <!-- ── Weekly Insights (RF-912) ──────────────────────────────────────── -->
+    <string name="weekly_insights_title">Wekelijkse Inzichten</string>
+    <string name="weekly_insights_subtitle">Jouw trainingstrends in één oogopslag</string>
+    <string name="weekly_insights_loading">Wekelijkse inzichten laden...</string>
+    <string name="weekly_insights_error_title">⚠️ Trends konden niet worden geladen</string>
+    <string name="weekly_insights_retry">Tik om opnieuw te proberen →</string>
+    <string name="weekly_insights_week_over_week">Week-op-week Vergelijking</string>
+    <string name="weekly_insights_cadence">Cadans</string>
+    <string name="weekly_insights_spm_unit">SPM</string>
+    <string name="weekly_insights_cadence_desc">Hogere cadans vermindert het risico op overstap</string>
+    <string name="weekly_insights_vertical_oscillation">Verticale Oscillatie</string>
+    <string name="weekly_insights_cm_unit">cm</string>
+    <string name="weekly_insights_oscillation_desc">Lagere oscillatie = efficiëntere pas</string>
+    <string name="weekly_insights_ground_contact_time">Grondcontacttijd</string>
+    <string name="weekly_insights_ms_unit">ms</string>
+    <string name="weekly_insights_gct_desc">Kortere GCT = snellere omzet</string>
+    <string name="weekly_insights_stats">Wekelijkse Statistieken</string>
+    <string name="weekly_insights_distance">Afstand</string>
+    <string name="weekly_insights_sessions">Sessies</string>
+    <string name="weekly_insights_duration">Duur</string>
+    <string name="weekly_insights_badges">Deze Week Verdiende Badges</string>
+    <string name="weekly_insights_ai_coach">AI Coach Zegt</string>
+    <string name="weekly_insights_4week_trends">4-Weekse Trends</string>
+    <string name="weekly_insights_improving">Verbeterend</string>
+    <string name="weekly_insights_declining">Achteruitgaand</string>
+    <string name="weekly_insights_stable">Stabiel</string>
+    <string name="weekly_insights_last_week">Vorige week: %1$.1f %2$s</string>
+    <string name="weekly_insights_trend_cadence">Cadans (SPM)</string>
+    <string name="weekly_insights_trend_amplitude">Vert. Osc. (cm)</string>
+    <string name="weekly_insights_trend_gct">GCT (ms)</string>
+    <string name="weekly_insights_trend_distance">Afstand (km)</string>
+    <string name="refresh">Vernieuwen</string>
 </resources>

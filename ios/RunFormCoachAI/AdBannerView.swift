@@ -34,9 +34,12 @@ struct AdBannerView: UIViewRepresentable {
     }
 }
 
-// MARK: - Test Ad Unit IDs
+// MARK: - Ad Unit IDs
 
 extension AdBannerView {
     /// Google-provided test banner ad unit ID (safe for development / TestFlight testing).
     static let testAdUnitID = "ca-app-pub-3940256099942544/2934735716"
+
+    /// Production banner ad unit ID — replace with real ID from AdMob dashboard before release.
+    static let productionAdUnitID = "ca-app-pub-XXXXXXXX/XXXXXXXX"
 }

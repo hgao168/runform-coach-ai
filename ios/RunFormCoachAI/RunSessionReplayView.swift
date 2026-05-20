@@ -369,7 +369,7 @@ struct RunSessionReplayView: View {
                         Circle()
                             .fill(Color.red)
                             .frame(width: 8, height: 8)
-                        Text("Coach prompt at \(formattedTime(viewModel.playbackTime))")
+                        Text(String(format: NSLocalizedString("Coach prompt at %@", comment: "Coach prompt timestamp indicator"), formattedTime(viewModel.playbackTime)))
                             .font(.caption.weight(.medium))
                             .foregroundStyle(AppTheme.orange)
                     }
@@ -379,7 +379,7 @@ struct RunSessionReplayView: View {
         }
     }
 
-    private func overviewStat(label: String, value: String, unit: String, icon: String, color: Color) -> some View {
+    private func overviewStat(label: LocalizedStringKey, value: String, unit: String, icon: String, color: Color) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.headline)
@@ -400,7 +400,7 @@ struct RunSessionReplayView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private func overviewStatRow(label: String, value: String, icon: String, color: Color) -> some View {
+    private func overviewStatRow(label: LocalizedStringKey, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.caption.weight(.semibold))
@@ -581,7 +581,7 @@ struct RunSessionReplayView: View {
         )
     }
 
-    private func legendItem(color: Color, label: String) -> some View {
+    private func legendItem(color: Color, label: LocalizedStringKey) -> some View {
         HStack(spacing: 4) {
             Circle().fill(color).frame(width: 8, height: 8)
             Text(label).foregroundStyle(.white.opacity(0.7))
@@ -684,7 +684,7 @@ struct RunSessionReplayView: View {
                         Label(formattedTime(event.timestampSeconds), systemImage: "clock")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.5))
-                        Label("Priority \(event.priority)", systemImage: "flag.fill")
+                        Label(String(format: NSLocalizedString("Priority %lld", comment: "Coach prompt priority level"), event.priority), systemImage: "flag.fill")
                             .font(.caption2)
                             .foregroundStyle(event.priority >= 2 ? AppTheme.orange : .white.opacity(0.5))
                     }

@@ -5,6 +5,58 @@
 
 const { isZh } = require('./i18n')
 
+// ─── QR Code helper ──────────────────────────────────────────────────────
+// WeChat cloud.openapi.wxacode.getUnlimited generates a real mini-program
+// QR code.  This module provides optional dynamic fetching.
+// For static fallback see _drawQRPlaceholder() below.
+async function _tryFetchQRCode() {
+  try {
+    if (typeof wx === 'undefined' || !wx.cloud) return null
+    await wx.cloud.init()
+    const result = await wx.cloud.callFunction({
+      name: 'generateQRCode',
+      data: { page: 'pages/index/index', width: 280 },
+    })
+    if (result && result.result && result.result.buffer) {
+      return `data:image/png;base64,${result.result.buffer}`
+    }
+    // alternative: direct openapi call (requires cloud SDK)
+    const qrRes = await wx.cloud.openapi.wxacode.getUnlimited({
+      page: 'pages/index/index', width: 280,
+    })
+    if (qrRes && qrRes.buffer) {
+      return `data:image/png;base64,${qrRes.buffer.toString('base64')}`
+    }
+    return null
+  } catch (_) {
+    console.warn('[ShareCard] QR code fetch failed — using placeholder', _)
+    return null
+  }
+}
+
+/** Draw a minimal QR-code-style pattern when no real image is available. */
+function _drawQRPlaceholder(ctx, x, y, size) {
+  const cols = 7, rows = cols, cell = Math.floor(size / (cols + 1))
+  const ox = x + Math.floor((size - cell * cols) / 2)
+  const oy = y + Math.floor((size - cell * rows) / 2)
+  ctx.fillStyle = 'rgba(0,245,160,0.45)'
+  // deterministic pattern so the placeholder is consistent
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      // skip centre and corners — typical WeChat QR centre eye
+      if ((c < 2 && r < 2) || (c < 2 && r >= rows - 2) || (c >= cols - 2 && r < 2)) continue
+      if ((r * 7 + c * 3 + c * r) % 3 !== 0) {
+        ctx.fillRect(ox + c * cell, oy + r * cell, cell, cell)
+      }
+    }
+  }
+  // center dot
+  ctx.fillStyle = 'rgba(0,245,160,0.7)'
+  ctx.beginPath()
+  ctx.arc(x + size / 2, y + size / 2, cell * 1.2, 0, Math.PI * 2)
+  ctx.fill()
+}
+
 /**
  * ShareCard — generates a Canvas-based share image and provides save-to-album.
  *
@@ -451,9 +503,9 @@ function drawHistoryScenario(ctx, data) {
   return y
 }
 
-// ─── Footer: QR code placeholder + CTA ───
+// ─── Footer: QR code + CTA ───
 
-function drawFooter(ctx, y) {
+function drawFooter(ctx, y, qrCodeImage) {
   // Divider
   y += 4
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'
@@ -470,19 +522,20 @@ function drawFooter(ctx, y) {
   ctx.font = '12px ' + FONT
   ctx.fillText(isZh ? '扫码测测你的跑姿 →' : 'Scan to analyze your run →', PAD, y + 14)
 
-  // QR code placeholder box
-  ctx.fillStyle = 'rgba(0,245,160,0.12)'
-  roundRect(ctx, W - PAD - 48, y - 4, 48, 48, 6)
-  ctx.fill()
+  // QR code — use real image if available, otherwise draw patterned placeholder
+  const qrX = W - PAD - 48
+  const qrY = y - 4
+  const qrSize = 48
 
-  ctx.textAlign = 'center'
-  ctx.fillStyle = 'rgba(0,245,160,0.5)'
-  ctx.font = 'bold 14px ' + FONT
-  ctx.fillText('QR', W - PAD - 24, y + 8)
-
-  ctx.fillStyle = 'rgba(255,255,255,0.3)'
-  ctx.font = '8px ' + FONT
-  ctx.fillText(isZh ? '扫码体验' : 'SCAN', W - PAD - 24, y + 24)
+  if (qrCodeImage) {
+    try {
+      ctx.drawImage(qrCodeImage, qrX, qrY, qrSize, qrSize)
+    } catch (_) {
+      _drawQRPlaceholder(ctx, qrX, qrY, qrSize)
+    }
+  } else {
+    _drawQRPlaceholder(ctx, qrX, qrY, qrSize)
+  }
 
   y += 56
 
@@ -505,12 +558,15 @@ function drawFooter(ctx, y) {
  * Generate a share card image using Canvas 2D.
  *
  * @param {Object} options
- * @param {string} options.canvasId   - Canvas component ID (e.g. 'shareCanvas')
- * @param {string} options.scenario   - 'analysis' | 'compare' | 'history'
- * @param {Object} options.data       - Data for the card (varies by scenario)
- * @param {Function} options.onSuccess - Called with tempFilePath
- * @param {Function} options.onFail    - Called with error
- * @param {Object} [options.ctx]       - Optional: pass a pre-acquired Canvas context to skip selector query
+ * @param {string} options.canvasId      - Canvas component ID (e.g. 'shareCanvas')
+ * @param {string} options.scenario      - 'analysis' | 'compare' | 'history'
+ * @param {Object} options.data          - Data for the card (varies by scenario)
+ * @param {Function} options.onSuccess   - Called with tempFilePath
+ * @param {Function} options.onFail      - Called with error
+ * @param {Object} [options.ctx]         - Optional: pre-acquired Canvas context
+ * @param {CanvasImageSource} [options.qrCodeImage] - Optional: WeChat Canvas Image object
+ *        for the mini-program QR code.  If omitted, a stylized placeholder is drawn.
+ *        Obtain via cloud.openapi.wxacode.getUnlimited or a static asset in assets/.
  */
 function generate(options) {
   const { canvasId, scenario, data, onSuccess, onFail, pageInstance } = options
@@ -563,7 +619,7 @@ function generate(options) {
         }
 
         // Draw shared footer
-        drawFooter(ctx, contentEndY + 8)
+        drawFooter(ctx, contentEndY + 8, options.qrCodeImage)
 
         // Export to temp file
         wx.canvasToTempFilePath({
@@ -619,4 +675,4 @@ function saveToAlbum(tempFilePath) {
   })
 }
 
-module.exports = { generate, saveToAlbum, W, H }
+module.exports = { generate, saveToAlbum, tryFetchQRCode: _tryFetchQRCode, W, H }

@@ -45,6 +45,7 @@ android {
     buildTypes {
         debug {
             buildConfigField("String", "API_BASE_URL", "\"https://runform-coach-ai-staging.up.railway.app/\"")
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
         }
         release {
             isMinifyEnabled = true
@@ -54,6 +55,8 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("String", "API_BASE_URL", "\"https://api.runformcoach.com/\"")
+            // TODO: Replace with production AdMob App ID before release
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-xxxxxxxxxxxxxxxx~xxxxxxxxxxx"
         }
     }
     compileOptions {

@@ -17,26 +17,11 @@
         "tracking": false
       },
       {
-        "data_type": "Location",
-        "data_use": [
-          {
-            "purpose": "App Functionality",
-            "description": "Optional GPS location data is collected during live coaching sessions to track running route and pace. Users can choose to disable location access."
-          }
-        ],
-        "linked_to_user": false,
-        "tracking": false
-      },
-      {
         "data_type": "Identifiers",
         "data_use": [
           {
             "purpose": "App Functionality",
             "description": "Device identifier and user account ID are used for authentication, session management, and syncing run history across devices."
-          },
-          {
-            "purpose": "Analytics",
-            "description": "Anonymous device identifier used for crash reporting (Firebase Crashlytics) and app analytics to measure feature usage and stability."
           }
         ],
         "linked_to_user": true,

@@ -324,4 +324,37 @@
     <string name="dashboard_running">跑步中</string>
     <string name="dashboard_paused_label">已暂停</string>
     <string name="dashboard_stopped_label">已停止</string>
+
+    <!-- ── Weekly Insights (RF-912) ──────────────────────────────────────── -->
+    <string name="weekly_insights_title">每周洞察</string>
+    <string name="weekly_insights_subtitle">你的训练趋势一览</string>
+    <string name="weekly_insights_loading">正在加载你的每周洞察…</string>
+    <string name="weekly_insights_error_title">⚠️ 无法加载趋势</string>
+    <string name="weekly_insights_retry">点击重试 →</string>
+    <string name="weekly_insights_week_over_week">周环比对比</string>
+    <string name="weekly_insights_cadence">步频</string>
+    <string name="weekly_insights_spm_unit">步/分</string>
+    <string name="weekly_insights_cadence_desc">更高的步频可降低跨步风险</string>
+    <string name="weekly_insights_vertical_oscillation">垂直振幅</string>
+    <string name="weekly_insights_cm_unit">厘米</string>
+    <string name="weekly_insights_oscillation_desc">更低的振幅 = 更高效的步幅</string>
+    <string name="weekly_insights_ground_contact_time">触地时间</string>
+    <string name="weekly_insights_ms_unit">毫秒</string>
+    <string name="weekly_insights_gct_desc">更短的触地时间 = 更快的转换</string>
+    <string name="weekly_insights_stats">每周统计</string>
+    <string name="weekly_insights_distance">距离</string>
+    <string name="weekly_insights_sessions">次数</string>
+    <string name="weekly_insights_duration">时长</string>
+    <string name="weekly_insights_badges">本周获得的徽章</string>
+    <string name="weekly_insights_ai_coach">AI 教练说</string>
+    <string name="weekly_insights_4week_trends">4 周趋势</string>
+    <string name="weekly_insights_improving">改善中</string>
+    <string name="weekly_insights_declining">下降中</string>
+    <string name="weekly_insights_stable">稳定</string>
+    <string name="weekly_insights_last_week">上周：%1$.1f %2$s</string>
+    <string name="weekly_insights_trend_cadence">步频 (步/分)</string>
+    <string name="weekly_insights_trend_amplitude">垂直振幅 (厘米)</string>
+    <string name="weekly_insights_trend_gct">触地时间 (毫秒)</string>
+    <string name="weekly_insights_trend_distance">距离 (公里)</string>
+    <string name="refresh">刷新</string>
 </resources>
