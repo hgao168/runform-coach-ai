@@ -5,9 +5,12 @@ from datetime import datetime, timezone
 from functools import wraps
 from urllib.parse import urlencode
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address, _rate_limit_exceeded_handler
 from sqlalchemy import delete, select
 
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
@@ -29,6 +32,7 @@ from .schemas import (
     RunSessionResponse,
     SessionCompareRequest,
     SessionCompareResponse,
+    SessionMetricPair,
     SessionTrendsResponse,
     StravaCallbackResponse,
     StravaConnectResponse,
@@ -60,6 +64,7 @@ from .strava_oauth import (
 )
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+API_KEY = os.getenv("API_KEY", "")
 
 _PROFILE_FIELDS = [
     "first_name", "last_name", "nickname", "level", "weekly_mileage_km",
@@ -67,6 +72,22 @@ _PROFILE_FIELDS = [
     "gender", "shoe_size", "shoe_brand_model", "leg_length_cm", "date_of_birth",
     "weekly_exercise_hours",
 ]
+
+# ── Rate limiter ──────────────────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address)
+
+
+async def verify_api_key(x_api_key: str | None = Header(None, alias="X-API-Key")) -> str:
+    """Validate API Key from X-API-Key header when API_KEY env var is configured.
+
+    If API_KEY is not set the check is skipped (backward compatibility / dev mode).
+    Otherwise the request must carry a matching X-API-Key header.
+    """
+    if not API_KEY:
+        return ""
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API Key")
+    return x_api_key
 
 
 def _utc_now_iso() -> str:
@@ -126,13 +147,35 @@ def _strava_endpoint(action: str):
 
 app = FastAPI(title="RunForm Coach AI API", version="0.5.0")
 
+# ── CORS ──────────────────────────────────────────────────────────────────
+# Whitelist origins from env; dev includes localhost.  allow_credentials=True
+# so cookie-based auth works for allowed origins, but NEVER with wildcard.
+_ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "https://movenova.ai,https://runformcoach.com",
+).split(",")
+# In development, also allow localhost origins
+if ENVIRONMENT == "development":
+    _ALLOWED_ORIGINS += [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8080",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Rate limiter wiring ───────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.get("/health")
@@ -149,7 +192,7 @@ def health() -> dict:
 
 
 @app.put("/profile", response_model=ProfileSaveResponse)
-def save_profile(payload: ProfileSaveRequest) -> ProfileSaveResponse:
+def save_profile(payload: ProfileSaveRequest, _api_key: str = Depends(verify_api_key)) -> ProfileSaveResponse:
     """Save or update user profile data."""
     try:
         with get_db_session() as session:
@@ -170,7 +213,8 @@ def save_profile(payload: ProfileSaveRequest) -> ProfileSaveResponse:
 
 
 @app.post("/training-plan", response_model=TrainingPlanResponse)
-async def training_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
+@limiter.limit("10/minute")
+async def training_plan(plan_input: TrainingPlanInput, _api_key: str = Depends(verify_api_key)) -> TrainingPlanResponse:
     """Generate a personalised one-week training plan. planned_weekly_km mirrors current_weekly_km."""
     try:
         return generate_plan(plan_input)
@@ -181,7 +225,8 @@ async def training_plan(plan_input: TrainingPlanInput) -> TrainingPlanResponse:
 
 
 @app.post("/analyze-metrics", response_model=AnalysisResponse)
-async def analyze_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
+@limiter.limit("10/minute")
+async def analyze_metrics(pose_input: PoseMetricsInput, _api_key: str = Depends(verify_api_key)) -> AnalysisResponse:
     """Preferred path: iOS extracts pose metrics on-device; backend generates coaching advice."""
     try:
         return analyze_from_metrics(pose_input)
@@ -192,10 +237,12 @@ async def analyze_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
 
 
 @app.post("/analyze", response_model=AnalysisResponse)
+@limiter.limit("10/minute")
 async def analyze(
     video: UploadFile = File(...),
     language: str = Form("en"),
     profile_context: str = Form(""),
+    _api_key: str = Depends(verify_api_key),
 ) -> AnalysisResponse:
     """Legacy fallback: upload raw video for frame-based GPT-4o Vision analysis."""
     if not video.content_type or not video.content_type.startswith("video/"):
@@ -224,7 +271,8 @@ def list_athletes() -> list[AthleteListItem]:
 
 
 @app.post("/compare", response_model=CompareResponse)
-async def compare(request: CompareRequest) -> CompareResponse:
+@limiter.limit("10/minute")
+async def compare(request: CompareRequest, _api_key: str = Depends(verify_api_key)) -> CompareResponse:
     """Compare user running metrics against an elite athlete benchmark."""
     try:
         return compare_with_athlete(request)
@@ -237,7 +285,7 @@ async def compare(request: CompareRequest) -> CompareResponse:
 
 
 @app.post("/api/v1/feedback", response_model=FeedbackSubmitResponse)
-def submit_feedback(payload: FeedbackSubmitRequest) -> FeedbackSubmitResponse:
+def submit_feedback(payload: FeedbackSubmitRequest, _api_key: str = Depends(verify_api_key)) -> FeedbackSubmitResponse:
     """Accept tester feedback on an analysis result for coaching-quality improvement.
 
     Receives a rating (Accurate / Partly accurate / Not accurate / Confusing)
@@ -290,7 +338,7 @@ def _session_to_response(session_row: RunSession, ios_user_id: str | None = None
 
 
 @app.post("/sessions", response_model=RunSessionResponse, status_code=201)
-def create_session(payload: RunSessionCreate) -> RunSessionResponse:
+def create_session(payload: RunSessionCreate, _api_key: str = Depends(verify_api_key)) -> RunSessionResponse:
     """Create a new run session with metrics snapshot."""
     from datetime import datetime as _dt
     from datetime import timezone as _tz
@@ -328,6 +376,7 @@ def list_sessions(
     ios_user_id: str = Query(..., min_length=3),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    _api_key: str = Depends(verify_api_key),
 ) -> list[RunSessionResponse]:
     """List run sessions for a user, paginated, newest first."""
     try:
@@ -352,6 +401,7 @@ def session_trends(
     ios_user_id: str = Query(..., min_length=3),
     metrics: str = Query("cadence,oscillation,gct"),
     limit: int = Query(20, ge=1, le=100),
+    _api_key: str = Depends(verify_api_key),
 ) -> SessionTrendsResponse:
     """Return trend arrays for key metrics across the most recent sessions."""
     try:
@@ -391,7 +441,7 @@ def session_trends(
 
 
 @app.post("/sessions/compare", response_model=SessionCompareResponse)
-def compare_sessions(payload: SessionCompareRequest) -> SessionCompareResponse:
+def compare_sessions(payload: SessionCompareRequest, _api_key: str = Depends(verify_api_key)) -> SessionCompareResponse:
     """Compare two run sessions side-by-side."""
     try:
         with get_db_session() as session:
@@ -464,7 +514,7 @@ def compare_sessions(payload: SessionCompareRequest) -> SessionCompareResponse:
 
 
 @app.get("/sessions/{session_id}", response_model=RunSessionResponse)
-def get_session(session_id: int, ios_user_id: str = Query(..., min_length=3)) -> RunSessionResponse:
+def get_session(session_id: int, ios_user_id: str = Query(..., min_length=3), _api_key: str = Depends(verify_api_key)) -> RunSessionResponse:
     """Get a single run session by ID with full metrics."""
     try:
         with get_db_session() as session:
@@ -485,7 +535,7 @@ def get_session(session_id: int, ios_user_id: str = Query(..., min_length=3)) ->
 
 
 @app.delete("/sessions/{session_id}", status_code=204)
-def delete_session(session_id: int, ios_user_id: str = Query(..., min_length=3)):
+def delete_session(session_id: int, ios_user_id: str = Query(..., min_length=3), _api_key: str = Depends(verify_api_key)):
     """Delete a run session."""
     try:
         with get_db_session() as session:
@@ -509,7 +559,7 @@ def delete_session(session_id: int, ios_user_id: str = Query(..., min_length=3))
 # ── Weekly Insight ────────────────────────────────────────────────────────
 
 @app.get("/api/v1/weekly-insight", response_model=WeeklyInsightResponse)
-def weekly_insight(ios_user_id: str = Query(..., min_length=3)) -> WeeklyInsightResponse:
+def weekly_insight(ios_user_id: str = Query(..., min_length=3), _api_key: str = Depends(verify_api_key)) -> WeeklyInsightResponse:
     """Return this-week vs last-week comparison, AI coach advice, and badges.
 
     Compatible with iOS RF-911 and Android RF-912 WeeklyInsight screens.

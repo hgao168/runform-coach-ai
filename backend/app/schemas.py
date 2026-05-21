@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 
 
@@ -198,7 +198,9 @@ class StravaStatusResponse(BaseModel):
 
 
 class StravaDisconnectRequest(BaseModel):
-    ios_user_id: str
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
 
 
 class StravaDisconnectResponse(BaseModel):
@@ -212,7 +214,9 @@ class StravaDisconnectResponse(BaseModel):
 
 
 class StravaSyncRequest(BaseModel):
-    ios_user_id: str
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
 
 
 class StravaWeeklySummaryItem(BaseModel):
@@ -266,7 +270,13 @@ class StravaCallbackResponse(BaseModel):
 
 
 class ProfileSaveRequest(BaseModel):
-    ios_user_id: str
+    ios_user_id: str = Field(
+        ...,
+        min_length=3,
+        max_length=128,
+        pattern=r'^[a-zA-Z0-9._\-]+$',
+        description="iOS user identifier",
+    )
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     nickname: Optional[str] = None
@@ -293,7 +303,9 @@ class ProfileSaveResponse(BaseModel):
 # Mirrors the iOS AnalysisFeedback / FeedbackRating models
 
 class FeedbackSubmitRequest(BaseModel):
-    ios_user_id: str
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
     analysis_id: str          # UUID of the AnalysisHistoryItem from iOS
     rating: str               # "Accurate" | "Partly accurate" | "Not accurate" | "Confusing"
     comment: str = ""
@@ -355,7 +367,9 @@ class CompareResponse(BaseModel):
 # ── Run Session schemas ─────────────────────────────────────────────────────
 
 class RunSessionCreate(BaseModel):
-    ios_user_id: str
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
     start_time: str  # ISO 8601
     end_time: Optional[str] = None  # ISO 8601
     duration_sec: Optional[float] = None
@@ -388,7 +402,9 @@ class SessionTrendsResponse(BaseModel):
 
 
 class SessionCompareRequest(BaseModel):
-    ios_user_id: str
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
     session_id_a: int
     session_id_b: int
 
