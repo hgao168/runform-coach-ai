@@ -438,6 +438,11 @@ Page({
     wx.navigateTo({ url: '/pages/result/result' })
   },
 
+  // RF-1010: Navigate to weekly insight
+  goInsight() {
+    wx.navigateTo({ url: '/pages/insight/insight' })
+  },
+
   confirmClear() {
     wx.showModal({
       title: t('deleteConfirm'),

@@ -372,4 +372,43 @@
     <string name="compare_selected">Vergelijk Geselecteerde</string>
     <string name="your_analyses">Jouw Analyses</string>
     <string name="select_analysis">Selecteer analyse</string>
+
+    <!-- ── RunSession Replay (RF-1000) ─────────────────────────────────── -->
+    <string name="replay_session_history">Loopsessies</string>
+    <string name="replay_loading_sessions">Sessies laden…</string>
+    <string name="replay_tap_to_retry">Tik om opnieuw te proberen</string>
+    <string name="replay_no_sessions">Nog geen sessies</string>
+    <string name="replay_no_sessions_hint">Voltooi een live run om deze hier te zien</string>
+    <string name="replay_duration_min">%1$d min</string>
+    <string name="replay_distance_km">%1$.2f km</string>
+    <string name="replay_cadence_short">Cadans</string>
+    <string name="replay_amplitude_short">Amplitude</string>
+    <string name="replay_gct_short">GCT</string>
+    <string name="replay_trunk_lean_short">Hoek</string>
+    <string name="replay_prompt_count">%1$d coach aanwijzingen</string>
+    <string name="replay_tap_to_view">Tik voor herhaling →</string>
+    <string name="replay_title">Sessie Herhaling</string>
+    <string name="replay_back_to_list">Terug naar lijst</string>
+    <string name="replay_loading_detail">Sessiedetails laden…</string>
+    <string name="replay_duration_label">Duur</string>
+    <string name="replay_distance_label">Afstand</string>
+    <string name="replay_avg_cadence_label">Gem. Cadans</string>
+    <string name="replay_avg_amplitude_label">Gem. Osc.</string>
+    <string name="replay_min_label">%1$d min</string>
+    <string name="replay_km_label">%1$.2f km</string>
+    <string name="replay_spm_format">%1$.0f spm</string>
+    <string name="replay_cm_format">%1$.1f cm</string>
+    <string name="replay_ms_format">%1$.0f ms</string>
+    <string name="replay_deg_format">%1$.1f°</string>
+    <string name="replay_route_map">Routekaart</string>
+    <string name="replay_start">Start</string>
+    <string name="replay_end">Einde</string>
+    <string name="replay_you_are_here">Jij</string>
+    <string name="replay_timer_format">%1$02d:%2$02d / %3$02d:%4$02d</string>
+    <string name="replay_stop">Stop</string>
+    <string name="replay_pause">Pauze</string>
+    <string name="replay_play">Afspelen</string>
+    <string name="replay_timeline_chart">Tijdlijn</string>
+    <string name="replay_coach_prompts">Coach Aanwijzingen</string>
+    <string name="replay_time_min_sec">%1$d:%2$02d</string>
 </resources>

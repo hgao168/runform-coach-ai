@@ -43,4 +43,16 @@ interface RunFormApi {
     /** Fetch 4-week training trend data for the weekly insight report. */
     @GET("sessions/trends")
     suspend fun fetchWeeklyTrends(): WeeklyTrendsResponse
+
+    // ── RunSession History & Replay (RF-1000) ─────────────────────────────────
+
+    /** Fetch list of historical run sessions. */
+    @GET("sessions")
+    suspend fun fetchSessions(): List<RunSessionSummary>
+
+    /** Fetch a single session with full time-series data for replay. */
+    @GET("sessions/{sessionId}")
+    suspend fun fetchSessionDetail(
+        @retrofit2.http.Path("sessionId") sessionId: String
+    ): RunSessionDetail
 }

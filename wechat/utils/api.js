@@ -132,6 +132,15 @@ function submitFeedback(feedback) {
   return request('POST', '/feedback', feedback)
 }
 
+/**
+ * Fetch weekly training insight report.
+ * RF-1010: GET /api/v1/weekly-insight
+ * Returns comparison, trend, ai_advice, badges.
+ */
+function getWeeklyInsight() {
+  return request('GET', '/api/v1/weekly-insight')
+}
+
 module.exports = {
   analyzeVideo,
   generatePlan,
@@ -139,4 +148,5 @@ module.exports = {
   compareWithAthlete,
   submitFeedback,
   health,
+  getWeeklyInsight,
 }

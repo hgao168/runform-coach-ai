@@ -181,6 +181,11 @@
   <view class="action-section">
     <button class="btn-secondary full-btn" bindtap="goCompare">{{i.compareWithElite}}</button>
 
+    <!-- RF-1010: Weekly insight entry -->
+    <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" bindtap="goInsight">
+      📊 {{isZh ? '周训练洞察' : 'Weekly Insight'}}
+    </button>
+
     <!-- RF-304: Share button (uses WeChat native share) -->
     <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" open-type="share">
       📤 {{i.shareResult}}

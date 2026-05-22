@@ -85,6 +85,11 @@
 
     <!-- RF-913: Share & Save buttons -->
     <view class="action-section">
+      <!-- RF-1010: Weekly insight entry -->
+      <button class="btn-mint-outline full-btn" style="margin-bottom: 20rpx;" bindtap="goInsight">
+        📊 {{isZh ? '周训练洞察' : 'Weekly Insight'}}
+      </button>
+
       <button class="btn-mint-outline full-btn" style="margin-top: 8rpx;" open-type="share">
         📤 {{isZh ? '分享记录' : 'Share Records'}}
       </button>

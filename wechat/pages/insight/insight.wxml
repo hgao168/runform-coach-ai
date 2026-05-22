@@ -1,0 +1,122 @@
+<!-- pages/insight/insight.wxml -->
+<!-- RF-1010: Weekly Training Insight Report -->
+
+<view class="page-container">
+
+  <!-- ── Loading state ── -->
+  <view wx:if="{{loading}}" class="loading-overlay">
+    <view class="spinner"></view>
+    <text class="loading-text">{{i.loading}}</text>
+  </view>
+
+  <!-- ── Error state ── -->
+  <view wx:elif="{{error}}" class="empty-state">
+    <text class="empty-icon">⚠️</text>
+    <text class="empty-text">{{i.error}}</text>
+    <button class="btn-secondary" style="margin-top: 32rpx; padding: 0 48rpx; height: 88rpx;" bindtap="retry">
+      {{i.retry}}
+    </button>
+  </view>
+
+  <!-- ── Empty / no data state ── -->
+  <view wx:elif="{{!hasData}}" class="empty-state">
+    <text class="empty-icon">📊</text>
+    <text class="empty-text">{{i.noData}}</text>
+    <text class="empty-sub">{{i.noDataSub}}</text>
+  </view>
+
+  <!-- ── Main content ── -->
+  <block wx:else>
+
+    <!-- Page title -->
+    <view class="insight-header">
+      <text class="title">📈 {{i.title}}</text>
+    </view>
+
+    <!-- ──────── Comparison Cards ──────── -->
+    <view class="card" wx:if="{{comparison.length > 0}}">
+      <text class="section-title">{{i.compareTitle}}</text>
+      <view class="compare-grid">
+        <view
+          wx:for="{{comparison}}"
+          wx:key="key"
+          class="compare-item"
+        >
+          <view class="compare-icon">{{item.icon}}</view>
+          <view class="compare-body">
+            <text class="compare-label">{{item.label}}</text>
+            <view class="compare-value-row">
+              <text
+                class="compare-value {{item.changePct > 0 ? 'text-mint' : item.changePct < 0 ? 'text-red' : 'text-dim'}}"
+              >
+                {{item.changePct > 0 ? '+' : ''}}{{item.changePct.toFixed(1)}}%
+              </text>
+              <text class="compare-arrow {{item.changePct > 0 ? 'text-mint' : item.changePct < 0 ? 'text-red' : 'text-dim'}}">
+                {{item.changePct > 0 ? '▲' : item.changePct < 0 ? '▼' : '–'}}
+              </text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ──────── 4-Week Trend Chart ──────── -->
+    <view class="card" wx:if="{{trendHasData}}">
+      <text class="section-title">📉 {{i.trendTitle}}</text>
+
+      <view class="trend-canvas-wrap">
+        <canvas
+          type="2d"
+          id="insightTrendCanvas"
+          class="trend-canvas"
+          bindtouchstart="onChartTap"
+        ></canvas>
+
+        <!-- Tooltip -->
+        <view
+          wx:if="{{trendTooltip}}"
+          class="trend-tooltip"
+          style="left: {{trendTooltip.x}}px; top: {{trendTooltip.y}}px;"
+        >
+          <view class="trend-tooltip-inner" style="border-color: {{trendTooltip.color}};">
+            <text class="trend-tooltip-text">{{trendTooltip.text}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Legend -->
+      <view class="trend-legend-hint">
+        <view wx:for="{{trendDatasets}}" wx:key="label" class="trend-legend-item">
+          <view class="trend-legend-dot" style="background: {{item.color}};"></view>
+          <text class="trend-legend-label">{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ──────── AI Coach Advice ──────── -->
+    <view class="card ai-card" wx:if="{{aiAdvice}}">
+      <text class="section-title">🤖 {{i.aiAdviceTitle}}</text>
+      <view class="ai-advice-body">
+        <text class="ai-advice-text">{{aiAdvice}}</text>
+      </view>
+    </view>
+
+    <!-- ──────── Achievement Badges ──────── -->
+    <view class="card" wx:if="{{badges.length > 0}}">
+      <text class="section-title">🏆 {{i.badgesTitle}}</text>
+      <view class="badges-grid">
+        <view wx:for="{{badges}}" wx:key="name" class="badge-item">
+          <view class="badge-icon-wrap">
+            <text class="badge-icon">{{item.icon}}</text>
+          </view>
+          <view class="badge-body">
+            <text class="badge-name">{{item.name}}</text>
+            <text class="badge-desc">{{item.description}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+  </block>
+
+</view>

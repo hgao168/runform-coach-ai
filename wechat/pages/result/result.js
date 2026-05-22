@@ -292,6 +292,11 @@ Page({
     wx.navigateTo({ url: '/pages/compare/compare' })
   },
 
+  // RF-1010: Navigate to weekly insight
+  goInsight() {
+    wx.navigateTo({ url: '/pages/insight/insight' })
+  },
+
   // ──────────── RF-304: Share ────────────
 
   shareResult() {

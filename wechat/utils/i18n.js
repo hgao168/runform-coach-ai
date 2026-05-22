@@ -180,8 +180,27 @@ const strings = {
     // Feedback submitting state
     feedbackSubmitting: '提交中...',
 
-    // RF-305: Voice Coach
-    voiceCoach: '语音教练',
+   // RF-305: Voice Coach
+   voiceCoach: '语音教练',
+
+    // RF-1010: Weekly Insight
+    insightTitle: '周训练洞察',
+    insightLoading: '加载洞察报告...',
+    insightError: '洞察加载失败',
+    insightRetry: '重试',
+    insightCompareTitle: '本周 vs 上周',
+    insightTrendTitle: '4周趋势',
+    insightAiAdviceTitle: 'AI 教练建议',
+    insightBadgesTitle: '本周成就',
+    insightCadence: '步频',
+    insightOscillation: '垂直振幅',
+    insightGCT: '触地时间',
+    insightDistance: '距离',
+    insightSessions: '训练次数',
+    insightSpacing: '间距',
+    insightNoData: '暂无足够数据生成洞察报告',
+    insightNoDataSub: '完成至少两周的训练记录后\\n每周洞察将在这里显示',
+
     voiceCoachPlay: '播放语音播报',
     voiceCoachStop: '停止播报',
     voiceCoachMute: '静音',
@@ -351,6 +370,25 @@ const strings = {
 
     // RF-305: Voice Coach
     voiceCoach: 'Voice Coach',
+
+    // RF-1010: Weekly Insight
+    insightTitle: 'Weekly Insight',
+    insightLoading: 'Loading insight...',
+    insightError: 'Failed to load insight',
+    insightRetry: 'Retry',
+    insightCompareTitle: 'This Week vs Last Week',
+    insightTrendTitle: '4-Week Trend',
+    insightAiAdviceTitle: 'AI Coach Advice',
+    insightBadgesTitle: 'This Week Achievements',
+    insightCadence: 'Cadence',
+    insightOscillation: 'Vert. Osc.',
+    insightGCT: 'GCT',
+    insightDistance: 'Distance',
+    insightSessions: 'Sessions',
+    insightSpacing: 'Spacing',
+    insightNoData: 'Not enough data for weekly insight',
+    insightNoDataSub: 'Complete at least two weeks of\\ntraining for insights to appear',
+
     voiceCoachPlay: 'Play Voice Feedback',
     voiceCoachStop: 'Stop',
     voiceCoachMute: 'Mute',
