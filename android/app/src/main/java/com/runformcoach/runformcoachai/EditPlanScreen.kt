@@ -647,21 +647,15 @@ private fun EditableWorkoutCard(
     onDelete: () -> Unit
 ) {
     val color = categoryColor(workout.category)
-    val dayLabel = try {
-        stringResource(
-            when (workout.day.lowercase().take(3)) {
-                "mon" -> R.string.day_mon
-                "tue" -> R.string.day_tue
-                "wed" -> R.string.day_wed
-                "thu" -> R.string.day_thu
-                "fri" -> R.string.day_fri
-                "sat" -> R.string.day_sat
-                "sun" -> R.string.day_sun
-                else -> R.string.day_mon
-            }
-        )
-    } catch (_: Exception) {
-        workout.day.take(3)
+    val dayLabel = when (workout.day.lowercase().take(3)) {
+        "mon" -> stringResource(R.string.day_mon)
+        "tue" -> stringResource(R.string.day_tue)
+        "wed" -> stringResource(R.string.day_wed)
+        "thu" -> stringResource(R.string.day_thu)
+        "fri" -> stringResource(R.string.day_fri)
+        "sat" -> stringResource(R.string.day_sat)
+        "sun" -> stringResource(R.string.day_sun)
+        else -> workout.day.take(3)
     }
 
     Row(

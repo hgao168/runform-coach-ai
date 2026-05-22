@@ -127,6 +127,12 @@ class LiveRunningDashboardViewModel @Inject constructor(
     fun pause() = sessionManager.pause()
     fun resume() = sessionManager.resume()
     fun stop() = sessionManager.stop()
+
+    override fun onCleared() {
+        super.onCleared()
+        // Clean up callback to avoid memory leaks from singleton
+        sessionManager.onMetricsUpdate = null
+    }
 }
 
 // ── LiveRunningDashboardScreen ─────────────────────────────────────────────

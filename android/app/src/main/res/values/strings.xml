@@ -217,6 +217,10 @@
     <string name="close">Close</string>
     <string name="couldnt_load_athletes">Couldn\'t Load Athletes</string>
     <string name="comparison_failed">Comparison Failed</string>
+    <string name="retry">Retry</string>
+    <string name="compare_history_desc">Select a past analysis to compare with an elite athlete’s form.</string>
+    <string name="select_analysis_for_compare">Select Analysis</string>
+    <string name="pick_an_athlete">Pick an Athlete</string>
 
     <!-- ── Feedback (RF-203) ─────────────────────────────────────────────── -->
     <string name="tester_feedback">Tester Feedback</string>
@@ -357,4 +361,26 @@
     <string name="weekly_insights_trend_gct">GCT (ms)</string>
     <string name="weekly_insights_trend_distance">Distance (km)</string>
     <string name="refresh">Refresh</string>
+
+    <!-- ── Compare Screen (additional) ────────────────────────────────── -->
+    <string name="compare_go_back">Go Back</string>
+    <string name="status_ahead">Ahead</string>
+    <string name="status_on_par">On Par</string>
+    <string name="status_gap">Gap</string>
+    <string name="vs_label">vs</string>
+    <string name="about_label">About</string>
+    <string name="elite_athletes_tab">Elite Athletes</string>
+    <string name="custom_compare_tab">Custom Compare</string>
+    <string name="select_two_analyses_desc">Select two of your past analyses to see how your form has changed over time.</string>
+    <string name="compare_selected">Compare Selected</string>
+    <string name="your_analyses">Your Analyses</string>
+    <string name="select_analysis">Select analysis</string>
+
+    <!-- ── Live Guidance (RF-209) ──────────────────────────────────────── -->
+    <string name="guidance_close">Too close</string>
+    <string name="guidance_step_back">Step back</string>
+    <string name="guidance_move_closer">Move closer</string>
+    <string name="guidance_ready">Ready!</string>
+    <string name="guidance_in_frame">In frame</string>
+    <string name="guidance_stop_recording">Stop Recording</string>
 </resources>

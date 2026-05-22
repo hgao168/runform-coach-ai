@@ -11,7 +11,6 @@ import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.nio.ByteBuffer
 
 /**
  * Compresses video to 720p at 30fps using Android's MediaCodec API.
@@ -43,6 +42,9 @@ object VideoCompressor {
         val outputFile = File.createTempFile("compressed_", ".mp4", context.cacheDir)
         val extractor = MediaExtractor()
         val muxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        var decoder: MediaCodec? = null
+        var decoder2: MediaCodec? = null
+        var encoder: MediaCodec? = null
 
         try {
             context.contentResolver.openInputStream(inputUri)?.use { inputStream ->
@@ -70,7 +72,7 @@ object VideoCompressor {
 
                 // Configure output format
                 val outputFormat = MediaFormat.createVideoFormat(
-                    MediaFormat.MIME_TYPE_AVC,
+                    "video/avc",
                     outWidth,
                     outHeight
                 ).apply {
@@ -82,17 +84,16 @@ object VideoCompressor {
                 }
 
                 // Decoder
-                val decoder = MediaCodec.createDecoderByType(
-                    inputFormat.getString(MediaFormat.KEY_MIME) ?: MediaFormat.MIME_TYPE_AVC
+                decoder = MediaCodec.createDecoderByType(
+                    inputFormat.getString(MediaFormat.KEY_MIME) ?: "video/avc"
                 )
                 decoder.configure(inputFormat, null, null, 0)
                 decoder.start()
 
                 // Encoder
-                val encoderName = findEncoderForMimeType(MediaFormat.MIME_TYPE_AVC)
-                val encoder = MediaCodec.createByCodecName(encoderName)
+                val encoderName = findEncoderForMimeType("video/avc")
+                encoder = MediaCodec.createByCodecName(encoderName)
                 encoder.configure(outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-                val inputSurface = encoder.createInputSurface()
                 encoder.start()
 
                 extractor.selectTrack(videoTrackIndex)
@@ -106,13 +107,8 @@ object VideoCompressor {
                 decoder.reset()
 
                 // Reconfigure decoder for byte buffer mode
-                val decoderFormat = MediaFormat.createVideoFormat(
-                    inputFormat.getString(MediaFormat.KEY_MIME) ?: MediaFormat.MIME_TYPE_AVC,
-                    originalWidth,
-                    originalHeight
-                )
-                val decoder2 = MediaCodec.createDecoderByType(
-                    inputFormat.getString(MediaFormat.KEY_MIME) ?: MediaFormat.MIME_TYPE_AVC
+                decoder2 = MediaCodec.createDecoderByType(
+                    inputFormat.getString(MediaFormat.KEY_MIME) ?: "video/avc"
                 )
                 decoder2.configure(inputFormat, null, null, 0)
                 decoder2.start()
@@ -121,7 +117,7 @@ object VideoCompressor {
                 encoder.stop()
                 encoder.reset()
                 val byteBufferEncoderFormat = MediaFormat.createVideoFormat(
-                    MediaFormat.MIME_TYPE_AVC,
+                    "video/avc",
                     outWidth,
                     outHeight
                 ).apply {
@@ -141,43 +137,43 @@ object VideoCompressor {
 
                 while (!done) {
                     // Feed input to decoder
-                    val decoderInIndex = decoder2.dequeueInputBuffer(10_000)
+                    val decoderInIndex = decoder2?.dequeueInputBuffer(10_000) ?: -1
                     if (decoderInIndex >= 0) {
-                        val inputBuffer = decoder2.getInputBuffer(decoderInIndex)!!
+                        val inputBuffer = decoder2?.getInputBuffer(decoderInIndex)!!
                         val sampleSize = extractor.readSampleData(inputBuffer, 0)
                         if (sampleSize < 0) {
-                            decoder2.queueInputBuffer(decoderInIndex, 0, 0, 0,
+                            decoder2?.queueInputBuffer(decoderInIndex, 0, 0, 0,
                                 MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             done = true
                         } else {
                             val sampleTime = extractor.sampleTime
-                            decoder2.queueInputBuffer(decoderInIndex, 0, sampleSize, sampleTime, 0)
+                            decoder2?.queueInputBuffer(decoderInIndex, 0, sampleSize, sampleTime, 0)
                             extractor.advance()
                         }
                     }
 
                     // Get decoded output
-                    var decoderOutIndex = decoder2.dequeueOutputBuffer(bufferInfo, 0)
+                    var decoderOutIndex = decoder2?.dequeueOutputBuffer(bufferInfo, 0) ?: -1
                     while (decoderOutIndex >= 0) {
                         if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                             // Signal encoder EOS
-                            val encoderInIndex = encoder.dequeueInputBuffer(10_000)
+                            val encoderInIndex = encoder?.dequeueInputBuffer(10_000) ?: -1
                             if (encoderInIndex >= 0) {
-                                encoder.queueInputBuffer(encoderInIndex, 0, 0, 0,
+                                encoder?.queueInputBuffer(encoderInIndex, 0, 0, 0,
                                     MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             }
                         } else if (bufferInfo.size > 0) {
                             // Feed decoded frame to encoder (with scaling would need OpenGL — for
                             // now we pass through and let the encoder handle resizing via its config)
-                            val encoderInIndex = encoder.dequeueInputBuffer(10_000)
+                            val encoderInIndex = encoder?.dequeueInputBuffer(10_000) ?: -1
                             if (encoderInIndex >= 0) {
-                                val encoderInputBuffer = encoder.getInputBuffer(encoderInIndex)!!
-                                val decoderOutputBuffer = decoder2.getOutputBuffer(decoderOutIndex)!!
+                                val encoderInputBuffer = encoder?.getInputBuffer(encoderInIndex)!!
+                                val decoderOutputBuffer = decoder2?.getOutputBuffer(decoderOutIndex)!!
                                 encoderInputBuffer.clear()
                                 decoderOutputBuffer.position(bufferInfo.offset)
                                 decoderOutputBuffer.limit(bufferInfo.offset + bufferInfo.size)
                                 encoderInputBuffer.put(decoderOutputBuffer)
-                                encoder.queueInputBuffer(
+                                encoder?.queueInputBuffer(
                                     encoderInIndex, 0, bufferInfo.size,
                                     bufferInfo.presentationTimeUs, 0
                                 )
@@ -190,24 +186,24 @@ object VideoCompressor {
                                 }
                             }
                         }
-                        decoder2.releaseOutputBuffer(decoderOutIndex, false)
-                        decoderOutIndex = decoder2.dequeueOutputBuffer(bufferInfo, 0)
+                        decoder2?.releaseOutputBuffer(decoderOutIndex, false)
+                        decoderOutIndex = decoder2?.dequeueOutputBuffer(bufferInfo, 0) ?: -1
                     }
 
                     // Get encoded output and write to muxer
                     val encBufferInfo = MediaCodec.BufferInfo()
-                    var encoderOutIndex = encoder.dequeueOutputBuffer(encBufferInfo, 0)
+                    var encoderOutIndex = encoder?.dequeueOutputBuffer(encBufferInfo, 0) ?: -1
                     while (encoderOutIndex >= 0) {
                         if (encBufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
                             // Skip codec config data
-                            encoder.releaseOutputBuffer(encoderOutIndex, false)
-                            encoderOutIndex = encoder.dequeueOutputBuffer(encBufferInfo, 0)
+                            encoder?.releaseOutputBuffer(encoderOutIndex, false)
+                            encoderOutIndex = encoder?.dequeueOutputBuffer(encBufferInfo, 0) ?: -1
                             continue
                         }
                         if (encBufferInfo.size > 0) {
-                            val encodedData = encoder.getOutputBuffer(encoderOutIndex)!!
+                            val encodedData = encoder?.getOutputBuffer(encoderOutIndex)!!
                             if (!muxerStarted) {
-                                trackIndex = muxer.addTrack(encoder.outputFormat)
+                                trackIndex = muxer.addTrack(encoder?.outputFormat!!)
                                 muxer.start()
                                 muxerStarted = true
                             }
@@ -218,16 +214,18 @@ object VideoCompressor {
                         if (encBufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                             done = true
                         }
-                        encoder.releaseOutputBuffer(encoderOutIndex, false)
-                        encoderOutIndex = encoder.dequeueOutputBuffer(encBufferInfo, 0)
+                        encoder?.releaseOutputBuffer(encoderOutIndex, false)
+                        encoderOutIndex = encoder?.dequeueOutputBuffer(encBufferInfo, 0) ?: -1
                     }
                 }
 
                 // Cleanup
-                encoder.stop()
-                encoder.release()
-                decoder2.stop()
-                decoder2.release()
+                encoder?.stop()
+                encoder?.release()
+                encoder = null
+                decoder2?.stop()
+                decoder2?.release()
+                decoder2 = null
                 muxer.stop()
                 muxer.release()
                 extractor.release()
@@ -246,10 +244,13 @@ object VideoCompressor {
         } catch (e: Exception) {
             // On any failure, try to copy the original
             try {
-                encoder.stop(); encoder.release()
+                encoder?.stop(); encoder?.release()
             } catch (_: Exception) {}
             try {
-                decoder2.stop(); decoder2.release()
+                decoder2?.stop(); decoder2?.release()
+            } catch (_: Exception) {}
+            try {
+                decoder?.stop(); decoder?.release()
             } catch (_: Exception) {}
             try {
                 muxer.release()

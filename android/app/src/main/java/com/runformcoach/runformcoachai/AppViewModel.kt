@@ -356,29 +356,35 @@ class AppViewModel @Inject constructor(
     ) {
         runCatching {
             val plan: TrainingPlanResponse = gson.fromJson(planEntity.planJson, TrainingPlanResponse::class.java)
-            val weeks = plan.marathonPlan?.weeks?.toMutableList()
-                ?: plan.racePlan?.weeks?.toMutableList() ?: return
-            if (weekIndex >= weeks.size) return
-            val weekWorkouts = weeks[weekIndex].workouts.toMutableList()
-            if (workoutIndex < weekWorkouts.size) {
-                weekWorkouts[workoutIndex] = updatedWorkout
-            } else {
-                weekWorkouts.add(updatedWorkout)
-            }
-            // Rebuild the week with updated workouts
-            val oldWeek = weeks[weekIndex]
-            weeks[weekIndex] = if (plan.marathonPlan != null) {
-                oldWeek.copy(workouts = weekWorkouts)
-            } else {
-                // RacePlanWeek - use the same copy pattern
-                oldWeek
-            }
-            // Rebuild plan
+
             val updatedPlan = if (plan.marathonPlan != null) {
+                val weeks = plan.marathonPlan.weeks.toMutableList()
+                if (weekIndex >= weeks.size) return@runCatching
+                val week = weeks[weekIndex]
+                val workouts = week.workouts.toMutableList()
+                if (workoutIndex < workouts.size) {
+                    workouts[workoutIndex] = updatedWorkout
+                } else {
+                    workouts.add(updatedWorkout)
+                }
+                weeks[weekIndex] = week.copy(workouts = workouts)
                 plan.copy(marathonPlan = plan.marathonPlan.copy(weeks = weeks))
+            } else if (plan.racePlan != null) {
+                val weeks = plan.racePlan.weeks.toMutableList()
+                if (weekIndex >= weeks.size) return@runCatching
+                val week = weeks[weekIndex]
+                val workouts = week.workouts.toMutableList()
+                if (workoutIndex < workouts.size) {
+                    workouts[workoutIndex] = updatedWorkout
+                } else {
+                    workouts.add(updatedWorkout)
+                }
+                weeks[weekIndex] = week.copy(workouts = workouts)
+                plan.copy(racePlan = plan.racePlan.copy(weeks = weeks))
             } else {
-                plan.copy(racePlan = plan.racePlan?.copy(weeks = weeks))
+                return@runCatching
             }
+
             val json = gson.toJson(updatedPlan)
             viewModelScope.launch(Dispatchers.IO) {
                 planDao.insert(
@@ -393,23 +399,29 @@ class AppViewModel @Inject constructor(
     fun deleteWorkout(planEntity: SavedPlanEntity, weekIndex: Int, workoutIndex: Int) {
         runCatching {
             val plan: TrainingPlanResponse = gson.fromJson(planEntity.planJson, TrainingPlanResponse::class.java)
-            val weeks = plan.marathonPlan?.weeks?.toMutableList()
-                ?: plan.racePlan?.weeks?.toMutableList() ?: return
-            if (weekIndex >= weeks.size) return
-            val weekWorkouts = weeks[weekIndex].workouts.toMutableList()
-            if (workoutIndex >= weekWorkouts.size) return
-            weekWorkouts.removeAt(workoutIndex)
-            val oldWeek = weeks[weekIndex]
-            weeks[weekIndex] = if (plan.marathonPlan != null) {
-                oldWeek.copy(workouts = weekWorkouts)
-            } else {
-                oldWeek
-            }
+
             val updatedPlan = if (plan.marathonPlan != null) {
+                val weeks = plan.marathonPlan.weeks.toMutableList()
+                if (weekIndex >= weeks.size) return@runCatching
+                val week = weeks[weekIndex]
+                val workouts = week.workouts.toMutableList()
+                if (workoutIndex >= workouts.size) return@runCatching
+                workouts.removeAt(workoutIndex)
+                weeks[weekIndex] = week.copy(workouts = workouts)
                 plan.copy(marathonPlan = plan.marathonPlan.copy(weeks = weeks))
+            } else if (plan.racePlan != null) {
+                val weeks = plan.racePlan.weeks.toMutableList()
+                if (weekIndex >= weeks.size) return@runCatching
+                val week = weeks[weekIndex]
+                val workouts = week.workouts.toMutableList()
+                if (workoutIndex >= workouts.size) return@runCatching
+                workouts.removeAt(workoutIndex)
+                weeks[weekIndex] = week.copy(workouts = workouts)
+                plan.copy(racePlan = plan.racePlan.copy(weeks = weeks))
             } else {
-                plan.copy(racePlan = plan.racePlan?.copy(weeks = weeks))
+                return@runCatching
             }
+
             val json = gson.toJson(updatedPlan)
             viewModelScope.launch(Dispatchers.IO) {
                 planDao.insert(

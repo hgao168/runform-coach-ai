@@ -104,7 +104,7 @@ fun CompareResultScreen(
                 Text(stringResource(R.string.comparison_failed), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                 Text(error, color = AppColors.TextSecondary, fontSize = 13.sp)
                 TextButton(onClick = onClose) {
-                    Text(stringResource(R.string.go_back), color = AppColors.Mint)
+                    Text(stringResource(R.string.compare_go_back), color = AppColors.Mint)
                 }
             }
         }

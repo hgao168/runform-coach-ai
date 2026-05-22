@@ -217,6 +217,10 @@
     <string name="close">关闭</string>
     <string name="couldnt_load_athletes">无法加载运动员数据</string>
     <string name="comparison_failed">对比失败</string>
+    <string name="retry">重试</string>
+    <string name="compare_history_desc">选择过去的分析，与顶尖运动员的状态进行对比。</string>
+    <string name="select_analysis_for_compare">选择分析</string>
+    <string name="pick_an_athlete">选择运动员</string>
 
     <!-- ── Feedback (RF-203) ─────────────────────────────────────────────── -->
     <string name="tester_feedback">测试者反馈</string>
@@ -357,4 +361,18 @@
     <string name="weekly_insights_trend_gct">触地时间 (毫秒)</string>
     <string name="weekly_insights_trend_distance">距离 (公里)</string>
     <string name="refresh">刷新</string>
+
+    <!-- ── Compare Screen (additional) ────────────────────────────────── -->
+    <string name="compare_go_back">返回</string>
+    <string name="status_ahead">领先</string>
+    <string name="status_on_par">持平</string>
+    <string name="status_gap">差距</string>
+    <string name="vs_label">对比</string>
+    <string name="about_label">关于</string>
+    <string name="elite_athletes_tab">精英运动员</string>
+    <string name="custom_compare_tab">自定义对比</string>
+    <string name="select_two_analyses_desc">选择两次过去的分析，查看你的跑步姿态随时间的变化。</string>
+    <string name="compare_selected">对比所选</string>
+    <string name="your_analyses">你的分析</string>
+    <string name="select_analysis">选择分析</string>
 </resources>

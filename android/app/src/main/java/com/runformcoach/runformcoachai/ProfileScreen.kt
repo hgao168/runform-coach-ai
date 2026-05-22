@@ -71,7 +71,6 @@ fun ProfileScreen(vm: AppViewModel) {
     var shoeBrand by rememberSaveable { mutableStateOf(profile.shoeBrand) }
     var shoeModel by rememberSaveable { mutableStateOf(profile.shoeModel) }
     val textFieldColors = OutlinedTextFieldDefaults.colors(
-    val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = AppColors.Mint,
         unfocusedBorderColor = AppColors.Border,
         focusedTextColor = Color.White,

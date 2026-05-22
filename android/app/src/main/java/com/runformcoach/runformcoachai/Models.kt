@@ -149,15 +149,24 @@ data class MarathonPlan(
     val weeks: List<MarathonPlanWeek>
 )
 
+interface PlanWeek {
+    val week: Int
+    val phase: String
+    val targetKm: Double
+    val longRunKm: Double
+    val workouts: List<PlannedWorkout>
+    val notes: String?
+}
+
 /** One week inside a marathon training block. */
 data class MarathonPlanWeek(
-    val week: Int,
-    val phase: String,
-    @SerializedName("target_km") val targetKm: Double,
-    @SerializedName("long_run_km") val longRunKm: Double,
-    val workouts: List<PlannedWorkout> = emptyList(),
-    val notes: String? = null
-)
+    override val week: Int,
+    override val phase: String,
+    @SerializedName("target_km") override val targetKm: Double,
+    @SerializedName("long_run_km") override val longRunKm: Double,
+    override val workouts: List<PlannedWorkout> = emptyList(),
+    override val notes: String? = null
+) : PlanWeek
 
 // ── Race Plan Models (5K / 10K / Half Marathon) ──────────────────────────────
 
@@ -171,13 +180,13 @@ data class RacePlan(
 
 /** One week inside a race training block. */
 data class RacePlanWeek(
-    val week: Int,
-    val phase: String,
-    @SerializedName("target_km") val targetKm: Double,
-    @SerializedName("long_run_km") val longRunKm: Double,
-    val workouts: List<PlannedWorkout> = emptyList(),
-    val notes: String? = null
-)
+    override val week: Int,
+    override val phase: String,
+    @SerializedName("target_km") override val targetKm: Double,
+    @SerializedName("long_run_km") override val longRunKm: Double,
+    override val workouts: List<PlannedWorkout> = emptyList(),
+    override val notes: String? = null
+) : PlanWeek
 
 /** Phase boundary helper (computed locally). */
 data class MarathonPhaseLink(

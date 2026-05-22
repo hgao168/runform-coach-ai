@@ -224,6 +224,10 @@
     <string name="close">Sluiten</string>
     <string name="couldnt_load_athletes">Atleten laden mislukt</string>
     <string name="comparison_failed">Vergelijking mislukt</string>
+    <string name="retry">Opnieuw</string>
+    <string name="compare_history_desc">Selecteer een eerdere analyse om te vergelijken met de vorm van een topatleet.</string>
+    <string name="select_analysis_for_compare">Selecteer analyse</string>
+    <string name="pick_an_athlete">Kies een atleet</string>
 
     <!-- ── Feedback (RF-203) ─────────────────────────────────────────────── -->
     <string name="tester_feedback">Tester Feedback</string>
@@ -281,7 +285,7 @@
     <string name="share_analysis_subject">RunForm analyse — %1$d%% score</string>
     <string name="share_analysis_body">Mijn RunForm Coach AI analyse:\n• Score: %1$d%%\n• Samenvatting: %2$s\n\nDownload RunForm: https://runform.coach</string>
     <string name="share_compare_subject">RunForm vergelijking — %1$s vs %2$s</string>
-    <string name="share_compare_body">Mijn RunForm vergelijking:\n• Ik kwam %1$d%% overeen met %2$s\n• Grootste verschil: %3$s\n\nDownload RunForm: https://runform.coach</string>
+    <string name="share_compare_body">Mijn RunForm vergelijking:\n• Ik matched %1$s op %2$d%%\n• Grootste verschil: %3$s\n\nDownload RunForm: https://runform.coach</string>
     <string name="share_download_link">https://runform.coach</string>
 
     <!-- ── Profile Extended Fields (RF-208) ───────────────────────────────── -->
@@ -354,4 +358,18 @@
     <string name="weekly_insights_trend_gct">GCT (ms)</string>
     <string name="weekly_insights_trend_distance">Afstand (km)</string>
     <string name="refresh">Vernieuwen</string>
+
+    <!-- ── Compare Screen (additional) ────────────────────────────────── -->
+    <string name="compare_go_back">Ga terug</string>
+    <string name="status_ahead">Voor</string>
+    <string name="status_on_par">Gelijk</string>
+    <string name="status_gap">Verschil</string>
+    <string name="vs_label">vs</string>
+    <string name="about_label">Over</string>
+    <string name="elite_athletes_tab">Elite Atleten</string>
+    <string name="custom_compare_tab">Aangepaste Vergelijking</string>
+    <string name="select_two_analyses_desc">Selecteer twee van je eerdere analyses om te zien hoe je vorm in de loop van de tijd is veranderd.</string>
+    <string name="compare_selected">Vergelijk Geselecteerde</string>
+    <string name="your_analyses">Jouw Analyses</string>
+    <string name="select_analysis">Selecteer analyse</string>
 </resources>

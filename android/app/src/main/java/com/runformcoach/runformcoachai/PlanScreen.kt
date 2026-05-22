@@ -209,7 +209,7 @@ private fun WeeklyPlanContent(
                     // Weekly km
                     OutlinedTextField(
                         value = weeklyKmText,
-                        onValueChange = { weeklyKmText = it.filter { c -> c.isDigit() } },
+                        onValueChange = { onWeeklyKmChange(it.filter { c -> c.isDigit() }) },
                         label = { Text("Current weekly km", color = AppColors.TextSecondary) },
                         suffix = { Text("km", color = AppColors.TextMuted) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -251,7 +251,7 @@ private fun WeeklyPlanContent(
                                     DropdownMenuItem(
                                         text = { Text(target, color = if (target == selectedTarget) AppColors.Mint else Color.White) },
                                         onClick = {
-                                            selectedTarget = target
+                                            onTargetChange(target)
                                             targetDropdownOpen = false
                                         }
                                     )
@@ -278,10 +278,12 @@ private fun WeeklyPlanContent(
                                 FilterChip(
                                     selected = day in selectedDays,
                                     onClick = {
-                                        selectedDays = if (day in selectedDays)
-                                            selectedDays - day
-                                        else
-                                            selectedDays + day
+                                        onDaysChange(
+                                            if (day in selectedDays)
+                                                selectedDays - day
+                                            else
+                                                selectedDays + day
+                                        )
                                     },
                                     label = { Text(day, fontSize = 11.sp) },
                                     modifier = Modifier.weight(1f),
@@ -314,7 +316,7 @@ private fun WeeklyPlanContent(
                         }
                         Switch(
                             checked = injuryFlag,
-                            onCheckedChange = { injuryFlag = it },
+                            onCheckedChange = { onInjuryChange(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.Black,
                                 checkedTrackColor = AppColors.Mint,
@@ -499,7 +501,7 @@ private fun WorkoutCard(workout: PlannedWorkout) {
 }
 
 @Composable
-private fun CategoryPill(category: String, color: Color) {
+internal fun CategoryPill(category: String, color: Color) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
@@ -511,7 +513,7 @@ private fun CategoryPill(category: String, color: Color) {
 }
 
 @Composable
-private fun IntensityPill(intensity: String) {
+internal fun IntensityPill(intensity: String) {
     val color = when (intensity.lowercase()) {
         "high", "very high" -> AppColors.Red
         "medium", "moderate" -> AppColors.Orange

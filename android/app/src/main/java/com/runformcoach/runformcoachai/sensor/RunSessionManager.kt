@@ -2,19 +2,19 @@ package com.runformcoach.runformcoachai.sensor
 
 import android.content.Context
 import android.util.Log
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import javax.inject.Singleton
 
 // ── 会话状态枚举 ─────────────────────────────────────────────────────────────
 
@@ -75,34 +75,31 @@ data class SessionMetrics(
  *
  * 状态机: `idle → ready → running → paused → stopped`
  *
- * 使用 [StateFlow] 暴露状态和指标, [@HiltViewModel] 注入。
+ * 管理传感器捕获、步频检测、步态分析和语音教练。
+ * 作为一个 [@Singleton] 存在，可以在多个 ViewModel 或服务中共享。
  *
  * 用法:
  * ```
  * // Hilt 自动注入
- * @HiltViewModel
  * class MyViewModel @Inject constructor(
  *     private val sessionManager: RunSessionManager
  * ) : ViewModel() { ... }
- *
- * // 或手动创建
- * val session = RunSessionManager(context, config)
- * session.start()
- * session.pause()
- * session.resume()
- * session.stop()
  * ```
  */
-@HiltViewModel
+@Singleton
 class RunSessionManager @Inject constructor(
     @ApplicationContext private val appContext: Context
-) : ViewModel() {
+) {
 
     companion object {
         private const val TAG = "RunSessionManager"
         private const val METRICS_INTERVAL_MS = 1000L  // 1 Hz
         private const val MAX_PROMPT_HISTORY = 50
     }
+
+    // ── 协程作用域 ────────────────────────────────────────────────────────────
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // ── 公开属性 ──────────────────────────────────────────────────────────────
 
@@ -158,7 +155,7 @@ class RunSessionManager @Inject constructor(
     /**
      * 使用默认配置或指定配置初始化管线组件。
      *
-     * 一般在 [init] 或首次 [start] 之前调用。
+     * 一般在 [start] 之前调用。
      */
     fun configure(cfg: RunSessionConfig = RunSessionConfig()) {
         config = cfg
@@ -191,7 +188,7 @@ class RunSessionManager @Inject constructor(
     private fun wirePipeline() {
         // SensorCaptureManager → CadenceDetector + GaitAnalyzer
         sensorCollectJob?.cancel()
-        sensorCollectJob = viewModelScope.launch {
+        sensorCollectJob = scope.launch {
             sensorCaptureManager.sensorFrames().collect { frame ->
                 // 计算加速度向量模长喂给步频检测器
                 val accelMag = kotlin.math.sqrt(
@@ -207,11 +204,11 @@ class RunSessionManager @Inject constructor(
         }
 
         // CadenceDetector → AudioCoach 评估
-        viewModelScope.launch {
+        scope.launch {
             cadenceDetector.currentCadence.collectLatest { cadence ->
                 if (cadence != null && _state.value == RunSessionState.running) {
                     // Inject latest cadence into gait analyzer for snapshot enrichment
-                    gaitAnalyzer.latestCadenceSPM = cadence.currentSPM
+                    gaitAnalyzer.latestCadenceSPM = cadence.stepsPerMinute
                     val gait = gaitAnalyzer.currentSnapshot.value
                     audioCoach.evaluate(
                         cadence = cadence,
@@ -299,7 +296,7 @@ class RunSessionManager @Inject constructor(
 
     private fun startMetricsTimer() {
         metricsJob?.cancel()
-        metricsJob = viewModelScope.launch {
+        metricsJob = scope.launch {
             while (true) {
                 delay(METRICS_INTERVAL_MS)
                 if (_state.value != RunSessionState.running) continue
@@ -338,14 +335,16 @@ class RunSessionManager @Inject constructor(
         onStateChange?.invoke(oldState, newState)
     }
 
-    // ── ViewModel 生命周期 ────────────────────────────────────────────────────
+    // ── 清理 ──────────────────────────────────────────────────────────────────
 
-    override fun onCleared() {
-        super.onCleared()
+    /**
+     * 显式销毁管线并释放资源。
+     */
+    fun shutdown() {
         stopMetricsTimer()
         sensorCollectJob?.cancel()
         sensorCaptureManager.stop()
         audioCoach.shutdown()
-        Log.d(TAG, "RunSessionManager 已清理")
+        Log.d(TAG, "RunSessionManager 已销毁")
     }
 }

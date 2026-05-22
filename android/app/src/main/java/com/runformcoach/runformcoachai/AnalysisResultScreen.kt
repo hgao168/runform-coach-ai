@@ -465,8 +465,9 @@ private const val BANNER_AD_UNIT_ID_PRODUCTION = "ca-app-pub-xxxxxxxxxxxxxxxx/xx
  */
 @Composable
 private fun BannerAdView(modifier: Modifier = Modifier) {
-    val adView = remember {
-        AdView(LocalContext.current).apply {
+    val context = LocalContext.current
+    val adView = remember(context) {
+        AdView(context).apply {
             setAdSize(AdSize.BANNER)
             adUnitId = if (com.runformcoach.runformcoachai.BuildConfig.DEBUG) BANNER_AD_UNIT_ID_TEST else BANNER_AD_UNIT_ID_PRODUCTION
             layoutParams = ViewGroup.LayoutParams(
