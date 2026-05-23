@@ -186,6 +186,12 @@ class ChallengeParticipant(Base):
     baseline_vertical_oscillation: Mapped[float | None] = mapped_column(Float, nullable=True)
     baseline_overall_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    # C5: challenge check-in tracking
+    last_check_in: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    check_in_count: Mapped[int] = mapped_column(Integer, default=0)
+    current_streak: Mapped[int] = mapped_column(Integer, default=0)
+    latest_cadence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    latest_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     user: Mapped[User] = relationship(back_populates="challenge_participations")
 

@@ -141,6 +141,101 @@ function getWeeklyInsight() {
   return request('GET', '/api/v1/weekly-insight')
 }
 
+// ─── Invite Code APIs ───
+
+/**
+ * Get user's invite status: existing codes and invited users list.
+ * GET /api/v1/invite/status?user_id=X
+ */
+function getInviteStatus(userId) {
+  return request('GET', `/api/v1/invite/status?user_id=${encodeURIComponent(userId)}`)
+}
+
+/**
+ * Validate an invite code.
+ * GET /api/v1/invite/{code}
+ */
+function getInviteCode(code) {
+  return request('GET', `/api/v1/invite/${encodeURIComponent(code)}`)
+}
+
+/**
+ * Generate a new invite code for a user.
+ * POST /api/v1/invite/generate
+ */
+function generateInviteCode(data) {
+  return request('POST', '/api/v1/invite/generate', data)
+}
+
+/**
+ * Redeem an invite code (friend joins via invite).
+ * POST /api/v1/invite/redeem
+ */
+function redeemInviteCode(data) {
+  return request('POST', '/api/v1/invite/redeem', data)
+}
+
+// ─── Challenge APIs ───
+
+/**
+ * Fetch available challenges list.
+ * GET /api/v1/challenges
+ */
+function getChallenges() {
+  return request('GET', '/api/v1/challenges')
+}
+
+/**
+ * Join a challenge.
+ * POST /api/v1/challenges/{challenge_id}/join
+ */
+function joinChallenge(challengeId, data) {
+  return request('POST', `/api/v1/challenges/${encodeURIComponent(challengeId)}/join`, data)
+}
+
+/**
+ * Get a challenge's leaderboard.
+ * GET /api/v1/challenges/{challenge_id}/leaderboard
+ */
+function getLeaderboard(challengeId) {
+  return request('GET', `/api/v1/challenges/${encodeURIComponent(challengeId)}/leaderboard`)
+}
+
+/**
+ * Daily check-in for a challenge.
+ * POST /api/v1/challenges/{challenge_id}/check-in
+ */
+function checkInChallenge(challengeId, data) {
+  return request('POST', `/api/v1/challenges/${encodeURIComponent(challengeId)}/check-in`, data)
+}
+
+// ─── Shared helpers ───
+
+/**
+ * Get or create a persistent user_id for API calls.
+ * Checks globalData first, then storage. Generates a UUID if neither exists.
+ */
+function getUserId() {
+  const app = getApp()
+  if (app && app.globalData && app.globalData.userId) {
+    return app.globalData.userId
+  }
+  let userId = ''
+  try {
+    userId = wx.getStorageSync('userId') || ''
+  } catch (_) { /* ignore */ }
+  if (!userId) {
+    userId = 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10)
+    try {
+      wx.setStorageSync('userId', userId)
+    } catch (_) { /* ignore */ }
+    if (app && app.globalData) {
+      app.globalData.userId = userId
+    }
+  }
+  return userId
+}
+
 module.exports = {
   analyzeVideo,
   generatePlan,
@@ -149,4 +244,16 @@ module.exports = {
   submitFeedback,
   health,
   getWeeklyInsight,
+  // Invite
+  getInviteStatus,
+  getInviteCode,
+  generateInviteCode,
+  redeemInviteCode,
+  // Challenge
+  getChallenges,
+  joinChallenge,
+  getLeaderboard,
+  checkInChallenge,
+  // Helpers
+  getUserId,
 }

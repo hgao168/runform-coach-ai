@@ -1,6 +1,14 @@
 // pages/invite/invite.js
 // RF-600: 邀请码分享海报生成 (Invite code share poster)
+// C3: 接通真实后端邀请码 API
 const { t } = require('../../utils/i18n')
+const {
+  getInviteStatus,
+  getInviteCode,
+  generateInviteCode: apiGenerateInviteCode,
+  redeemInviteCode: apiRedeemInviteCode,
+  getUserId,
+} = require('../../utils/api')
 const app = getApp()
 
 // Canvas 2D poster layout constants
@@ -27,7 +35,7 @@ Page({
     userFormScore: 0,
   },
 
-  onLoad() {
+  onLoad(options) {
     this.setData({
       i: {
         inviteTitle: t('inviteTitle'),
@@ -52,6 +60,13 @@ Page({
         posterPoweredBy: t('posterPoweredBy'),
       },
     })
+
+    // C3: If user entered via a shared invite link, redeem the code.
+    const inviteParam = options && (options.invite || options.inviteCode || '')
+    if (inviteParam) {
+      this._redeemInviteCode(inviteParam)
+    }
+
     this._loadInviteData()
   },
 
@@ -59,34 +74,137 @@ Page({
     this._loadInviteData()
   },
 
-  _loadInviteData() {
-    const inviteData = app.globalData.inviteData || this._generateInviteData()
+  // C3: 接通真实邀请码 API — 加载邀请数据
+  async _loadInviteData() {
+    const userId = getUserId()
+    let inviteCode = ''
+    let inviteCount = 0
+    let invitedList = []
+
+    // Try loading from backend API
+    try {
+      const status = await getInviteStatus(userId)
+      // Backend returns: { codes: [...], invited_users: [...] } or similar
+      if (status) {
+        // Use first active code if available
+        if (status.codes && status.codes.length > 0) {
+          inviteCode = status.codes[0].code || status.codes[0]
+          // Persist code to local storage for next load
+          try {
+            wx.setStorageSync('inviteCode', inviteCode)
+          } catch (_) { /* ignore */ }
+        }
+        // Map invited users
+        if (status.invited_users && status.invited_users.length > 0) {
+          inviteCount = status.invited_users.length
+          invitedList = status.invited_users.map((item, idx) => ({
+            ...item,
+            displayName: item.nickname || item.name || (t('isZh') ? `好友${idx + 1}` : `Friend ${idx + 1}`),
+            avatarText: (item.nickname || item.name || '?')[0].toUpperCase(),
+          }))
+        }
+      }
+    } catch (err) {
+      console.warn('[Invite] API failed, falling back to local data:', err.message)
+      // C3: 降级到本地状态
+      wx.showToast({ title: t('isZh') ? '网络异常，使用本地数据' : 'Network error, using local data', icon: 'none' })
+    }
+
+    // Fallback: if no API data, use local storage or generate mock
+    if (!inviteCode) {
+      const savedCode = ''
+      try {
+        const sc = wx.getStorageSync('inviteCode') || ''
+        inviteCode = sc
+      } catch (_) { /* ignore */ }
+      if (!inviteCode) {
+        // Generate locally only if absolutely no code
+        const localData = this._getLocalFallbackCode()
+        inviteCode = localData.code
+      }
+    }
+
+    // Validate saved invite code against backend if we have one
+    if (inviteCode && !invitedList.length) {
+      try {
+        const validation = await getInviteCode(inviteCode)
+        if (validation) {
+          // Code is valid; update from validation response if available
+          if (validation.invited_users) {
+            inviteCount = validation.invited_users.length
+            invitedList = validation.invited_users.map((item, idx) => ({
+              ...item,
+              displayName: item.nickname || item.name || (t('isZh') ? `好友${idx + 1}` : `Friend ${idx + 1}`),
+              avatarText: (item.nickname || item.name || '?')[0].toUpperCase(),
+            }))
+          }
+        }
+      } catch (err) {
+        // Code validation failed — may be expired, keep using it anyway as fallback
+        console.warn('[Invite] Code validation failed:', err.message)
+      }
+    }
+
     // Get user stats from globalData or storage for poster
     const profile = app.globalData.profile || {}
     const latestResult = (app.globalData.history && app.globalData.history.length > 0)
       ? app.globalData.history[0] : null
 
     this.setData({
-      inviteCode: inviteData.code || 'RUNFORM001',
-      inviteCount: (inviteData.invited || []).length,
-      invitedList: (inviteData.invited || []).map((item, idx) => ({
-        ...item,
-        displayName: item.nickname || item.name || (t('isZh') ? `好友${idx + 1}` : `Friend ${idx + 1}`),
-        avatarText: (item.nickname || item.name || '?')[0].toUpperCase(),
-      })),
+      inviteCode: inviteCode || 'RUNFORM001',
+      inviteCount,
+      invitedList,
       loading: false,
       userCadence: (latestResult && latestResult.metrics && latestResult.metrics.cadence) || 0,
       userFormScore: (latestResult && latestResult.confidence) || (profile && profile.bestScore) || 0,
     })
   },
 
-  _generateInviteData() {
+  // C3: 调用 POST /api/v1/invite/generate 生成邀请码
+  async _generateInviteData() {
+    const userId = getUserId()
+    try {
+      const result = await apiGenerateInviteCode({ user_id: userId })
+      if (result && result.code) {
+        // Persist code to local storage
+        try {
+          wx.setStorageSync('inviteCode', result.code)
+        } catch (_) { /* ignore */ }
+        return { code: result.code, invited: result.invited_users || [] }
+      }
+    } catch (err) {
+      console.warn('[Invite] Generate code API failed, using local fallback:', err.message)
+      wx.showToast({ title: t('isZh') ? '生成邀请码失败' : 'Failed to generate invite code', icon: 'none' })
+    }
+    // C3: 降级到本地生成
+    return this._getLocalFallbackCode()
+  },
+
+  // C3: 本地降级邀请码生成（仅当 API 不可用时）
+  _getLocalFallbackCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     let code = ''
     for (let i = 0; i < 8; i++) {
       code += chars[Math.floor(Math.random() * chars.length)]
     }
+    try {
+      wx.setStorageSync('inviteCode', code)
+    } catch (_) { /* ignore */ }
     return { code, invited: [] }
+  },
+
+  // C3: 当好友通过分享链接进入时，调用 POST /api/v1/invite/redeem
+  async _redeemInviteCode(inviteCode) {
+    if (!inviteCode) return
+    const userId = getUserId()
+    try {
+      await apiRedeemInviteCode({ code: inviteCode, user_id: userId })
+      console.log('[Invite] Code redeemed successfully:', inviteCode)
+      wx.showToast({ title: t('isZh') ? '邀请码已使用！' : 'Invite code redeemed!', icon: 'success' })
+    } catch (err) {
+      console.warn('[Invite] Redeem failed:', err.message)
+      // Don't block user — redeem may fail if already redeemed or network issue
+    }
   },
 
   copyInviteCode() {

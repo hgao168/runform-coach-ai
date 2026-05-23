@@ -10,9 +10,9 @@ from urllib.parse import urlencode
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from slowapi import Limiter
+from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
 from sqlalchemy import delete, func, select
 
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
@@ -23,10 +23,14 @@ from .schemas import (
     AnalyzeProfileContext,
     AnalysisResponse,
     AthleteListItem,
+    ChallengeCheckInRequest,
+    ChallengeCheckInResponse,
     ChallengeInfo,
     ChallengeJoinRequest,
     ChallengeJoinResponse,
     ChallengeLeaderboardEntry,
+    ClubLeaderboardEntry,
+    ClubLeaderboardResponse,
     CoachCodeGenerateRequest,
     CoachCodeResponse,
     CoachDashboardResponse,
@@ -1218,6 +1222,99 @@ def challenge_leaderboard(challenge_id: str) -> list[ChallengeLeaderboardEntry]:
         raise HTTPException(status_code=500, detail=f"Failed to compute leaderboard: {exc}") from exc
 
 
+@app.post("/api/v1/challenges/{challenge_id}/check-in", response_model=ChallengeCheckInResponse)
+def challenge_check_in(challenge_id: str, payload: ChallengeCheckInRequest, _api_key: str = Depends(verify_api_key)) -> ChallengeCheckInResponse:
+    """C5: Daily check-in for an active challenge. Records today's run metrics and builds a streak.
+
+    - Validates challenge exists and user has joined
+    - Prevents duplicate check-ins on the same UTC day
+    - Pulls the user's latest run_session metrics as today's data
+    - If no run session today, still records the check-in but without metrics
+    - Computes consecutive check-in streak
+    """
+    from datetime import timedelta
+
+    if challenge_id not in _CHALLENGES:
+        raise HTTPException(status_code=404, detail=f"Challenge '{challenge_id}' not found.")
+
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, payload.user_id)
+
+            # Verify user has joined this challenge
+            participant = session.scalar(
+                select(ChallengeParticipant).where(
+                    ChallengeParticipant.challenge_id == challenge_id,
+                    ChallengeParticipant.user_id == user.id,
+                )
+            )
+            if participant is None:
+                raise HTTPException(status_code=400, detail="You must join the challenge before checking in.")
+
+            # Prevent duplicate check-in on the same UTC day
+            now = datetime.now(timezone.utc)
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            if participant.last_check_in is not None and participant.last_check_in >= today_start:
+                raise HTTPException(status_code=409, detail="You have already checked in today.")
+
+            # Get today's latest run session metrics
+            latest_session = session.scalar(
+                select(RunSession).where(
+                    RunSession.user_id == user.id,
+                ).order_by(RunSession.start_time.desc()).limit(1)
+            )
+
+            today_metrics: dict = {}
+            has_today_run = False
+            if latest_session is not None and latest_session.start_time >= today_start:
+                has_today_run = True
+                today_metrics = {
+                    "cadence": latest_session.avg_cadence,
+                    "vertical_oscillation": latest_session.avg_vertical_oscillation,
+                    "gct": latest_session.avg_gct,
+                    "duration_sec": latest_session.duration_sec,
+                }
+                # Filter out None values
+                today_metrics = {k: v for k, v in today_metrics.items() if v is not None}
+
+                # Update latest metrics on participant
+                if latest_session.avg_cadence is not None:
+                    participant.latest_cadence = latest_session.avg_cadence
+                if latest_session.avg_cadence is not None and latest_session.avg_vertical_oscillation is not None:
+                    participant.latest_score = round(
+                        (latest_session.avg_cadence / 180.0 * 0.5)
+                        + ((0.12 / max(latest_session.avg_vertical_oscillation, 0.001)) * 0.5),
+                        3,
+                    )
+
+            # Compute streak based on previous check-in date
+            yesterday_start = today_start - timedelta(days=1)
+            yesterday_end = today_start - timedelta(seconds=1)
+            if participant.last_check_in is not None and yesterday_start <= participant.last_check_in <= yesterday_end:
+                # Consecutive day — streak continues
+                streak_days = participant.current_streak + 1
+            else:
+                # Either first check-in ever, or streak was broken
+                streak_days = 1
+
+            # Record the check-in
+            participant.last_check_in = now
+            participant.check_in_count = (participant.check_in_count or 0) + 1
+            participant.current_streak = streak_days
+            session.commit()
+
+            return ChallengeCheckInResponse(
+                status="ok",
+                check_in_count=participant.check_in_count,
+                streak_days=streak_days,
+                today_metrics=today_metrics,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to check in: {exc}") from exc
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # RF-602  Coach Panel API ──────────────────────────────────────────────────
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1463,3 +1560,136 @@ def coach_dashboard(
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to load dashboard: {exc}") from exc
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# C4  Club / Group Leaderboard API ─────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/v1/clubs/{club_code}/leaderboard", response_model=ClubLeaderboardResponse)
+def club_leaderboard(
+    club_code: str,
+    ios_user_id: str | None = Query(None, min_length=3),
+    _api_key: str = Depends(verify_api_key),
+) -> ClubLeaderboardResponse:
+    """C4: Return a running-form leaderboard for a club/group.
+
+    club_code maps to a CoachCode — the club is a virtual grouping identified
+    by the coach's invite code. Students who joined through that code form the
+    club. Rankings are based on the latest run session form_score for each member.
+
+    If the club_code does not match any coach code, returns empty with
+    coming_soon=true so the frontend can show an appropriate placeholder.
+    """
+    try:
+        with get_db_session() as session:
+            # Resolve club_code to a CoachCode
+            coach_code = session.scalar(
+                select(CoachCode).where(
+                    CoachCode.code == club_code.upper(),
+                    CoachCode.is_active.is_(True),
+                )
+            )
+            if coach_code is None:
+                # Also try looking up by coach ios_user_id as a fallback
+                # (club_code might be a coach's user identifier directly)
+                coach_user = session.scalar(
+                    select(User).where(User.ios_user_id == club_code)
+                )
+                if coach_user is None:
+                    return ClubLeaderboardResponse(entries=[], coming_soon=True)
+                coach_id = coach_user.id
+            else:
+                coach_id = coach_code.coach_id
+
+            # Get all students in this club
+            rows = session.execute(
+                select(CoachStudent, User).join(
+                    User, CoachStudent.student_id == User.id,
+                ).where(
+                    CoachStudent.coach_id == coach_id,
+                ).order_by(CoachStudent.joined_at.desc())
+            ).all()
+
+            if not rows:
+                return ClubLeaderboardResponse(entries=[], coming_soon=True)
+
+            # Build leaderboard entries with latest run session metrics
+            entries: list[ClubLeaderboardEntry] = []
+            for cs, student in rows:
+                # Get latest run session for this student
+                latest = session.scalar(
+                    select(RunSession).where(
+                        RunSession.user_id == student.id,
+                    ).order_by(RunSession.start_time.desc()).limit(1)
+                )
+
+                # Get second-latest for score_change calculation
+                second_latest = None
+                if latest is not None:
+                    second_latest = session.scalar(
+                        select(RunSession).where(
+                            RunSession.user_id == student.id,
+                            RunSession.id != latest.id,
+                        ).order_by(RunSession.start_time.desc()).limit(1)
+                    )
+
+                # Compute form_score
+                form_score = None
+                cadence = None
+                if latest is not None:
+                    cadence = latest.avg_cadence
+                    if latest.avg_cadence is not None and latest.avg_vertical_oscillation is not None:
+                        form_score = round(
+                            (latest.avg_cadence / 180.0 * 0.5)
+                            + ((0.12 / max(latest.avg_vertical_oscillation, 0.001)) * 0.5),
+                            3,
+                        )
+
+                # Compute score_change direction
+                score_change = "→"
+                if latest is not None and second_latest is not None:
+                    prev_score = None
+                    if second_latest.avg_cadence is not None and second_latest.avg_vertical_oscillation is not None:
+                        prev_score = round(
+                            (second_latest.avg_cadence / 180.0 * 0.5)
+                            + ((0.12 / max(second_latest.avg_vertical_oscillation, 0.001)) * 0.5),
+                            3,
+                        )
+                    if form_score is not None and prev_score is not None:
+                        if form_score > prev_score:
+                            score_change = "+"
+                        elif form_score < prev_score:
+                            score_change = "-"
+
+                # Determine nickname
+                nickname = student.nickname or student.first_name or student.ios_user_id
+
+                # Check if this entry is the requesting user
+                is_me = (ios_user_id is not None and student.ios_user_id == ios_user_id)
+
+                entries.append(ClubLeaderboardEntry(
+                    rank=0,  # filled below after sorting
+                    nickname=nickname,
+                    avatar_url=None,
+                    cadence=cadence,
+                    form_score=form_score,
+                    score_change=score_change,
+                    is_me=is_me,
+                ))
+
+            # Sort by form_score descending (None goes to bottom)
+            entries.sort(
+                key=lambda e: e.form_score if e.form_score is not None else float("-inf"),
+                reverse=True,
+            )
+
+            # Assign ranks
+            for i, entry in enumerate(entries):
+                entry.rank = i + 1
+
+            return ClubLeaderboardResponse(entries=entries, coming_soon=False)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load club leaderboard: {exc}") from exc

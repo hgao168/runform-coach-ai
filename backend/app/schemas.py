@@ -515,6 +515,38 @@ class ChallengeLeaderboardEntry(BaseModel):
     rank: int
 
 
+# ── C5: Challenge check-in schemas ────────────────────────────────────────
+
+class ChallengeCheckInRequest(BaseModel):
+    user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\\-]+$'
+    )
+
+
+class ChallengeCheckInResponse(BaseModel):
+    status: str
+    check_in_count: int
+    streak_days: int
+    today_metrics: dict = {}
+
+
+# ── C4: Club leaderboard schemas ──────────────────────────────────────────
+
+class ClubLeaderboardEntry(BaseModel):
+    rank: int
+    nickname: Optional[str] = None
+    avatar_url: Optional[str] = None
+    cadence: Optional[float] = None
+    form_score: Optional[float] = None
+    score_change: str = "→"  # "+" | "-" | "→"
+    is_me: bool = False
+
+
+class ClubLeaderboardResponse(BaseModel):
+    entries: list[ClubLeaderboardEntry] = []
+    coming_soon: bool = False
+
+
 # ── RF-602: Coach panel schemas ────────────────────────────────────────────
 
 
