@@ -455,3 +455,61 @@ class WeeklyInsightResponse(BaseModel):
     metrics: List[WeeklyInsightMetric]   # cadence, oscillation, gct, distance, sessions
     ai_coach_advice: str                 # AI-generated coaching narrative
     badges: List[WeeklyInsightBadge] = []
+
+
+# ── RF-600: Invite code schemas ───────────────────────────────────────────
+
+class InviteCodeGenerateRequest(BaseModel):
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
+
+
+class InviteCodeGenerateResponse(BaseModel):
+    code: str
+    created_at: str
+    remaining: int
+
+
+class InviteRedeemRequest(BaseModel):
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
+    code: str = Field(..., min_length=8, max_length=8)
+
+
+class InviteRedeemResponse(BaseModel):
+    success: bool
+    message: str
+
+
+# ── RF-601: Challenge schemas ─────────────────────────────────────────────
+
+class ChallengeInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    start_date: str
+    end_date: str
+    participant_count: int
+    status: str  # "active" | "ended"
+
+
+class ChallengeJoinRequest(BaseModel):
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
+
+
+class ChallengeJoinResponse(BaseModel):
+    joined: bool
+    challenge_id: str
+    message: str
+
+
+class ChallengeLeaderboardEntry(BaseModel):
+    ios_user_id: str
+    cadence_improvement_pct: Optional[float] = None
+    oscillation_improvement_pct: Optional[float] = None
+    overall_score_change: Optional[float] = None
+    rank: int

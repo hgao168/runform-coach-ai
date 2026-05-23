@@ -8,6 +8,11 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# ── RF-600 / RF-601 ───────────────────────────────────────────────────────
+
+_MAX_INVITE_CODES_PER_USER = 5
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -42,6 +47,20 @@ class User(Base):
     strava_runs: Mapped[list["StravaRun"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     strava_weekly_stats: Mapped[list["StravaWeeklyStat"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     run_sessions: Mapped[list["RunSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+    # RF-600: invite codes created by this user
+    created_invite_codes: Mapped[list["InviteCode"]] = relationship(
+        "InviteCode", back_populates="creator", foreign_keys="InviteCode.creator_user_id",
+        cascade="all, delete-orphan",
+    )
+    # RF-600: invite codes redeemed by this user (at most 1)
+    redeemed_invite_code: Mapped["InviteCode | None"] = relationship(
+        "InviteCode", back_populates="redeemer", foreign_keys="InviteCode.redeemed_by",
+    )
+    # RF-601: challenge participations
+    challenge_participations: Mapped[list["ChallengeParticipant"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan",
+    )
 
 
 class OAuthConnection(Base):
@@ -118,3 +137,39 @@ class RunSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
 
     user: Mapped[User] = relationship(back_populates="run_sessions")
+
+
+# ── RF-600: Invite code model ─────────────────────────────────────────────
+
+class InviteCode(Base):
+    __tablename__ = "invite_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(8), unique=True, index=True)
+    creator_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    redeemed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    creator: Mapped[User] = relationship(back_populates="created_invite_codes", foreign_keys=[creator_user_id])
+    redeemer: Mapped[User | None] = relationship(back_populates="redeemed_invite_code", foreign_keys=[redeemed_by])
+
+
+# ── RF-601: Challenge participant model ───────────────────────────────────
+
+_FOURTEEN_DAY_CHALLENGE_ID = "14-day-form-challenge"
+
+
+class ChallengeParticipant(Base):
+    __tablename__ = "challenge_participants"
+    __table_args__ = (UniqueConstraint("challenge_id", "user_id", name="uq_challenge_user"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    challenge_id: Mapped[str] = mapped_column(String(64), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    baseline_cadence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    baseline_vertical_oscillation: Mapped[float | None] = mapped_column(Float, nullable=True)
+    baseline_overall_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+
+    user: Mapped[User] = relationship(back_populates="challenge_participations")

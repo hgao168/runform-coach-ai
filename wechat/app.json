@@ -9,7 +9,9 @@
     "pages/compare/compare",
     "pages/webview/webview",
     "pages/cadence/cadence",
-    "pages/insight/insight"
+    "pages/insight/insight",
+    "pages/invite/invite",
+    "pages/challenge/challenge"
   ],
   "tabBar": {
     "color": "#888888",

@@ -1,0 +1,308 @@
+/* pages/challenge/challenge.wxss */
+.challenge-page {
+  min-height: 100vh;
+  background: #0a0a0f;
+  padding: 24rpx 32rpx;
+}
+
+.challenge-header {
+  text-align: center;
+  padding: 40rpx 0 24rpx;
+}
+
+.challenge-title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12rpx;
+}
+
+.challenge-sub {
+  display: block;
+  font-size: 26rpx;
+  color: rgba(255,255,255,0.5);
+}
+
+/* Join card (not joined) */
+.join-card {
+  background: linear-gradient(135deg, #12121a 0%, #1a1a2e 100%);
+  border: 1rpx solid rgba(0,245,160,0.15);
+  border-radius: 24rpx;
+  padding: 56rpx 40rpx;
+  text-align: center;
+  margin-top: 24rpx;
+}
+
+.join-icon {
+  font-size: 100rpx;
+  display: block;
+  margin-bottom: 24rpx;
+}
+
+.join-desc {
+  display: block;
+  font-size: 28rpx;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.6;
+  margin-bottom: 40rpx;
+}
+
+.btn-join {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: linear-gradient(135deg, #00f5a0 0%, #00d4ff 100%);
+  color: #0a0a0f;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  border: none;
+  padding: 0;
+}
+
+.btn-join::after {
+  border: none;
+}
+
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  background: rgba(255,255,255,0.04);
+  border-radius: 16rpx;
+  padding: 6rpx;
+  margin-bottom: 32rpx;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: rgba(255,255,255,0.4);
+  transition: all 0.2s;
+}
+
+.tab-item.active {
+  background: rgba(0,245,160,0.15);
+  color: #00f5a0;
+  font-weight: 600;
+}
+
+/* Progress ring */
+.progress-ring-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32rpx;
+}
+
+.progress-canvas {
+  display: block;
+}
+
+/* Check-in card */
+.checkin-card {
+  background: rgba(255,255,255,0.04);
+  border: 1rpx solid rgba(255,255,255,0.06);
+  border-radius: 20rpx;
+  padding: 28rpx 28rpx;
+  margin-bottom: 28rpx;
+}
+
+.checkin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.checkin-label {
+  font-size: 26rpx;
+  color: rgba(255,255,255,0.5);
+}
+
+.checkin-progress {
+  font-size: 24rpx;
+  color: #00f5a0;
+  font-weight: 600;
+}
+
+.checkin-task {
+  display: block;
+  font-size: 30rpx;
+  color: #fff;
+  font-weight: 600;
+  margin-bottom: 24rpx;
+}
+
+.btn-checkin {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: linear-gradient(135deg, #00f5a0 0%, #00d4ff 100%);
+  color: #0a0a0f;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  border: none;
+  padding: 0;
+}
+
+.btn-checkin::after {
+  border: none;
+}
+
+.btn-checkin.done {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.35);
+}
+
+/* Day dots */
+.day-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  justify-content: center;
+  padding: 8rpx 0;
+}
+
+.day-dot {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 2rpx solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.3);
+}
+
+.day-dot.filled {
+  background: rgba(0,245,160,0.15);
+  border-color: rgba(0,245,160,0.4);
+  color: #00f5a0;
+}
+
+.day-dot.current {
+  border-color: #00f5a0;
+  border-width: 3rpx;
+  box-shadow: 0 0 16rpx rgba(0,245,160,0.3);
+}
+
+/* My rank card */
+.my-rank-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(0,245,160,0.1) 0%, rgba(0,212,255,0.1) 100%);
+  border: 1rpx solid rgba(0,245,160,0.2);
+  border-radius: 20rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.rank-label {
+  font-size: 26rpx;
+  color: rgba(255,255,255,0.5);
+}
+
+.rank-value {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #00f5a0;
+}
+
+/* Leaderboard list */
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.lb-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 18rpx 20rpx;
+  background: rgba(255,255,255,0.03);
+  border-radius: 14rpx;
+}
+
+.lb-item.is-me {
+  background: rgba(0,245,160,0.08);
+  border: 1rpx solid rgba(0,245,160,0.15);
+}
+
+.lb-rank {
+  width: 56rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: rgba(255,255,255,0.5);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.lb-avatar {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: rgba(0,245,160,0.12);
+  color: #00f5a0;
+  font-size: 24rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lb-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+.lb-name {
+  font-size: 26rpx;
+  color: #fff;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-days {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.35);
+}
+
+.lb-progress {
+  width: 120rpx;
+  flex-shrink: 0;
+}
+
+.lb-progress-bar {
+  height: 8rpx;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.lb-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00f5a0, #00d4ff);
+  border-radius: 4rpx;
+}
+
+/* Loading */
+.loading-state {
+  text-align: center;
+  padding: 120rpx 0;
+  color: rgba(255,255,255,0.3);
+  font-size: 28rpx;
+}

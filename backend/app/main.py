@@ -1,6 +1,8 @@
 import asyncio
 import os
 import json
+import random
+import string
 from datetime import datetime, timezone
 from functools import wraps
 from urllib.parse import urlencode
@@ -11,20 +13,28 @@ from fastapi.responses import RedirectResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address, _rate_limit_exceeded_handler
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
 from .athletes import compare_with_athlete, get_all_athletes
 from .db import check_database, get_db_session
-from .db_models import OAuthConnection, RunSession, StravaRun, StravaWeeklyStat, User
+from .db_models import InviteCode, ChallengeParticipant, OAuthConnection, RunSession, StravaRun, StravaWeeklyStat, User, _MAX_INVITE_CODES_PER_USER, _FOURTEEN_DAY_CHALLENGE_ID
 from .schemas import (
     AnalyzeProfileContext,
     AnalysisResponse,
     AthleteListItem,
+    ChallengeInfo,
+    ChallengeJoinRequest,
+    ChallengeJoinResponse,
+    ChallengeLeaderboardEntry,
     CompareRequest,
     CompareResponse,
     FeedbackSubmitRequest,
     FeedbackSubmitResponse,
+    InviteCodeGenerateRequest,
+    InviteCodeGenerateResponse,
+    InviteRedeemRequest,
+    InviteRedeemResponse,
     PoseMetricsInput,
     ProfileSaveRequest,
     ProfileSaveResponse,
@@ -873,3 +883,329 @@ async def strava_disconnect(payload: StravaDisconnectRequest) -> StravaDisconnec
         deleted_weekly_stat_count=deleted_weekly_stat_count,
         message=message,
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RF-600  Invite Code System  ──────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+
+_ALPHANUMERIC = string.ascii_uppercase + string.digits
+
+
+def _generate_invite_code() -> str:
+    """Generate a unique 8-character alphanumeric invite code."""
+    return ''.join(random.choices(_ALPHANUMERIC, k=8))
+
+
+@app.post("/api/v1/invite/generate", response_model=InviteCodeGenerateResponse)
+def generate_invite(payload: InviteCodeGenerateRequest, _api_key: str = Depends(verify_api_key)) -> InviteCodeGenerateResponse:
+    """Generate a unique 8-character invite code. Each user can create up to 5 codes."""
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, payload.ios_user_id)
+
+            active_codes = session.execute(
+                select(InviteCode).where(
+                    InviteCode.creator_user_id == user.id,
+                    InviteCode.redeemed_by.is_(None),
+                )
+            ).scalars().all()
+            if len(active_codes) >= _MAX_INVITE_CODES_PER_USER:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"You have reached the maximum of {_MAX_INVITE_CODES_PER_USER} active invite codes.",
+                )
+
+            # Generate unique codes, retrying on collision
+            for _ in range(20):
+                code = _generate_invite_code()
+                existing = session.scalar(select(InviteCode).where(InviteCode.code == code))
+                if existing is None:
+                    break
+            else:
+                raise HTTPException(status_code=500, detail="Failed to generate unique invite code. Please try again.")
+
+            invite = InviteCode(
+                code=code,
+                creator_user_id=user.id,
+            )
+            session.add(invite)
+            session.commit()
+            session.refresh(invite)
+
+            remaining = _MAX_INVITE_CODES_PER_USER - len(active_codes) - 1
+            return InviteCodeGenerateResponse(
+                code=invite.code,
+                created_at=invite.created_at.isoformat(),
+                remaining=remaining,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to generate invite code: {exc}") from exc
+
+
+@app.get("/api/v1/invite/{code}")
+def verify_invite(code: str) -> dict:
+    """Verify if an invite code is valid and unredeemed."""
+    try:
+        with get_db_session() as session:
+            invite = session.scalar(select(InviteCode).where(InviteCode.code == code.upper()))
+            if invite is None:
+                return {"valid": False, "reason": "Code not found"}
+            if invite.redeemed_by is not None:
+                return {"valid": False, "reason": "Already redeemed"}
+            return {
+                "valid": True,
+                "code": invite.code,
+                "created_at": invite.created_at.isoformat(),
+            }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to verify invite code: {exc}") from exc
+
+
+@app.post("/api/v1/invite/redeem", response_model=InviteRedeemResponse)
+def redeem_invite(payload: InviteRedeemRequest, _api_key: str = Depends(verify_api_key)) -> InviteRedeemResponse:
+    """Redeem an invite code. Both creator and redeemer get reward markers."""
+
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, payload.ios_user_id)
+            code = payload.code.strip().upper()
+
+            invite = session.scalar(select(InviteCode).where(InviteCode.code == code))
+            if invite is None:
+                raise HTTPException(status_code=404, detail="Invite code not found.")
+            if invite.redeemed_by is not None:
+                raise HTTPException(status_code=400, detail="This invite code has already been redeemed.")
+            if invite.creator_user_id == user.id:
+                raise HTTPException(status_code=400, detail="You cannot redeem your own invite code.")
+
+            # Check if redeemer has already redeemed a code
+            already_redeemed = session.scalar(
+                select(func.count()).select_from(InviteCode).where(InviteCode.redeemed_by == user.id)
+            ) or 0
+            if already_redeemed > 0:
+                raise HTTPException(status_code=400, detail="You have already redeemed an invite code.")
+
+            invite.redeemed_by = user.id
+            invite.redeemed_at = datetime.now(timezone.utc)
+            session.commit()
+
+            # Reward markers — logged for future gamification
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(
+                "Invite redeemed — code=%s creator_user_id=%s redeemer_user_id=%s",
+                code, invite.creator_user_id, user.id,
+            )
+
+            return InviteRedeemResponse(success=True, message="Invite code redeemed! Both you and your friend earned rewards.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to redeem invite code: {exc}") from exc
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RF-601  Challenge Platform API ───────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+
+_CHALLENGES = {
+    _FOURTEEN_DAY_CHALLENGE_ID: {
+        "id": _FOURTEEN_DAY_CHALLENGE_ID,
+        "name": "14-Day Running Form Challenge",
+        "description": (
+            "Improve your running form in 14 days! Track your cadence and "
+            "vertical oscillation improvements. Top improvers earn badges and rewards."
+        ),
+        "start_date": "2026-05-18",
+        "end_date": "2026-06-01",
+    },
+}
+
+
+@app.get("/api/v1/challenges", response_model=list[ChallengeInfo])
+def list_challenges() -> list[ChallengeInfo]:
+    """Return all challenges. Currently hardcoded to the 14-day form challenge."""
+    try:
+        with get_db_session() as session:
+            results = []
+            for cid, cdata in _CHALLENGES.items():
+                count = session.scalar(
+                    select(func.count()).select_from(ChallengeParticipant).where(
+                        ChallengeParticipant.challenge_id == cid,
+                    )
+                ) or 0
+                now = datetime.now(timezone.utc)
+                end_dt = datetime.fromisoformat(cdata["end_date"]).replace(tzinfo=timezone.utc)
+                status = "active" if now <= end_dt else "ended"
+                results.append(ChallengeInfo(
+                    id=cdata["id"],
+                    name=cdata["name"],
+                    description=cdata["description"],
+                    start_date=cdata["start_date"],
+                    end_date=cdata["end_date"],
+                    participant_count=count,
+                    status=status,
+                ))
+            return results
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to list challenges: {exc}") from exc
+
+
+@app.post("/api/v1/challenges/{challenge_id}/join", response_model=ChallengeJoinResponse)
+def join_challenge(challenge_id: str, payload: ChallengeJoinRequest, _api_key: str = Depends(verify_api_key)) -> ChallengeJoinResponse:
+    """Join a challenge. Captures baseline metrics from the user's recent run sessions."""
+    if challenge_id not in _CHALLENGES:
+        raise HTTPException(status_code=404, detail=f"Challenge '{challenge_id}' not found.")
+
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, payload.ios_user_id)
+
+            # Check if already joined
+            existing = session.scalar(
+                select(ChallengeParticipant).where(
+                    ChallengeParticipant.challenge_id == challenge_id,
+                    ChallengeParticipant.user_id == user.id,
+                )
+            )
+            if existing is not None:
+                return ChallengeJoinResponse(
+                    joined=True,
+                    challenge_id=challenge_id,
+                    message="You have already joined this challenge.",
+                )
+
+            # Capture baseline metrics from the user's 3 most recent sessions
+            recent_sessions = session.execute(
+                select(RunSession)
+                .where(RunSession.user_id == user.id)
+                .order_by(RunSession.start_time.desc())
+                .limit(3)
+            ).scalars().all()
+
+            baseline_cadence = None
+            baseline_osc = None
+            baseline_score = None
+
+            if recent_sessions:
+                cadences = [s.avg_cadence for s in recent_sessions if s.avg_cadence is not None]
+                oscillations = [s.avg_vertical_oscillation for s in recent_sessions if s.avg_vertical_oscillation is not None]
+
+                if cadences:
+                    baseline_cadence = round(sum(cadences) / len(cadences), 2)
+                if oscillations:
+                    baseline_osc = round(sum(oscillations) / len(oscillations), 4)
+
+                # Composite overall score: normalized cadence + inverted oscillation
+                if baseline_cadence and baseline_osc:
+                    baseline_score = round(
+                        (baseline_cadence / 180.0 * 0.5) + ((0.12 / max(baseline_osc, 0.001)) * 0.5), 3
+                    )
+
+            participant = ChallengeParticipant(
+                challenge_id=challenge_id,
+                user_id=user.id,
+                baseline_cadence=baseline_cadence,
+                baseline_vertical_oscillation=baseline_osc,
+                baseline_overall_score=baseline_score,
+            )
+            session.add(participant)
+            session.commit()
+
+            return ChallengeJoinResponse(
+                joined=True,
+                challenge_id=challenge_id,
+                message="Successfully joined the 14-Day Running Form Challenge! Your baseline metrics have been recorded.",
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to join challenge: {exc}") from exc
+
+
+@app.get("/api/v1/challenges/{challenge_id}/leaderboard", response_model=list[ChallengeLeaderboardEntry])
+def challenge_leaderboard(challenge_id: str) -> list[ChallengeLeaderboardEntry]:
+    """Return the leaderboard sorted by overall improvement magnitude."""
+    if challenge_id not in _CHALLENGES:
+        raise HTTPException(status_code=404, detail=f"Challenge '{challenge_id}' not found.")
+
+    try:
+        with get_db_session() as session:
+            participants = session.execute(
+                select(ChallengeParticipant).where(
+                    ChallengeParticipant.challenge_id == challenge_id,
+                )
+            ).scalars().all()
+
+            entries: list[ChallengeLeaderboardEntry] = []
+
+            for p in participants:
+                # Get sessions since join date
+                recent_sessions = session.execute(
+                    select(RunSession)
+                    .where(
+                        RunSession.user_id == p.user_id,
+                        RunSession.start_time >= p.joined_at,
+                    )
+                    .order_by(RunSession.start_time.desc())
+                    .limit(10)
+                ).scalars().all()
+
+                # Compute current averages
+                cadences = [s.avg_cadence for s in recent_sessions if s.avg_cadence is not None]
+                oscillations = [s.avg_vertical_oscillation for s in recent_sessions if s.avg_vertical_oscillation is not None]
+
+                current_cadence = round(sum(cadences) / len(cadences), 2) if cadences else None
+                current_osc = round(sum(oscillations) / len(oscillations), 4) if oscillations else None
+
+                # Improvement percentages
+                cadence_improvement = None
+                osc_improvement = None
+
+                if p.baseline_cadence and current_cadence and p.baseline_cadence > 0:
+                    cadence_improvement = round((current_cadence - p.baseline_cadence) / p.baseline_cadence * 100, 1)
+
+                if p.baseline_vertical_oscillation and current_osc and p.baseline_vertical_oscillation > 0:
+                    # Lower oscillation is better, so improvement = (baseline - current) / baseline * 100
+                    osc_improvement = round((p.baseline_vertical_oscillation - current_osc) / p.baseline_vertical_oscillation * 100, 1)
+
+                # Current overall score
+                current_score = None
+                if current_cadence and current_osc:
+                    current_score = round(
+                        (current_cadence / 180.0 * 0.5) + ((0.12 / max(current_osc, 0.001)) * 0.5), 3
+                    )
+
+                overall_change = None
+                if p.baseline_overall_score is not None and current_score is not None:
+                    overall_change = round(current_score - p.baseline_overall_score, 3)
+
+                # Look up ios_user_id
+                user = session.scalar(select(User).where(User.id == p.user_id))
+
+                entries.append(ChallengeLeaderboardEntry(
+                    ios_user_id=user.ios_user_id if user else f"user_{p.user_id}",
+                    cadence_improvement_pct=cadence_improvement,
+                    oscillation_improvement_pct=osc_improvement,
+                    overall_score_change=overall_change,
+                    rank=0,  # placeholder, filled below
+                ))
+
+            # Sort by overall_score_change descending, then cadence improvement
+            entries.sort(
+                key=lambda e: (
+                    e.overall_score_change if e.overall_score_change is not None else float("-inf")
+                ),
+                reverse=True,
+            )
+
+            # Assign ranks
+            for i, entry in enumerate(entries):
+                entry.rank = i + 1
+
+            return entries
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to compute leaderboard: {exc}") from exc

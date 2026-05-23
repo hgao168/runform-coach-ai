@@ -222,6 +222,34 @@ const strings = {
     voiceCoachPaused: '已暂停',
     voiceCoachStopped: '播报完毕',
     voiceCoachNoAudio: '语音文件未生成，请运行 tools/generate-voice-prompts.py',
+
+    // Invite page
+    inviteTitle: '邀请好友',
+    myInviteCode: '我的邀请码',
+    shareInvite: '分享邀请',
+    invitedFriends: '已邀请好友',
+    noInviteesYet: '还没有好友加入',
+    noInviteesSub: '分享你的邀请码，邀请跑友一起加入',
+    copyCode: '复制邀请码',
+    codeCopied: '已复制',
+    inviteTip: '邀请好友加入 RunForm，一起改善跑步姿态',
+    inviteReward: '每成功邀请一位好友，双方各得7天Pro体验',
+
+    // Challenge page
+    challengeTitle: '14天跑姿改善挑战',
+    challengeSub: '每天改善一点，14天后遇见更好的跑姿',
+    challengeDesc: '加入14天跑姿改善挑战，每天完成一项跑姿改善任务，与跑友一起进步！',
+    joinChallenge: '立即加入挑战',
+    joinedLabel: '已加入挑战！',
+    progressLabel: '我的进度',
+    leaderboardLabel: '排行榜',
+    todayTask: '今日任务',
+    checkIn: '打卡签到',
+    checkedIn: '打卡成功！',
+    dayLabel: '天',
+    daysCompleted: '天已完成',
+    rank: '我的排名',
+    noRank: '暂未上榜',
   },
 
   en: {
@@ -421,6 +449,34 @@ const strings = {
     voiceCoachPaused: 'Paused',
     voiceCoachStopped: 'Finished',
     voiceCoachNoAudio: 'Voice files not generated. Run tools/generate-voice-prompts.py',
+
+    // Invite page
+    inviteTitle: 'Invite Friends',
+    myInviteCode: 'My Invite Code',
+    shareInvite: 'Share Invite',
+    invitedFriends: 'Invited Friends',
+    noInviteesYet: 'No friends yet',
+    noInviteesSub: 'Share your invite code with running buddies',
+    copyCode: 'Copy Code',
+    codeCopied: 'Copied!',
+    inviteTip: 'Invite friends to RunForm and improve together',
+    inviteReward: 'Both get 7-day Pro trial for each successful invite',
+
+    // Challenge page
+    challengeTitle: '14-Day Form Challenge',
+    challengeSub: 'Improve a little each day, meet a better runner in 14 days',
+    challengeDesc: 'Join the 14-day running form challenge. Complete one task daily and progress with the community!',
+    joinChallenge: 'Join Challenge',
+    joinedLabel: 'Joined!',
+    progressLabel: 'My Progress',
+    leaderboardLabel: 'Leaderboard',
+    todayTask: 'Today\'s Task',
+    checkIn: 'Check In',
+    checkedIn: 'Checked In!',
+    dayLabel: 'days',
+    daysCompleted: 'days completed',
+    rank: 'My Rank',
+    noRank: 'Not ranked',
   },
 }
 
