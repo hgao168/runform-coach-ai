@@ -3,6 +3,7 @@ package com.runformcoach.runformcoachai
 import android.content.Intent
 import android.net.Uri
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -51,6 +53,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -67,12 +72,13 @@ fun AnalysisResultScreen(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ── RF-207: Share button ───────────────────────────────────────────
+        // ── RF-207 / RF-1001: Share buttons ────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Share text (existing)
             IconButton(onClick = {
                 val scorePercent = (result.confidence * 100).toInt()
                 val summary = result.summary
@@ -89,6 +95,35 @@ fun AnalysisResultScreen(
                     imageVector = Icons.Default.Share,
                     contentDescription = stringResource(R.string.share),
                     tint = AppColors.Mint,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            // Share as image card (RF-1001)
+            IconButton(onClick = {
+                Toast.makeText(context, context.getString(R.string.share_card_saving), Toast.LENGTH_SHORT).show()
+                CoroutineScope(Dispatchers.IO).launch {
+                    val bitmap = ShareCardRenderer.renderAnalysisCard(context, result)
+                    val uri = ShareCardRenderer.saveToGallery(context, bitmap, "runform_analysis")
+                    bitmap.recycle()
+                    CoroutineScope(Dispatchers.Main).launch {
+                        if (uri != null) {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "image/png"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            Toast.makeText(context, context.getString(R.string.share_card_saved), Toast.LENGTH_SHORT).show()
+                            context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.share_card_failed), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Image,
+                    contentDescription = stringResource(R.string.share_card),
+                    tint = AppColors.Cyan,
                     modifier = Modifier.size(22.dp)
                 )
             }

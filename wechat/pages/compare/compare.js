@@ -249,7 +249,7 @@ Page({
       pageInstance: this,
       onSuccess: (tempFilePath) => {
         this._shareImagePath = tempFilePath
-        wx.showToast({ title: isZh ? '分享图已生成' : 'Share image ready', icon: 'success' })
+        wx.showToast({ title: t('shareGenSuccess'), icon: 'success' })
       },
       onFail: (err) => {
         console.error('[compare] ShareCard generate failed:', err)
@@ -278,7 +278,7 @@ Page({
           ShareCard.saveToAlbum(tempFilePath)
         },
         onFail: () => {
-          wx.showToast({ title: isZh ? '生成分享图失败' : 'Share image failed', icon: 'none' })
+          wx.showToast({ title: t('shareGenFail'), icon: 'none' })
         },
       })
     }

@@ -1,9 +1,11 @@
 // utils/share-card.js
 // RF-913: Canvas 渲染分享卡片工具
-// 支持 3 种场景：分析结果分享、对比结果分享、历史记录分享
-// 分享卡片内容：RunForm Logo + 关键指标（步频/振幅/GCT）+ 小程序码 + "扫码体验"
+// RF-1011: 3种场景差异化设计（分析/对比/洞察）
+// 分析结果分享卡：评分圆环 + 关键指标 + 小程序码
+// 对比结果分享卡：用户 vs 精英对比表 + 小程序码
+// 洞察报告分享卡：周趋势迷你图 + AI建议摘要 + 小程序码
 
-const { isZh } = require('./i18n')
+const { t, isZh } = require('./i18n')
 
 // ─── QR Code helper ──────────────────────────────────────────────────────
 // WeChat cloud.openapi.wxacode.getUnlimited generates a real mini-program
@@ -65,7 +67,7 @@ function _drawQRPlaceholder(ctx, x, y, size) {
  *
  *   ShareCard.generate({
  *     canvasId: 'shareCanvas',
- *     scenario: 'analysis',   // 'analysis' | 'compare' | 'history'
+ *     scenario: 'analysis',   // 'analysis' | 'compare' | 'insight'
  *     data: { ... },
  *     onSuccess: (tempFilePath) => { ... },
  *     onFail: (err) => { ... },
@@ -77,12 +79,44 @@ function _drawQRPlaceholder(ctx, x, y, size) {
 // ─── Layout constants ───
 
 const W = 375                   // card width
-const H = 580                   // card height (taller for 3 scenarios)
+const H = 580                   // card height
 const PAD = 24                  // horizontal padding
-const ACCENT = '#00f5a0'       // mint green
-const BG_START = '#0a0a0f'
-const BG_MID = '#12121a'
 const FONT = '-apple-system, "PingFang SC", sans-serif'
+
+// ─── Scenario color schemes (RF-1011) ───
+// Each scenario gets a distinct accent color and background gradient
+
+const SCENARIO_COLORS = {
+  analysis: {
+    accent: '#00f5a0',           // mint green
+    accentDim: 'rgba(0,245,160,0.4)',
+    accentBg: 'rgba(0,245,160,0.08)',
+    bgGradStart: '#0a0a0f',
+    bgGradMid: '#12121a',
+    secondary: '#00d4ff',
+  },
+  compare: {
+    accent: '#ff9f30',           // orange
+    accentDim: 'rgba(255,159,48,0.4)',
+    accentBg: 'rgba(255,159,48,0.08)',
+    bgGradStart: '#0f0a08',
+    bgGradMid: '#1a1412',
+    secondary: '#ff6b9d',
+  },
+  insight: {
+    accent: '#00d4ff',           // cyan
+    accentDim: 'rgba(0,212,255,0.4)',
+    accentBg: 'rgba(0,212,255,0.08)',
+    bgGradStart: '#0a0f14',
+    bgGradMid: '#121a1f',
+    secondary: '#a78bfa',        // purple
+  },
+}
+
+/** Get color scheme, defaulting to analysis */
+function _colors(scenario) {
+  return SCENARIO_COLORS[scenario] || SCENARIO_COLORS.analysis
+}
 
 // ─── Helpers ───
 
@@ -102,27 +136,30 @@ function roundRect(ctx, x, y, w, h, r) {
 
 // ─── Common background & header ───
 
-function drawBackground(ctx) {
+function drawBackground(ctx, scenario) {
+  const c = _colors(scenario)
   const bgGrad = ctx.createLinearGradient(0, 0, 0, H)
-  bgGrad.addColorStop(0, BG_START)
-  bgGrad.addColorStop(0.5, BG_MID)
-  bgGrad.addColorStop(1, BG_START)
+  bgGrad.addColorStop(0, c.bgGradStart)
+  bgGrad.addColorStop(0.5, c.bgGradMid)
+  bgGrad.addColorStop(1, c.bgGradStart)
   ctx.fillStyle = bgGrad
   ctx.fillRect(0, 0, W, H)
 
-  // Accent band
-  ctx.fillStyle = ACCENT
+  // Accent band — uses scenario accent color
+  ctx.fillStyle = c.accent
   ctx.fillRect(0, 0, W, 4)
 }
 
-function drawHeader(ctx, y) {
+function drawHeader(ctx, y, scenario) {
+  const c = _colors(scenario)
+
   // RunForm logo circle
-  ctx.fillStyle = ACCENT
+  ctx.fillStyle = c.accent
   ctx.beginPath()
   ctx.arc(PAD + 16, y + 18, 16, 0, Math.PI * 2)
   ctx.fill()
 
-  ctx.fillStyle = BG_START
+  ctx.fillStyle = c.bgGradStart
   ctx.font = 'bold 10px ' + FONT
   ctx.textAlign = 'center'
   ctx.fillText('🏃', PAD + 16, y + 22)
@@ -135,7 +172,22 @@ function drawHeader(ctx, y) {
 
   ctx.fillStyle = 'rgba(255,255,255,0.4)'
   ctx.font = '11px ' + FONT
-  ctx.fillText(isZh ? 'AI 跑姿分析' : 'AI Run Analysis', PAD + 40, y + 32)
+
+  // Different subtitle per scenario
+  let subtitle
+  switch (scenario) {
+    case 'compare':
+      subtitle = isZh ? '精英运动员对比' : 'Elite Athlete Comparison'
+      break
+    case 'insight':
+      subtitle = isZh ? '周训练洞察报告' : 'Weekly Training Insight'
+      break
+    case 'analysis':
+    default:
+      subtitle = isZh ? 'AI 跑姿分析' : 'AI Run Analysis'
+      break
+  }
+  ctx.fillText(subtitle, PAD + 40, y + 32)
 
   return y + 58
 }
@@ -150,37 +202,138 @@ function drawDivider(ctx, y) {
   return y + 20
 }
 
+// ─── Mini sparkline helper (RF-1011: insight trend) ───
+
+/**
+ * Draw a mini sparkline chart (no axes, just the curve).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number[]} values  - Data points
+ * @param {number} x         - Left edge
+ * @param {number} y         - Top edge
+ * @param {number} w         - Width
+ * @param {number} h         - Height
+ * @param {string} color     - Line color
+ */
+function _drawSparkline(ctx, values, x, y, w, h, color) {
+  if (!values || values.length < 2) return
+
+  const valid = values.filter((v) => v != null)
+  if (valid.length < 2) return
+
+  let vMin = Infinity, vMax = -Infinity
+  for (const v of valid) {
+    if (v < vMin) vMin = v
+    if (v > vMax) vMax = v
+  }
+  if (vMin === vMax) {
+    vMin -= 1
+    vMax += 1
+  }
+
+  const step = w / (valid.length - 1)
+
+  // Fill area under curve (subtle gradient)
+  const fillGrad = ctx.createLinearGradient(0, y, 0, y + h)
+  fillGrad.addColorStop(0, color.replace(')', ',0.15)').replace('rgb', 'rgba'))
+  fillGrad.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = fillGrad
+  ctx.beginPath()
+  valid.forEach((v, i) => {
+    const px = x + i * step
+    const py = y + h - ((v - vMin) / (vMax - vMin)) * h
+    if (i === 0) ctx.moveTo(px, py)
+    else ctx.lineTo(px, py)
+  })
+  ctx.lineTo(x + (valid.length - 1) * step, y + h)
+  ctx.lineTo(x, y + h)
+  ctx.closePath()
+  ctx.fill()
+
+  // Line
+  ctx.strokeStyle = color
+  ctx.lineWidth = 2
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  valid.forEach((v, i) => {
+    const px = x + i * step
+    const py = y + h - ((v - vMin) / (vMax - vMin)) * h
+    if (i === 0) ctx.moveTo(px, py)
+    else ctx.lineTo(px, py)
+  })
+  ctx.stroke()
+
+  // Start/end dots
+  ctx.fillStyle = color
+  valid.forEach((v, i) => {
+    if (i === 0 || i === valid.length - 1) {
+      const px = x + i * step
+      const py = y + h - ((v - vMin) / (vMax - vMin)) * h
+      ctx.beginPath()
+      ctx.arc(px, py, 3, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  })
+}
+
 // ─── Scenario: analysis (分析结果分享) ───
+// RF-1011: 评分圆环 + 关键指标 + 小程序码
 
 function drawAnalysisScenario(ctx, data) {
   let y = 30
+  const c = _colors('analysis')
   const { confidencePct, metrics, insights, overallAssessment } = data
 
   // Header
-  y = drawHeader(ctx, y)
+  y = drawHeader(ctx, y, 'analysis')
 
   // Divider
   y = drawDivider(ctx, y)
 
-  // ── Score card ──
-  ctx.fillStyle = 'rgba(0,245,160,0.08)'
-  roundRect(ctx, PAD, y, W - PAD * 2, 100, 12)
+  // ── Score ring (RF-1011: circular gauge instead of plain text) ──
+  const ringCx = W / 2
+  const ringCy = y + 56
+  const ringR = 44
+  const ringW = 6
+
+  // Score card background
+  ctx.fillStyle = c.accentBg
+  roundRect(ctx, PAD, y, W - PAD * 2, 116, 12)
   ctx.fill()
 
-  ctx.fillStyle = ACCENT
-  ctx.font = 'bold 56px ' + FONT
+  // Background ring
+  ctx.beginPath()
+  ctx.arc(ringCx, ringCy, ringR, 0, Math.PI * 2)
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'
+  ctx.lineWidth = ringW
+  ctx.stroke()
+
+  // Progress arc
+  const pct = Math.min(Math.max(confidencePct || 0, 0), 100)
+  const startAngle = -Math.PI / 2
+  const endAngle = startAngle + (Math.PI * 2 * pct) / 100
+  ctx.beginPath()
+  ctx.arc(ringCx, ringCy, ringR, startAngle, endAngle)
+  ctx.strokeStyle = c.accent
+  ctx.lineWidth = ringW
+  ctx.lineCap = 'round'
+  ctx.stroke()
+
+  // Score text inside ring
+  ctx.fillStyle = c.accent
+  ctx.font = 'bold 36px ' + FONT
   ctx.textAlign = 'center'
   const scoreText = confidencePct != null ? `${confidencePct}` : '–'
-  ctx.fillText(scoreText, W / 2, y + 56)
+  ctx.fillText(scoreText, ringCx, ringCy - 2)
 
-  ctx.fillStyle = 'rgba(255,255,255,0.6)'
-  ctx.font = '13px ' + FONT
-  ctx.fillText(isZh ? '跑姿评分' : 'FORM SCORE', W / 2, y + 82)
+  // Label below ring
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'
+  ctx.font = '11px ' + FONT
+  ctx.fillText(isZh ? '跑姿评分' : 'FORM SCORE', ringCx, ringCy + 34)
 
-  y += 120
+  y += 136
 
   // ── Key metrics circle row ──
-  // Extract real metrics: cadence (步频), vertical oscillation (振幅), GCT (触地时间)
   const keyMetricKeys = [
     { match: ['cadence', '步频'], labelZh: '步频', labelEn: 'Cadence' },
     { match: ['oscillation', '振幅', 'vertical'], labelZh: '振幅', labelEn: 'Osc.' },
@@ -221,13 +374,13 @@ function drawAnalysisScenario(ctx, data) {
       ctx.lineWidth = 3
       ctx.stroke()
 
-      // Progress arc
-      const pct = m.pct || 0
+      // Progress arc (use scenario accent)
+      const mpct = m.pct || 0
       ctx.beginPath()
-      const startAngle = -Math.PI / 2
-      const endAngle = startAngle + (Math.PI * 2 * pct) / 100
-      ctx.arc(cx, y + 20, 16, startAngle, endAngle)
-      ctx.strokeStyle = m.color || ACCENT
+      const sa = -Math.PI / 2
+      const ea = sa + (Math.PI * 2 * mpct) / 100
+      ctx.arc(cx, y + 20, 16, sa, ea)
+      ctx.strokeStyle = m.color || c.accent
       ctx.lineWidth = 3
       ctx.stroke()
 
@@ -240,7 +393,7 @@ function drawAnalysisScenario(ctx, data) {
       // Value
       ctx.fillStyle = '#ffffff'
       ctx.font = 'bold 12px ' + FONT
-      ctx.fillText(m.valueText || `${m.pct}%`, cx, y + 68)
+      ctx.fillText(m.valueText || `${mpct}%`, cx, y + 68)
     })
     y += 82
   }
@@ -248,7 +401,7 @@ function drawAnalysisScenario(ctx, data) {
   // ── Key finding ──
   if (insights && insights.length > 0) {
     ctx.textAlign = 'left'
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'
+    ctx.fillStyle = c.accentDim
     ctx.font = '11px ' + FONT
     ctx.fillText(isZh ? '关键发现' : 'KEY FINDING', PAD, y + 14)
 
@@ -261,7 +414,7 @@ function drawAnalysisScenario(ctx, data) {
     y += 50
   } else if (overallAssessment) {
     ctx.textAlign = 'left'
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'
+    ctx.fillStyle = c.accentDim
     ctx.font = '11px ' + FONT
     ctx.fillText(isZh ? '综合评估' : 'ASSESSMENT', PAD, y + 14)
 
@@ -278,17 +431,20 @@ function drawAnalysisScenario(ctx, data) {
 }
 
 // ─── Scenario: compare (对比结果分享) ───
+// RF-1011: 用户 vs 精英对比表 + 小程序码
 
 function drawCompareScenario(ctx, data) {
   let y = 30
+  const c = _colors('compare')
   const { userMetrics, athleteName, athleteStats, comparisonRows } = data
 
   // Header
-  y = drawHeader(ctx, y)
+  y = drawHeader(ctx, y, 'compare')
 
-  // Title
+  // Divider
   y = drawDivider(ctx, y)
 
+  // Title
   ctx.textAlign = 'center'
   ctx.fillStyle = '#ffffff'
   ctx.font = 'bold 18px ' + FONT
@@ -299,12 +455,10 @@ function drawCompareScenario(ctx, data) {
 
   y += 52
 
-  // ── Comparison table ──
-  // Use comparisonRows from the compare page if available; otherwise build from raw data
+  // ── Comparison table (RF-1011: enhanced with gap colors and card background) ──
   let rows = comparisonRows || []
 
   if (rows.length === 0 && athleteStats && userMetrics) {
-    // Build basic comparison from raw stats
     const metricMeta = [
       { key: 'cadence', labelZh: '步频', labelEn: 'Cadence', unit: 'spm', format: (v) => Math.round(v).toString() },
       { key: 'vertical_oscillation', labelZh: '振幅', labelEn: 'Osc.', unit: 'cm', format: (v) => v.toFixed(1) },
@@ -323,7 +477,7 @@ function drawCompareScenario(ctx, data) {
         let diffColor = ''
         if (bothHave) {
           const diff = m.key === 'cadence' ? userVal - eliteVal : eliteVal - userVal
-          diffColor = diff >= 0 ? ACCENT : '#ff4757'
+          diffColor = diff >= 0 ? c.accent : '#ff4757'
         }
         return {
           label: isZh ? m.labelZh : m.labelEn,
@@ -336,30 +490,38 @@ function drawCompareScenario(ctx, data) {
   }
 
   if (rows.length > 0) {
+    // Table background card
+    const tableH = 8 + 24 + rows.slice(0, 4).length * 36 + 8
+    ctx.fillStyle = c.accentBg
+    roundRect(ctx, PAD, y, W - PAD * 2, tableH + 8, 10)
+    ctx.fill()
+
+    y += 8
+
     // Table header
-    const col1 = PAD + 8
-    const col2 = PAD + 120
+    const col1 = PAD + 16
+    const col2 = PAD + 130
     const col3 = PAD + 210
-    const col4 = W - PAD - 8
+    const col4 = W - PAD - 16
 
     ctx.textAlign = 'left'
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'
+    ctx.fillStyle = c.accentDim
     ctx.font = '10px ' + FONT
     ctx.fillText('', col1, y + 14)
     ctx.textAlign = 'center'
     ctx.fillText(isZh ? '你' : 'YOU', col2 + 24, y + 14)
-    ctx.fillText(isZh ? '精英' : 'ELITE', col3 + 24, y + 14)
+    ctx.fillText(isZh ? (athleteName || '精英') : (athleteName || 'ELITE'), col3 + 24, y + 14)
 
     y += 24
 
     // Table rows
     const rowH = 36
-    rows.slice(0, 3).forEach((row, i) => {
+    rows.slice(0, 4).forEach((row, i) => {
       const ry = y + i * rowH
 
-      // Row background (alternating)
+      // Row background (alternating in accent)
       if (i % 2 === 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.03)'
+        ctx.fillStyle = 'rgba(255,255,255,0.02)'
         ctx.fillRect(PAD, ry, W - PAD * 2, rowH)
       }
 
@@ -368,17 +530,25 @@ function drawCompareScenario(ctx, data) {
       ctx.font = '12px ' + FONT
       ctx.fillText(row.label, col1, ry + rowH / 2 + 4)
 
+      // User value — in accent color
       ctx.textAlign = 'center'
-      ctx.fillStyle = ACCENT
-      ctx.font = 'bold 12px ' + FONT
+      ctx.fillStyle = c.accent
+      ctx.font = 'bold 13px ' + FONT
       ctx.fillText(row.userDisplay, col2 + 24, ry + rowH / 2 + 4)
 
+      // Elite value
       ctx.fillStyle = '#ffffff'
-      ctx.font = '12px ' + FONT
+      ctx.font = '13px ' + FONT
       ctx.fillText(row.eliteDisplay, col3 + 24, ry + rowH / 2 + 4)
+
+      // Gap indicator (colored bar on right)
+      if (row.diffColor) {
+        ctx.fillStyle = row.diffColor
+        ctx.fillRect(col4 - 4, ry + rowH / 2 - 1, 4, 2)
+      }
     })
 
-    y += rows.slice(0, 3).length * rowH + 8
+    y += rows.slice(0, 4).length * rowH + 12
 
     // Unit hint
     if (rows[0] && rows[0].unit) {
@@ -400,112 +570,185 @@ function drawCompareScenario(ctx, data) {
   return y
 }
 
-// ─── Scenario: history (历史记录分享) ───
+// ─── Scenario: insight (洞察报告分享) ───
+// RF-1011: 周趋势迷你图 + AI建议摘要 + 小程序码
 
-function drawHistoryScenario(ctx, data) {
+function drawInsightScenario(ctx, data) {
   let y = 30
-  const { confidencePct, dateDisplay, overallAssessment, metrics, analysisCount } = data
+  const c = _colors('insight')
+  const {
+    comparison, trendDatasets, trendLabels, aiAdvice, badges,
+    confidencePct, dateDisplay,
+  } = data
 
   // Header
-  y = drawHeader(ctx, y)
+  y = drawHeader(ctx, y, 'insight')
   y = drawDivider(ctx, y)
 
-  // Title
+  // ── Title ──
   ctx.textAlign = 'center'
   ctx.fillStyle = '#ffffff'
   ctx.font = 'bold 18px ' + FONT
-  ctx.fillText(isZh ? '历史跑姿记录' : 'Run History Record', W / 2, y + 20)
-  y += 52
+  ctx.fillText(isZh ? '周训练洞察' : 'Weekly Training Insight', W / 2, y + 20)
+  y += 46
 
-  // ── Score card (compact) ──
-  ctx.fillStyle = 'rgba(0,245,160,0.08)'
-  roundRect(ctx, PAD, y, W - PAD * 2, 80, 12)
-  ctx.fill()
-
-  ctx.fillStyle = ACCENT
-  ctx.font = 'bold 48px ' + FONT
-  ctx.textAlign = 'center'
-  ctx.fillText(`${confidencePct != null ? confidencePct : '–'}`, W / 2, y + 44)
-
-  ctx.fillStyle = 'rgba(255,255,255,0.6)'
-  ctx.font = '12px ' + FONT
-  ctx.fillText(isZh ? '跑姿评分' : 'FORM SCORE', W / 2, y + 66)
-
-  y += 96
-
-  // Date + analysis count
-  ctx.textAlign = 'center'
-  if (dateDisplay) {
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'
-    ctx.font = '13px ' + FONT
-    ctx.fillText(dateDisplay, W / 2, y)
-    y += 24
-  }
-
-  if (analysisCount != null && analysisCount > 1) {
+  // ── Date / score info ──
+  if (dateDisplay || confidencePct != null) {
+    ctx.textAlign = 'center'
     ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    ctx.font = '12px ' + FONT
-    ctx.fillText(
-      isZh ? `共 ${analysisCount} 次分析记录` : `${analysisCount} analysis records`,
-      W / 2,
-      y
-    )
-    y += 28
+    ctx.font = '11px ' + FONT
+    let infoLine = ''
+    if (dateDisplay) infoLine += dateDisplay
+    if (confidencePct != null) {
+      infoLine += infoLine ? ` · ${isZh ? '综合' : 'Score'} ${confidencePct}` : `${isZh ? '综合评分' : 'Score'} ${confidencePct}`
+    }
+    ctx.fillText(infoLine, W / 2, y)
+    y += 22
   }
 
-  // ── Key metrics inline ──
-  if (metrics && metrics.length > 0) {
-    y += 8
-    const displayMetrics = metrics.slice(0, 3)
-    const colW = (W - PAD * 2) / displayMetrics.length
-    displayMetrics.forEach((m, i) => {
-      const cx = PAD + i * colW + colW / 2
-      const pct = m.pct || 0
+  // Divider
+  y = drawDivider(ctx, y - 2)
 
-      ctx.beginPath()
-      ctx.arc(cx, y + 14, 14, 0, Math.PI * 2)
-      ctx.strokeStyle = 'rgba(255,255,255,0.1)'
-      ctx.lineWidth = 2.5
-      ctx.stroke()
+  // ── Weekly change comparison cards ──
+  if (comparison && comparison.length > 0) {
+    ctx.textAlign = 'left'
+    ctx.fillStyle = c.accentDim
+    ctx.font = '11px ' + FONT
+    ctx.fillText(isZh ? '本周 vs 上周' : 'This Week vs Last Week', PAD, y)
+    y += 18
 
-      ctx.beginPath()
-      const sa = -Math.PI / 2
-      const ea = sa + (Math.PI * 2 * pct) / 100
-      ctx.arc(cx, y + 14, 14, sa, ea)
-      ctx.strokeStyle = m.color || ACCENT
-      ctx.stroke()
+    const cardW = (W - PAD * 2 - 16) / Math.min(comparison.length, 4)
+    comparison.slice(0, 4).forEach((item, i) => {
+      const cx = PAD + i * (cardW + 4)
+      const cardH = 48
+      const pct = item.changePct
+      const isGood = pct > 0
+
+      ctx.fillStyle = c.accentBg
+      roundRect(ctx, cx, y, cardW, cardH, 6)
+      ctx.fill()
 
       ctx.fillStyle = 'rgba(255,255,255,0.6)'
       ctx.font = '9px ' + FONT
       ctx.textAlign = 'center'
-      const short = m.label.length > 6 ? m.label.slice(0, 5) + '…' : m.label
-      ctx.fillText(short, cx, y + 42)
+      ctx.fillText(item.label, cx + cardW / 2, y + 14)
 
-      ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 11px ' + FONT
-      ctx.fillText(m.valueText || `${pct}%`, cx, y + 56)
+      const changeColor = isGood ? c.accent : '#ff4757'
+      const changeText = (pct > 0 ? '+' : '') + pct.toFixed(1) + '%'
+      ctx.fillStyle = changeColor
+      ctx.font = 'bold 13px ' + FONT
+      ctx.fillText(changeText, cx + cardW / 2, y + 34)
     })
-    y += 74
+    y += 56
   }
 
-  // Assessment text
-  if (overallAssessment) {
-    ctx.textAlign = 'center'
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'
+  // ── Trend mini sparklines ──
+  if (trendDatasets && trendDatasets.length > 0) {
+    ctx.textAlign = 'left'
+    ctx.fillStyle = c.accentDim
     ctx.font = '11px ' + FONT
-    const short = overallAssessment.length > 50
-      ? overallAssessment.slice(0, 50) + '...'
-      : overallAssessment
-    ctx.fillText(short, W / 2, y + 8)
-    y += 32
+    ctx.fillText(isZh ? '4周趋势' : '4-Week Trend', PAD, y)
+    y += 16
+
+    // Layout: label + sparkline per dataset
+    const sparkH = 28
+    const sparkW = 100
+    const labelW = 50
+    const maxDs = Math.min(trendDatasets.length, 3)
+
+    trendDatasets.slice(0, maxDs).forEach((ds, i) => {
+      const ry = y + i * (sparkH + 6)
+
+      // Label
+      ctx.textAlign = 'right'
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'
+      ctx.font = '10px ' + FONT
+      ctx.fillText(ds.label, PAD + labelW - 4, ry + sparkH / 2 + 4)
+
+      // Sparkline
+      _drawSparkline(ctx, ds.data, PAD + labelW + 4, ry, sparkW, sparkH, ds.color || c.accent)
+    })
+
+    y += maxDs * (sparkH + 6) + 8
+  }
+
+  // ── AI advice summary ──
+  if (aiAdvice) {
+    ctx.textAlign = 'left'
+    ctx.fillStyle = c.accentDim
+    ctx.font = '11px ' + FONT
+    ctx.fillText(isZh ? 'AI 教练建议' : 'AI Coach Advice', PAD, y)
+    y += 16
+
+    // Advice background
+    const adviceLines = _wrapText(ctx, aiAdvice, W - PAD * 2 - 16, 11, FONT, false)
+    const adviceH = 8 + adviceLines.length * 18 + 8
+
+    ctx.fillStyle = 'rgba(167,139,250,0.08)'
+    roundRect(ctx, PAD, y, W - PAD * 2, adviceH, 8)
+    ctx.fill()
+
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'
+    ctx.font = '11px ' + FONT
+    ctx.textAlign = 'left'
+    adviceLines.forEach((line, i) => {
+      ctx.fillText(line, PAD + 12, y + 16 + i * 18)
+    })
+
+    y += adviceH + 8
+  }
+
+  // ── Badges summary ──
+  if (badges && badges.length > 0) {
+    ctx.textAlign = 'left'
+    ctx.fillStyle = c.accentDim
+    ctx.font = '11px ' + FONT
+    ctx.fillText(isZh ? '本周成就' : 'Achievements', PAD, y)
+    y += 16
+
+    const badgeW = Math.min((W - PAD * 2) / badges.length, 100)
+    badges.slice(0, 3).forEach((b, i) => {
+      const bx = PAD + i * badgeW
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'
+      ctx.font = '24px ' + FONT
+      ctx.textAlign = 'center'
+      ctx.fillText(b.icon || '🏅', bx + badgeW / 2, y + 8)
+    })
+    y += 38
   }
 
   return y
 }
 
+// ─── Text wrapping helper (move to module level) ───
+
+function _wrapText(ctx, text, maxWidth, fontSize, fontFace, center) {
+  if (!text) return []
+  // Approximate: set font then measure
+  const prevFont = ctx.font
+  ctx.font = (fontSize || 12) + 'px ' + (fontFace || FONT)
+  const chars = text.replace(/\n/g, ' ').split('')
+  const lines = []
+  let current = ''
+  for (const ch of chars) {
+    const test = current + ch
+    if (ctx.measureText(test).width > maxWidth && current.length > 0) {
+      lines.push(current)
+      current = ch
+    } else {
+      current = test
+    }
+  }
+  if (current) lines.push(current)
+  ctx.font = prevFont
+  return lines.slice(0, 4) // Max 4 lines
+}
+
 // ─── Footer: QR code + CTA ───
 
-function drawFooter(ctx, y, qrCodeImage) {
+function drawFooter(ctx, y, qrCodeImage, scenario) {
+  const c = _colors(scenario)
+
   // Divider
   y += 4
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'
@@ -516,11 +759,25 @@ function drawFooter(ctx, y, qrCodeImage) {
   ctx.stroke()
   y += 16
 
-  // CTA text
+  // CTA text — different per scenario
   ctx.textAlign = 'left'
   ctx.fillStyle = 'rgba(255,255,255,0.6)'
   ctx.font = '12px ' + FONT
-  ctx.fillText(isZh ? '扫码测测你的跑姿 →' : 'Scan to analyze your run →', PAD, y + 14)
+
+  let ctaText
+  switch (scenario) {
+    case 'compare':
+      ctaText = isZh ? '扫码对比你的跑姿 →' : 'Scan to compare your run →'
+      break
+    case 'insight':
+      ctaText = isZh ? '扫码查看你的洞察 →' : 'Scan to see your insight →'
+      break
+    case 'analysis':
+    default:
+      ctaText = isZh ? '扫码测测你的跑姿 →' : 'Scan to analyze your run →'
+      break
+  }
+  ctx.fillText(ctaText, PAD, y + 14)
 
   // QR code — use real image if available, otherwise draw patterned placeholder
   const qrX = W - PAD - 48
@@ -559,7 +816,7 @@ function drawFooter(ctx, y, qrCodeImage) {
  *
  * @param {Object} options
  * @param {string} options.canvasId      - Canvas component ID (e.g. 'shareCanvas')
- * @param {string} options.scenario      - 'analysis' | 'compare' | 'history'
+ * @param {string} options.scenario      - 'analysis' | 'compare' | 'insight'
  * @param {Object} options.data          - Data for the card (varies by scenario)
  * @param {Function} options.onSuccess   - Called with tempFilePath
  * @param {Function} options.onFail      - Called with error
@@ -600,8 +857,8 @@ function generate(options) {
         // Clear
         ctx.clearRect(0, 0, W, H)
 
-        // Draw background
-        drawBackground(ctx)
+        // Draw background (scenario-aware)
+        drawBackground(ctx, scenario)
 
         // Draw scenario-specific content
         let contentEndY
@@ -609,8 +866,12 @@ function generate(options) {
           case 'compare':
             contentEndY = drawCompareScenario(ctx, data)
             break
+          case 'insight':
+            contentEndY = drawInsightScenario(ctx, data)
+            break
           case 'history':
-            contentEndY = drawHistoryScenario(ctx, data)
+            // Backward compat: 'history' maps to basic analysis-style card
+            contentEndY = drawInsightScenario(ctx, data)
             break
           case 'analysis':
           default:
@@ -618,8 +879,8 @@ function generate(options) {
             break
         }
 
-        // Draw shared footer
-        drawFooter(ctx, contentEndY + 8, options.qrCodeImage)
+        // Draw shared footer (scenario-aware)
+        drawFooter(ctx, contentEndY + 8, options.qrCodeImage, scenario)
 
         // Export to temp file
         wx.canvasToTempFilePath({
@@ -647,21 +908,21 @@ function generate(options) {
  */
 function saveToAlbum(tempFilePath) {
   if (!tempFilePath) {
-    wx.showToast({ title: isZh ? '图片未生成' : 'Image not ready', icon: 'none' })
+    wx.showToast({ title: t('shareGenNoImage'), icon: 'none' })
     return
   }
 
   wx.saveImageToPhotosAlbum({
     filePath: tempFilePath,
     success: () => {
-      wx.showToast({ title: isZh ? '已保存到相册' : 'Saved to album', icon: 'success' })
+      wx.showToast({ title: t('shareImageSaved'), icon: 'success' })
     },
     fail: (err) => {
       if (err.errMsg && err.errMsg.includes('auth deny')) {
         wx.showModal({
-          title: isZh ? '需要相册权限' : 'Album permission needed',
-          content: isZh ? '请在设置中开启相册权限' : 'Please enable album permission in settings',
-          confirmText: isZh ? '去设置' : 'Settings',
+          title: t('albumPermTitle'),
+          content: t('albumPermDesc'),
+          confirmText: t('albumPermGoSettings'),
           success: (res) => {
             if (res.confirm) {
               wx.openSetting()
@@ -669,7 +930,7 @@ function saveToAlbum(tempFilePath) {
           },
         })
       } else {
-        wx.showToast({ title: isZh ? '保存失败' : 'Save failed', icon: 'none' })
+        wx.showToast({ title: t('saveFailed'), icon: 'none' })
       }
     },
   })

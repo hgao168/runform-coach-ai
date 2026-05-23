@@ -1,5 +1,7 @@
 package com.runformcoach.runformcoachai
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,6 +61,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -164,6 +171,7 @@ private fun HistoryItemCard(
     expanded: Boolean,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val dateStr = remember(item.createdAt) {
         SimpleDateFormat("MMM d, yyyy  HH:mm", Locale.getDefault())
             .format(Date(item.createdAt))
@@ -203,29 +211,66 @@ private fun HistoryItemCard(
                 }
             }
 
-            // Issue pills
-            if (item.result.issues.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    item.result.issues.take(3).forEach { issue ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(AppColors.Orange.copy(alpha = 0.15f))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(issue.title, color = AppColors.Orange, fontSize = 11.sp)
+            // Issue pills + share card button row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (item.result.issues.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
+                        item.result.issues.take(3).forEach { issue ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AppColors.Orange.copy(alpha = 0.15f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(issue.title, color = AppColors.Orange, fontSize = 11.sp)
+                            }
+                        }
+                        if (item.result.issues.size > 3) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AppColors.Card)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text("+${item.result.issues.size - 3} more", color = AppColors.TextMuted, fontSize = 11.sp)
+                            }
                         }
                     }
-                    if (item.result.issues.size > 3) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(AppColors.Card)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text("+${item.result.issues.size - 3} more", color = AppColors.TextMuted, fontSize = 11.sp)
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+                // RF-1001: Share as image card
+                IconButton(onClick = {
+                    Toast.makeText(context, context.getString(R.string.share_card_saving), Toast.LENGTH_SHORT).show()
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val bitmap = ShareCardRenderer.renderHistoryCard(context, item)
+                        val uri = ShareCardRenderer.saveToGallery(context, bitmap, "runform_history")
+                        bitmap.recycle()
+                        CoroutineScope(Dispatchers.Main).launch {
+                            if (uri != null) {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "image/png"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                Toast.makeText(context, context.getString(R.string.share_card_saved), Toast.LENGTH_SHORT).show()
+                                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.share_card_failed), Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = stringResource(R.string.share_card),
+                        tint = AppColors.Cyan,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 

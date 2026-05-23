@@ -1,5 +1,7 @@
 package com.runformcoach.runformcoachai
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,6 +33,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
@@ -45,11 +49,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 private val DAYS = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -186,6 +194,7 @@ private fun WeeklyPlanContent(
     onDaysChange: (Set<String>) -> Unit,
     onInjuryChange: (Boolean) -> Unit
 ) {
+    val context = LocalContext.current
     var targetDropdownOpen by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -443,11 +452,46 @@ private fun WeeklyPlanContent(
             }
 
             item {
-                Button(
-                    onClick = { vm.resetPlan() },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Card, contentColor = AppColors.TextSecondary)
-                ) { Text("New Plan") }
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = { vm.resetPlan() },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.Card, contentColor = AppColors.TextSecondary)
+                    ) { Text("New Plan") }
+                    // RF-1001: Share plan as image card
+                    IconButton(onClick = {
+                        Toast.makeText(context, context.getString(R.string.share_card_saving), Toast.LENGTH_SHORT).show()
+                        CoroutineScope(Dispatchers.IO).launch {
+                            val planType = context.getString(R.string.plan_type_weekly_label)
+                            val bitmap = ShareCardRenderer.renderPlanCard(context, plan, planType)
+                            val uri = ShareCardRenderer.saveToGallery(context, bitmap, "runform_plan")
+                            bitmap.recycle()
+                            CoroutineScope(Dispatchers.Main).launch {
+                                if (uri != null) {
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "image/png"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    Toast.makeText(context, context.getString(R.string.share_card_saved), Toast.LENGTH_SHORT).show()
+                                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
+                                } else {
+                                    Toast.makeText(context, context.getString(R.string.share_card_failed), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = stringResource(R.string.share_card),
+                            tint = AppColors.Cyan,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
             }
         }
     }

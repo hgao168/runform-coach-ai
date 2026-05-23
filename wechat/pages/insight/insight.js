@@ -1,7 +1,9 @@
 // pages/insight/insight.js
 // RF-1010: Weekly Training Insight Report
+// RF-1011: Share card integration
 const api = require('../../utils/api')
 const { t, isZh } = require('../../utils/i18n')
+const ShareCard = require('../../utils/share-card')
 
 // --- Chart rendering constants ---
 const CHART_PAD_TOP = 36
@@ -32,6 +34,10 @@ Page({
       spacing: t('insightSpacing'),
       noData: t('insightNoData'),
       noDataSub: t('insightNoDataSub'),
+      shareInsight: t('shareInsightBtn'),
+      shareGenSuccess: t('shareGenSuccess'),
+      shareGenFail: t('shareGenFail'),
+      shareImageSaved: t('shareImageSaved'),
     },
 
     loading: true,
@@ -416,5 +422,113 @@ Page({
     } else {
       this.setData({ trendTooltip: null })
     }
+  },
+
+  // ──────────── RF-1011: Share card ────────────
+
+  /**
+   * Generate a share image for the weekly insight report.
+   * Uses the 'insight' scenario for differentiated layout.
+   */
+  generateShareImage() {
+    const { comparison, trendDatasets, trendLabels, aiAdvice, badges } = this.data
+    const raw = this._rawData || {}
+    const confidencePct = raw.overall_score != null ? Math.round(raw.overall_score * 100) : null
+    const dateDisplay = raw.week_label || ''
+
+    ShareCard.generate({
+      canvasId: 'shareCanvas',
+      scenario: 'insight',
+      data: {
+        comparison,
+        trendDatasets,
+        trendLabels,
+        aiAdvice,
+        badges,
+        confidencePct,
+        dateDisplay,
+      },
+      pageInstance: this,
+      onSuccess: (tempFilePath) => {
+        this._shareImagePath = tempFilePath
+        wx.showToast({ title: t('shareGenSuccess'), icon: 'success' })
+      },
+      onFail: (err) => {
+        console.error('[insight] ShareCard generate failed:', err)
+        wx.showToast({ title: t('shareGenFail'), icon: 'none' })
+      },
+    })
+  },
+
+  /**
+   * Save the generated share image to album.
+   * Generates on-demand if not already cached.
+   */
+  saveShareToAlbum() {
+    if (this._shareImagePath) {
+      ShareCard.saveToAlbum(this._shareImagePath)
+    } else {
+      const { comparison, trendDatasets, trendLabels, aiAdvice, badges } = this.data
+      const raw = this._rawData || {}
+      const confidencePct = raw.overall_score != null ? Math.round(raw.overall_score * 100) : null
+      const dateDisplay = raw.week_label || ''
+
+      ShareCard.generate({
+        canvasId: 'shareCanvas',
+        scenario: 'insight',
+        data: {
+          comparison,
+          trendDatasets,
+          trendLabels,
+          aiAdvice,
+          badges,
+          confidencePct,
+          dateDisplay,
+        },
+        pageInstance: this,
+        onSuccess: (tempFilePath) => {
+          this._shareImagePath = tempFilePath
+          ShareCard.saveToAlbum(tempFilePath)
+        },
+        onFail: () => {
+          wx.showToast({ title: t('shareGenFail'), icon: 'none' })
+        },
+      })
+    }
+  },
+
+  /**
+   * WeChat custom share card for insight.
+   */
+  onShareAppMessage() {
+    const { comparison, aiAdvice } = this.data
+    const lang = isZh
+
+    // Build a data-driven share title
+    const changeItems = (comparison || []).slice(0, 2)
+    const changeSummary = changeItems
+      .map((c) => `${c.icon || ''}${c.label} ${c.changePct > 0 ? '+' : ''}${c.changePct.toFixed(1)}%`)
+      .join(' ')
+
+    let title
+    if (changeSummary) {
+      title = lang
+        ? `📊 本周跑步洞察：${changeSummary}`
+        : `📊 Weekly Run Insight: ${changeSummary}`
+    } else if (aiAdvice) {
+      const snippet = aiAdvice.length > 40 ? aiAdvice.slice(0, 40) + '...' : aiAdvice
+      title = lang
+        ? `📊 周洞察：${snippet}`
+        : `📊 Weekly Insight: ${snippet}`
+    } else {
+      title = lang
+        ? '📊 RunForm 周训练洞察报告'
+        : '📊 RunForm Weekly Training Insight'
+    }
+
+    const path = '/pages/insight/insight'
+    const imageUrl = this._shareImagePath || ''
+
+    return { title, path, imageUrl }
   },
 })

@@ -117,6 +117,23 @@
       </view>
     </view>
 
+    <!-- RF-1011: Share buttons -->
+    <view class="action-section">
+      <button class="btn-mint-outline full-btn" open-type="share">
+        📤 {{i.shareInsight}}
+      </button>
+      <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="saveShareToAlbum">
+        🖼️ {{isZh ? '保存到相册' : 'Save to Album'}}
+      </button>
+    </view>
+
   </block>
+
+  <!-- RF-1011: Hidden canvas for share image generation -->
+  <canvas
+    type="2d"
+    id="shareCanvas"
+    style="position: fixed; left: -9999rpx; top: -9999rpx; width: 600rpx; height: 928rpx;"
+  />
 
 </view>

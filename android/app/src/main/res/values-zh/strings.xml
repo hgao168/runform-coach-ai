@@ -376,6 +376,18 @@
     <string name="your_analyses">你的分析</string>
     <string name="select_analysis">选择分析</string>
 
+    <!-- ── Share Card (RF-1001) ────────────────────────────────────────── -->
+    <string name="share_card">分享卡片</string>
+    <string name="share_card_saving">正在保存卡片…</string>
+    <string name="share_card_saved">卡片已保存到相册</string>
+    <string name="share_card_failed">保存卡片失败</string>
+    <string name="share_card_analysis_title">分析结果</string>
+    <string name="share_card_history_title">历史记录</string>
+    <string name="share_card_key_findings">关键发现</string>
+    <string name="share_card_key_workouts">关键训练</string>
+    <string name="share_card_weekly_km">%1$d 公里/周</string>
+    <string name="share_card_run_days">%1$d 天训练</string>
+
     <!-- ── RunSession Replay (RF-1000) ─────────────────────────────────── -->
     <string name="replay_session_history">跑步记录</string>
     <string name="replay_loading_sessions">加载中…</string>

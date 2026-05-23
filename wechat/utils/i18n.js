@@ -172,6 +172,17 @@ const strings = {
     // RF-913: Save share image
     saveToAlbum: '保存到相册',
 
+    // RF-1011: Share card generation
+    shareGenSuccess: '分享图已生成',
+    shareGenFail: '生成分享图失败',
+    shareGenNoImage: '图片未生成',
+    shareImageSaved: '已保存到相册',
+    albumPermTitle: '需要相册权限',
+    albumPermDesc: '请在设置中开启相册权限',
+    albumPermGoSettings: '去设置',
+    saveFailed: '保存失败',
+    shareInsightBtn: '分享洞察',
+
     // RF-963: Rewarded video ad
     adWatchTitle: '观看广告支持我们',
     adWatchDesc: '观看一段短视频广告，帮助我们持续优化教练服务 🙏',
@@ -359,6 +370,17 @@ const strings = {
 
     // RF-913: Save share image
     saveToAlbum: 'Save to Album',
+
+    // RF-1011: Share card generation
+    shareGenSuccess: 'Share image ready',
+    shareGenFail: 'Share image failed',
+    shareGenNoImage: 'Image not ready',
+    shareImageSaved: 'Saved to album',
+    albumPermTitle: 'Album permission needed',
+    albumPermDesc: 'Please enable album permission in settings',
+    albumPermGoSettings: 'Settings',
+    saveFailed: 'Save failed',
+    shareInsightBtn: 'Share Insight',
 
     // RF-963: Rewarded video ad
     adWatchTitle: 'Watch ad to support us',

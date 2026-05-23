@@ -384,6 +384,18 @@
     <string name="guidance_in_frame">In frame</string>
     <string name="guidance_stop_recording">Stop Recording</string>
 
+    <!-- ── Share Card (RF-1001) ────────────────────────────────────────── -->
+    <string name="share_card">Share Card</string>
+    <string name="share_card_saving">Saving card…</string>
+    <string name="share_card_saved">Card saved to gallery</string>
+    <string name="share_card_failed">Failed to save card</string>
+    <string name="share_card_analysis_title">Analysis Result</string>
+    <string name="share_card_history_title">History</string>
+    <string name="share_card_key_findings">Key Findings</string>
+    <string name="share_card_key_workouts">Key Workouts</string>
+    <string name="share_card_weekly_km">%1$d km/week</string>
+    <string name="share_card_run_days">%1$d run days</string>
+
     <!-- ── RunSession Replay (RF-1000) ─────────────────────────────────── -->
     <string name="replay_session_history">Run Sessions</string>
     <string name="replay_loading_sessions">Loading sessions…</string>

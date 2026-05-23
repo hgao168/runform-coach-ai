@@ -373,6 +373,18 @@
     <string name="your_analyses">Jouw Analyses</string>
     <string name="select_analysis">Selecteer analyse</string>
 
+    <!-- ── Share Card (RF-1001) ────────────────────────────────────────── -->
+    <string name="share_card">Deel kaart</string>
+    <string name="share_card_saving">Kaart opslaan…</string>
+    <string name="share_card_saved">Kaart opgeslagen in galerij</string>
+    <string name="share_card_failed">Opslaan mislukt</string>
+    <string name="share_card_analysis_title">Analyseresultaat</string>
+    <string name="share_card_history_title">Geschiedenis</string>
+    <string name="share_card_key_findings">Belangrijkste bevindingen</string>
+    <string name="share_card_key_workouts">Belangrijkste trainingen</string>
+    <string name="share_card_weekly_km">%1$d km/week</string>
+    <string name="share_card_run_days">%1$d loopdagen</string>
+
     <!-- ── RunSession Replay (RF-1000) ─────────────────────────────────── -->
     <string name="replay_session_history">Loopsessies</string>
     <string name="replay_loading_sessions">Sessies laden…</string>
