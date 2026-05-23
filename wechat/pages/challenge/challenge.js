@@ -56,21 +56,22 @@ Page({
   },
 
   _loadChallengeData() {
-    // Simulate loading challenge data from storage/API
     const app = getApp()
     const challengeData = app.globalData.challenge || this._getDefaultChallenge()
-    const leaderboardData = app.globalData.challengeLeaderboard || this._getDemoLeaderboard()
-
+    const joined = challengeData.joined || false
     const completedDays = challengeData.completedDays || 0
     const progressPct = Math.round((completedDays / this.data.challengeDays) * 100)
 
+    // Generate leaderboard AFTER knowing join state (fix: isMe bug)
+    const leaderboardData = app.globalData.challengeLeaderboard || this._getDemoLeaderboard(joined)
+
     this.setData({
-      joined: challengeData.joined || false,
+      joined,
       completedDays,
       todayCompleted: challengeData.todayCompleted || false,
       progressPct,
       leaderboard: leaderboardData.slice(0, 20),
-      myRank: challengeData.joined
+      myRank: joined
         ? leaderboardData.findIndex((e) => e.isMe) + 1 || '-'
         : '-',
       loading: false,
@@ -81,14 +82,14 @@ Page({
     return { joined: false, completedDays: 0, todayCompleted: false }
   },
 
-  _getDemoLeaderboard() {
+  _getDemoLeaderboard(joined) {
     const names = ['跑者小明', '马拉松侠', '清晨跑者', '追风者', 'RunnerX',
       '铁腿阿强', '慢跑侠', '夜跑达人', '晨光跑者', '飞毛腿']
     return names.map((name, i) => ({
       name,
       days: Math.max(0, 14 - i),
       avatarText: name[0],
-      isMe: i === 5 && this.data.joined,
+      isMe: i === 5 && joined,
     })).sort((a, b) => b.days - a.days)
   },
 
@@ -108,15 +109,20 @@ Page({
     }
     app.globalData.challenge = challengeData
 
+    // Regenerate leaderboard with isMe
+    const newLeaderboard = this._getDemoLeaderboard(true)
+
     this.setData({
       joined: true,
       completedDays: 0,
       todayCompleted: false,
       progressPct: 0,
+      leaderboard: newLeaderboard.slice(0, 20),
+      myRank: newLeaderboard.findIndex((e) => e.isMe) + 1 || '-',
     })
 
     // Draw initial progress ring
-    setTimeout(() => this._drawProgressRing(), 200)
+    setTimeout(() => this._drawProgressRing(), 300)
 
     wx.showToast({ title: t('joinedLabel') || '已加入挑战！', icon: 'success' })
   },
@@ -137,10 +143,22 @@ Page({
     app.globalData.challenge.completedDays = newCompleted
     app.globalData.challenge.todayCompleted = true
 
+    // Update leaderboard days for "me"
+    const updatedLeaderboard = this.data.leaderboard.map((item) => {
+      if (item.isMe) {
+        return { ...item, days: Math.min((item.days || 0) + 1, this.data.challengeDays) }
+      }
+      return item
+    }).sort((a, b) => b.days - a.days)
+
+    const newRank = updatedLeaderboard.findIndex((e) => e.isMe) + 1
+
     this.setData({
       completedDays: newCompleted,
       todayCompleted: true,
       progressPct,
+      leaderboard: updatedLeaderboard,
+      myRank: newRank || '-',
     })
 
     this._drawProgressRing()
@@ -159,14 +177,20 @@ Page({
     }
   },
 
-  // ─── Canvas 2D Progress Ring ───
-  _drawProgressRing() {
+  // ─── Canvas 2D Progress Ring (with retry) ───
+  _drawProgressRing(attempt) {
+    const retryAttempt = attempt || 0
     const query = wx.createSelectorQuery().in(this)
     query.select('#progressCanvas')
       .fields({ node: true, size: true })
       .exec((res) => {
         if (!res || !res[0] || !res[0].node) {
-          console.warn('[Challenge] Canvas node not found')
+          if (retryAttempt < 3) {
+            // Retry after short delay — canvas may not be in DOM yet
+            setTimeout(() => this._drawProgressRing(retryAttempt + 1), 200)
+          } else {
+            console.warn('[Challenge] Canvas node not found after 3 retries')
+          }
           return
         }
 
@@ -221,14 +245,14 @@ Page({
 
         // Center text: days
         ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 48px -apple-system, "PingFang SC", sans-serif'
+        ctx.font = 'bold 48px ' + FONT
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(`${this.data.completedDays}`, cx, cy - 8)
 
         // Sub label
         ctx.fillStyle = 'rgba(255,255,255,0.4)'
-        ctx.font = '14px -apple-system, "PingFang SC", sans-serif'
+        ctx.font = '14px ' + FONT
         ctx.fillText(
           t('daysCompleted') || '天已完成',
           cx,
@@ -237,7 +261,7 @@ Page({
 
         // "of 14" below
         ctx.fillStyle = 'rgba(255,255,255,0.25)'
-        ctx.font = '11px -apple-system, "PingFang SC", sans-serif'
+        ctx.font = '11px ' + FONT
         ctx.fillText(`/ ${this.data.challengeDays}`, cx, cy + 48)
       })
   },
@@ -253,3 +277,5 @@ Page({
     }
   },
 })
+
+const FONT = '-apple-system, "PingFang SC", sans-serif'

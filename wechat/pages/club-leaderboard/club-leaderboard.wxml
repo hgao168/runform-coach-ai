@@ -1,0 +1,126 @@
+<!-- pages/club-leaderboard/club-leaderboard.wxml -->
+<!-- RF-603: 跑团专属排行榜 -->
+<view class="club-page">
+  <!-- No club code -->
+  <block wx:if="{{!clubCode && !loading}}">
+    <view class="empty-club">
+      <text class="empty-icon">🏃‍♂️</text>
+      <text class="empty-title">{{i.noClubCode || '未提供跑团码'}}</text>
+      <text class="empty-desc">{{i.clubComingSoonSub || '请通过跑团链接进入排行榜'}}</text>
+    </view>
+  </block>
+
+  <!-- Loading -->
+  <block wx:if="{{loading}}">
+    <view class="loading-state">
+      <text>{{i.loading || '加载中...'}}</text>
+    </view>
+  </block>
+
+  <!-- Leaderboard content -->
+  <block wx:if="{{clubCode && !loading}}">
+    <!-- Coming Soon Banner (when using mock data) -->
+    <view class="coming-soon-banner" wx:if="{{isMock}}">
+      <view class="cs-icon">🚧</view>
+      <view class="cs-text">
+        <text class="cs-title">{{i.clubComingSoon || '跑团功能即将开放'}}</text>
+        <text class="cs-desc">{{i.clubComingSoonSub || '跑团专属排行榜正在开发中，敬请期待！'}}</text>
+      </view>
+    </view>
+
+    <!-- Club header -->
+    <view class="club-header">
+      <text class="club-title">{{i.clubLeaderboardTitle || '跑团排行榜'}}</text>
+      <view class="club-code-tag">
+        <text>{{i.clubCodeLabel || '跑团码'}}: {{clubCode}}</text>
+      </view>
+    </view>
+
+    <!-- Podium Top 3 -->
+    <view class="podium" wx:if="{{leaderboard.length >= 3}}">
+      <!-- 2nd place (left) -->
+      <view class="podium-item podium-2nd" wx:if="{{leaderboard[1]}}">
+        <view class="podium-medal">🥈</view>
+        <view class="podium-avatar">{{leaderboard[1].avatarText}}</view>
+        <text class="podium-name">{{leaderboard[1].nickname}}</text>
+        <text class="podium-score">{{leaderboard[1].formScore}}分</text>
+        <view class="podium-bar second"></view>
+      </view>
+
+      <!-- 1st place (center, taller) -->
+      <view class="podium-item podium-1st">
+        <view class="podium-medal">🥇</view>
+        <view class="podium-avatar gold">{{leaderboard[0].avatarText}}</view>
+        <text class="podium-name">{{leaderboard[0].nickname}}</text>
+        <text class="podium-score">{{leaderboard[0].formScore}}分</text>
+        <view class="podium-bar first"></view>
+      </view>
+
+      <!-- 3rd place (right) -->
+      <view class="podium-item podium-3rd" wx:if="{{leaderboard[2]}}">
+        <view class="podium-medal">🥉</view>
+        <view class="podium-avatar">{{leaderboard[2].avatarText}}</view>
+        <text class="podium-name">{{leaderboard[2].nickname}}</text>
+        <text class="podium-score">{{leaderboard[2].formScore}}分</text>
+        <view class="podium-bar third"></view>
+      </view>
+    </view>
+
+    <!-- Rank list header -->
+    <view class="rank-list-header">
+      <text class="rlh-title">{{i.clubMembers || '跑团成员排名'}} ({{leaderboard.length}})</text>
+    </view>
+
+    <!-- Rank list -->
+    <view class="rank-list">
+      <view
+        class="rank-item {{item.isMe ? 'is-me' : ''}}"
+        wx:for="{{leaderboard}}"
+        wx:key="rank"
+      >
+        <!-- Rank number -->
+        <view class="ri-rank">
+          <text wx:if="{{item.rank === 1}}">🥇</text>
+          <text wx:elif="{{item.rank === 2}}">🥈</text>
+          <text wx:elif="{{item.rank === 3}}">🥉</text>
+          <text wx:else>{{item.rank}}</text>
+        </view>
+
+        <!-- Avatar -->
+        <view class="ri-avatar {{item.rank === 1 ? 'gold' : ''}}">
+          {{item.avatarText}}
+        </view>
+
+        <!-- Info -->
+        <view class="ri-info">
+          <text class="ri-name">{{item.nickname}}</text>
+          <view class="ri-stats">
+            <text class="ri-stat">{{i.cadenceSpm || '步频'}}: {{item.cadence}}</text>
+            <text class="ri-stat">{{i.formScoreLabel || '跑姿评分'}}: {{item.formScore}}</text>
+          </view>
+        </view>
+
+        <!-- Rank change -->
+        <view class="ri-change">
+          <text class="ri-change-val {{item.rankChange > 0 ? 'up' : item.rankChange < 0 ? 'down' : ''}}">
+            <block wx:if="{{item.rankChange > 0}}">{{i.rankUp || '↑'}}{{item.rankChange}}</block>
+            <block wx:elif="{{item.rankChange < 0}}">{{i.rankDown || '↓'}}{{-item.rankChange}}</block>
+            <block wx:else>–</block>
+          </text>
+          <text class="ri-change-label">{{i.rankChange || '排名变化'}}</text>
+        </view>
+
+        <!-- Me badge -->
+        <view class="ri-me-badge" wx:if="{{item.isMe}}">
+          <text>你</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Empty leaderboard -->
+    <view class="empty-state" wx:if="{{leaderboard.length === 0}}">
+      <text class="empty-icon">📭</text>
+      <text class="empty-title">{{i.clubNotExist || '跑团不存在或暂无数据'}}</text>
+    </view>
+  </block>
+</view>

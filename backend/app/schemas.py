@@ -513,3 +513,58 @@ class ChallengeLeaderboardEntry(BaseModel):
     oscillation_improvement_pct: Optional[float] = None
     overall_score_change: Optional[float] = None
     rank: int
+
+
+# ── RF-602: Coach panel schemas ────────────────────────────────────────────
+
+
+class CoachCodeGenerateRequest(BaseModel):
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
+
+
+class CoachCodeResponse(BaseModel):
+    code: str
+    student_limit: int
+    created_at: str
+    is_active: bool
+
+
+class CoachJoinRequest(BaseModel):
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
+    code: str = Field(..., min_length=8, max_length=8)
+
+
+class CoachJoinResponse(BaseModel):
+    joined: bool
+    coach_ios_user_id: str
+    message: str
+
+
+class CoachStudentResponse(BaseModel):
+    ios_user_id: str
+    nickname: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    joined_at: str
+    student_note: Optional[str] = None
+
+
+class CoachStudentFormSummary(BaseModel):
+    """Latest run session form metrics for a student."""
+    session_count: int
+    latest_session_at: Optional[str] = None
+    avg_cadence: Optional[float] = None
+    avg_vertical_oscillation: Optional[float] = None
+    avg_gct: Optional[float] = None
+    overall_score: Optional[float] = None
+
+
+class CoachDashboardResponse(BaseModel):
+    coach_ios_user_id: str
+    student_count: int
+    students: List[CoachStudentResponse]
+    form_summaries: List[CoachStudentFormSummary]

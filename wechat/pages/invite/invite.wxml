@@ -1,4 +1,5 @@
 <!-- pages/invite/invite.wxml -->
+<!-- RF-600: 邀请码分享海报 -->
 <view class="invite-page">
   <!-- Header -->
   <view class="invite-header">
@@ -20,6 +21,14 @@
         {{i.shareInvite || '分享邀请'}}
       </button>
     </view>
+  </view>
+
+  <!-- Generate Poster Button -->
+  <view class="poster-trigger">
+    <button class="btn-poster" bindtap="generatePoster" loading="{{posterGenerating}}">
+      <text class="btn-poster-icon">🖼️</text>
+      {{posterGenerating ? (i.posterGenerating || '生成中...') : (i.generatePoster || '生成邀请海报')}}
+    </button>
   </view>
 
   <!-- Rewards hint -->
@@ -54,5 +63,34 @@
         <text class="empty-sub">{{i.noInviteesSub || '分享你的邀请码，邀请跑友一起加入'}}</text>
       </view>
     </block>
+  </view>
+
+  <!-- Hidden Canvas for poster generation -->
+  <canvas
+    type="2d"
+    id="posterCanvas"
+    class="poster-canvas"
+    style="width: 750rpx; height: 1200rpx;"
+  ></canvas>
+
+  <!-- Poster Preview Modal -->
+  <view class="poster-overlay {{showPosterPreview ? 'visible' : ''}}" catchtap="closePosterPreview">
+    <view class="poster-modal" catchtap="">
+      <view class="poster-modal-header">
+        <text class="poster-modal-title">{{i.previewPoster || '海报预览'}}</text>
+        <text class="poster-modal-close" bindtap="closePosterPreview">✕</text>
+      </view>
+      <view class="poster-preview-wrap">
+        <image class="poster-preview-img" src="{{posterPath}}" mode="widthFix"></image>
+      </view>
+      <view class="poster-modal-actions">
+        <button class="btn-poster-save" bindtap="savePoster">
+          {{i.savePoster || '保存到相册'}}
+        </button>
+        <button class="btn-poster-share" open-type="share" bindtap="sharePosterFile">
+          {{i.sharePoster || '分享海报'}}
+        </button>
+      </view>
+    </view>
   </view>
 </view>

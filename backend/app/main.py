@@ -18,7 +18,7 @@ from sqlalchemy import delete, func, select
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
 from .athletes import compare_with_athlete, get_all_athletes
 from .db import check_database, get_db_session
-from .db_models import InviteCode, ChallengeParticipant, OAuthConnection, RunSession, StravaRun, StravaWeeklyStat, User, _MAX_INVITE_CODES_PER_USER, _FOURTEEN_DAY_CHALLENGE_ID
+from .db_models import InviteCode, ChallengeParticipant, CoachCode, CoachStudent, OAuthConnection, RunSession, StravaRun, StravaWeeklyStat, User, _MAX_INVITE_CODES_PER_USER, _FOURTEEN_DAY_CHALLENGE_ID
 from .schemas import (
     AnalyzeProfileContext,
     AnalysisResponse,
@@ -27,6 +27,13 @@ from .schemas import (
     ChallengeJoinRequest,
     ChallengeJoinResponse,
     ChallengeLeaderboardEntry,
+    CoachCodeGenerateRequest,
+    CoachCodeResponse,
+    CoachDashboardResponse,
+    CoachJoinRequest,
+    CoachJoinResponse,
+    CoachStudentFormSummary,
+    CoachStudentResponse,
     CompareRequest,
     CompareResponse,
     FeedbackSubmitRequest,
@@ -1209,3 +1216,250 @@ def challenge_leaderboard(challenge_id: str) -> list[ChallengeLeaderboardEntry]:
             return entries
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to compute leaderboard: {exc}") from exc
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RF-602  Coach Panel API ──────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+
+_MAX_COACH_CODES_PER_USER = 5
+
+
+def _generate_coach_code() -> str:
+    """Generate a unique 8-character alphanumeric coach code."""
+    return ''.join(random.choices(_ALPHANUMERIC, k=8))
+
+
+def _resolve_user_by_id(session, user_id: int) -> User:
+    """Look up a User by internal ID or raise 404."""
+    user = session.scalar(select(User).where(User.id == user_id))
+    if user is None:
+        raise HTTPException(status_code=404, detail=f"User id={user_id} not found.")
+    return user
+
+
+@app.post("/api/v1/coach/generate-code", response_model=CoachCodeResponse)
+def generate_coach_code(payload: CoachCodeGenerateRequest, _api_key: str = Depends(verify_api_key)) -> CoachCodeResponse:
+    """Generate a unique 8-character coach code. Each user can create up to 5 active codes."""
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, payload.ios_user_id)
+
+            active_codes = session.execute(
+                select(CoachCode).where(
+                    CoachCode.coach_id == user.id,
+                    CoachCode.is_active.is_(True),
+                )
+            ).scalars().all()
+            if len(active_codes) >= _MAX_COACH_CODES_PER_USER:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"You have reached the maximum of {_MAX_COACH_CODES_PER_USER} active coach codes.",
+                )
+
+            # Generate unique code, retrying on collision
+            for _ in range(20):
+                code = _generate_coach_code()
+                existing = session.scalar(select(CoachCode).where(CoachCode.code == code))
+                if existing is None:
+                    break
+            else:
+                raise HTTPException(status_code=500, detail="Failed to generate unique coach code. Please try again.")
+
+            coach_code = CoachCode(
+                coach_id=user.id,
+                code=code,
+            )
+            session.add(coach_code)
+            session.commit()
+            session.refresh(coach_code)
+
+            return CoachCodeResponse(
+                code=coach_code.code,
+                student_limit=coach_code.student_limit,
+                created_at=coach_code.created_at.isoformat(),
+                is_active=coach_code.is_active,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to generate coach code: {exc}") from exc
+
+
+@app.get("/api/v1/coach/students", response_model=list[CoachStudentResponse])
+def coach_students(
+    coach_id: int = Query(..., ge=1),
+    _api_key: str = Depends(verify_api_key),
+) -> list[CoachStudentResponse]:
+    """List all students for a coach (looked up by user ID)."""
+    try:
+        with get_db_session() as session:
+            _resolve_user_by_id(session, coach_id)
+
+            rows = session.execute(
+                select(CoachStudent, User).join(
+                    User, CoachStudent.student_id == User.id,
+                ).where(
+                    CoachStudent.coach_id == coach_id,
+                ).order_by(CoachStudent.joined_at.desc())
+            ).all()
+
+            results = []
+            for cs, student in rows:
+                results.append(CoachStudentResponse(
+                    ios_user_id=student.ios_user_id,
+                    nickname=student.nickname,
+                    first_name=student.first_name,
+                    last_name=student.last_name,
+                    joined_at=cs.joined_at.isoformat(),
+                    student_note=cs.student_note,
+                ))
+            return results
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to list coach students: {exc}") from exc
+
+
+@app.post("/api/v1/coach/join", response_model=CoachJoinResponse)
+def coach_join(payload: CoachJoinRequest, _api_key: str = Depends(verify_api_key)) -> CoachJoinResponse:
+    """Student joins a coach using a coach code."""
+    try:
+        with get_db_session() as session:
+            student = _resolve_user(session, payload.ios_user_id)
+            code = payload.code.strip().upper()
+
+            coach_code = session.scalar(select(CoachCode).where(CoachCode.code == code))
+            if coach_code is None:
+                raise HTTPException(status_code=404, detail="Coach code not found.")
+            if not coach_code.is_active:
+                raise HTTPException(status_code=400, detail="This coach code is no longer active.")
+            if coach_code.coach_id == student.id:
+                raise HTTPException(status_code=400, detail="You cannot join yourself as a student.")
+
+            # Check student limit
+            current_student_count = session.scalar(
+                select(func.count()).select_from(CoachStudent).where(
+                    CoachStudent.coach_id == coach_code.coach_id,
+                )
+            ) or 0
+            if current_student_count >= coach_code.student_limit:
+                raise HTTPException(status_code=400, detail="This coach has reached their student limit.")
+
+            # Check if already joined
+            existing = session.scalar(
+                select(CoachStudent).where(
+                    CoachStudent.coach_id == coach_code.coach_id,
+                    CoachStudent.student_id == student.id,
+                )
+            )
+            if existing is not None:
+                coach_user = session.scalar(select(User).where(User.id == coach_code.coach_id))
+                return CoachJoinResponse(
+                    joined=True,
+                    coach_ios_user_id=coach_user.ios_user_id if coach_user else "",
+                    message="You are already connected with this coach.",
+                )
+
+            cs = CoachStudent(
+                coach_id=coach_code.coach_id,
+                student_id=student.id,
+            )
+            session.add(cs)
+            session.commit()
+
+            coach_user = session.scalar(select(User).where(User.id == coach_code.coach_id))
+            return CoachJoinResponse(
+                joined=True,
+                coach_ios_user_id=coach_user.ios_user_id if coach_user else "",
+                message="Successfully joined your coach! They can now view your running form data.",
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to join coach: {exc}") from exc
+
+
+@app.get("/api/v1/coach/dashboard", response_model=CoachDashboardResponse)
+def coach_dashboard(
+    coach_id: int = Query(..., ge=1),
+    _api_key: str = Depends(verify_api_key),
+) -> CoachDashboardResponse:
+    """Coach dashboard: list all students with their latest form summaries."""
+    try:
+        with get_db_session() as session:
+            coach = _resolve_user_by_id(session, coach_id)
+
+            # Get all coach-student relationships
+            rows = session.execute(
+                select(CoachStudent, User).join(
+                    User, CoachStudent.student_id == User.id,
+                ).where(
+                    CoachStudent.coach_id == coach_id,
+                ).order_by(CoachStudent.joined_at.desc())
+            ).all()
+
+            students: list[CoachStudentResponse] = []
+            form_summaries: list[CoachStudentFormSummary] = []
+
+            for cs, student in rows:
+                students.append(CoachStudentResponse(
+                    ios_user_id=student.ios_user_id,
+                    nickname=student.nickname,
+                    first_name=student.first_name,
+                    last_name=student.last_name,
+                    joined_at=cs.joined_at.isoformat(),
+                    student_note=cs.student_note,
+                ))
+
+                # Get latest run session metrics for this student
+                latest_session = session.scalar(
+                    select(RunSession).where(
+                        RunSession.user_id == student.id,
+                    ).order_by(RunSession.start_time.desc()).limit(1)
+                )
+
+                # Get all sessions for counting
+                session_count = session.scalar(
+                    select(func.count()).select_from(RunSession).where(
+                        RunSession.user_id == student.id,
+                    )
+                ) or 0
+
+                if latest_session:
+                    form_summaries.append(CoachStudentFormSummary(
+                        session_count=session_count,
+                        latest_session_at=latest_session.start_time.isoformat(),
+                        avg_cadence=latest_session.avg_cadence,
+                        avg_vertical_oscillation=latest_session.avg_vertical_oscillation,
+                        avg_gct=latest_session.avg_gct,
+                        overall_score=(
+                            round(
+                                ((latest_session.avg_cadence or 0) / 180.0 * 0.5)
+                                + ((0.12 / max((latest_session.avg_vertical_oscillation or 0.001), 0.001)) * 0.5),
+                                3,
+                            )
+                            if latest_session.avg_cadence is not None and latest_session.avg_vertical_oscillation is not None
+                            else None
+                        ),
+                    ))
+                else:
+                    form_summaries.append(CoachStudentFormSummary(
+                        session_count=0,
+                        latest_session_at=None,
+                        avg_cadence=None,
+                        avg_vertical_oscillation=None,
+                        avg_gct=None,
+                        overall_score=None,
+                    ))
+
+            return CoachDashboardResponse(
+                coach_ios_user_id=coach.ios_user_id,
+                student_count=len(students),
+                students=students,
+                form_summaries=form_summaries,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load dashboard: {exc}") from exc

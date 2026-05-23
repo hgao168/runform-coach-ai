@@ -61,6 +61,21 @@ class User(Base):
     challenge_participations: Mapped[list["ChallengeParticipant"]] = relationship(
         back_populates="user", cascade="all, delete-orphan",
     )
+    # RF-602: coach codes created by this user
+    created_coach_codes: Mapped[list["CoachCode"]] = relationship(
+        "CoachCode", back_populates="coach_user", foreign_keys="CoachCode.coach_id",
+        cascade="all, delete-orphan",
+    )
+    # RF-602: coach-student relationships (as coach)
+    coach_students_as_coach: Mapped[list["CoachStudent"]] = relationship(
+        "CoachStudent", back_populates="coach_user", foreign_keys="CoachStudent.coach_id",
+        cascade="all, delete-orphan",
+    )
+    # RF-602: coach-student relationships (as student)
+    coach_students_as_student: Mapped[list["CoachStudent"]] = relationship(
+        "CoachStudent", back_populates="student_user", foreign_keys="CoachStudent.student_id",
+        cascade="all, delete-orphan",
+    )
 
 
 class OAuthConnection(Base):
@@ -173,3 +188,34 @@ class ChallengeParticipant(Base):
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
 
     user: Mapped[User] = relationship(back_populates="challenge_participations")
+
+
+# ── RF-602: Coach code model ─────────────────────────────────────────────
+
+class CoachCode(Base):
+    __tablename__ = "coach_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coach_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    code: Mapped[str] = mapped_column(String(8), unique=True, index=True)
+    student_limit: Mapped[int] = mapped_column(Integer, default=20)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    is_active: Mapped[bool] = mapped_column(default=True)
+
+    coach_user: Mapped[User] = relationship(back_populates="created_coach_codes", foreign_keys=[coach_id])
+
+
+# ── RF-602: Coach-student association model ─────────────────────────────
+
+class CoachStudent(Base):
+    __tablename__ = "coach_students"
+    __table_args__ = (UniqueConstraint("coach_id", "student_id", name="uq_coach_student"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coach_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
+    student_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    coach_user: Mapped[User] = relationship(back_populates="coach_students_as_coach", foreign_keys=[coach_id])
+    student_user: Mapped[User] = relationship(back_populates="coach_students_as_student", foreign_keys=[student_id])

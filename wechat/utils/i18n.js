@@ -250,6 +250,31 @@ const strings = {
     daysCompleted: '天已完成',
     rank: '我的排名',
     noRank: '暂未上榜',
+
+    // Invite poster (RF-600)
+    generatePoster: '生成邀请海报',
+    previewPoster: '海报预览',
+    savePoster: '保存到相册',
+    sharePoster: '分享海报',
+    posterSaved: '海报已保存到相册',
+    posterJoinCTA: '扫码加入 RunForm，AI 分析你的跑姿',
+    posterPoweredBy: 'MoveNova · RunForm',
+    posterGenerating: '生成中...',
+    posterGenFailed: '海报生成失败',
+
+    // Club leaderboard (RF-603)
+    clubLeaderboardTitle: '跑团排行榜',
+    clubCodeLabel: '跑团码',
+    clubComingSoon: '跑团功能即将开放',
+    clubComingSoonSub: '跑团专属排行榜正在开发中，敬请期待！',
+    clubMembers: '跑团成员排名',
+    cadenceSpm: '步频 (spm)',
+    formScoreLabel: '跑姿评分',
+    rankChange: '排名变化',
+    rankUp: '↑',
+    rankDown: '↓',
+    noClubCode: '未提供跑团码',
+    clubNotExist: '跑团不存在或暂无数据',
   },
 
   en: {
@@ -477,6 +502,31 @@ const strings = {
     daysCompleted: 'days completed',
     rank: 'My Rank',
     noRank: 'Not ranked',
+
+    // Invite poster (RF-600)
+    generatePoster: 'Generate Poster',
+    previewPoster: 'Preview Poster',
+    savePoster: 'Save to Album',
+    sharePoster: 'Share Poster',
+    posterSaved: 'Poster saved to album',
+    posterJoinCTA: 'Scan to join RunForm, AI analyze your run',
+    posterPoweredBy: 'MoveNova · RunForm',
+    posterGenerating: 'Generating...',
+    posterGenFailed: 'Poster generation failed',
+
+    // Club leaderboard (RF-603)
+    clubLeaderboardTitle: 'Club Leaderboard',
+    clubCodeLabel: 'Club Code',
+    clubComingSoon: 'Club Feature Coming Soon',
+    clubComingSoonSub: 'Club leaderboard is under development. Stay tuned!',
+    clubMembers: 'Club Member Rankings',
+    cadenceSpm: 'Cadence (spm)',
+    formScoreLabel: 'Form Score',
+    rankChange: 'Rank Change',
+    rankUp: '↑',
+    rankDown: '↓',
+    noClubCode: 'No club code provided',
+    clubNotExist: 'Club not found or no data',
   },
 }
 
