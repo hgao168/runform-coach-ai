@@ -6,8 +6,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -83,30 +86,26 @@ class RunSessionReplayViewModel @Inject constructor(
 
     /**
      * Derived current data point from index and loaded session.
+     * Reactively recomputes when detailState or currentDataPointIndex changes.
      */
-    val currentDataPoint: StateFlow<ReplayDataPoint?>
-        get() {
-            val fallback = MutableStateFlow<ReplayDataPoint?>(null)
-            // Derive lazily from detailState + currentDataPointIndex
-            val detail = (_detailState.value as? RunSessionDetailState.Success)?.session
-            val idx = _currentDataPointIndex.value
-            val dp = detail?.dataPoints?.getOrNull(idx)
-            fallback.value = dp
-            return fallback.asStateFlow()
-        }
+    val currentDataPoint: StateFlow<ReplayDataPoint?> = combine(
+        _detailState, _currentDataPointIndex
+    ) { detailState, index ->
+        val detail = (detailState as? RunSessionDetailState.Success)?.session
+        detail?.dataPoints?.getOrNull(index)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     /**
      * Coach prompts that occurred at or before the current replay time.
+     * Reactively recomputes when detailState or currentDataPoint changes.
      */
-    val promptMarkersAtOrBefore: StateFlow<List<SessionCoachPrompt>>
-        get() {
-            val fallback = MutableStateFlow<List<SessionCoachPrompt>>(emptyList())
-            val detail = (_detailState.value as? RunSessionDetailState.Success)?.session
-            val dp = currentDataPoint.value
-            val elapsed = dp?.elapsedSeconds ?: 0.0
-            fallback.value = detail?.coachPrompts?.filter { it.elapsedSeconds <= elapsed } ?: emptyList()
-            return fallback.asStateFlow()
-        }
+    val promptMarkersAtOrBefore: StateFlow<List<SessionCoachPrompt>> = combine(
+        _detailState, currentDataPoint
+    ) { detailState, dp ->
+        val detail = (detailState as? RunSessionDetailState.Success)?.session
+        val elapsed = dp?.elapsedSeconds ?: 0.0
+        detail?.coachPrompts?.filter { it.elapsedSeconds <= elapsed } ?: emptyList()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // ── Internal ───────────────────────────────────────────────────────────────
 
