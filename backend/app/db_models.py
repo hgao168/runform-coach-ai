@@ -165,6 +165,7 @@ class InviteCode(Base):
     redeemed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
     redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
 
     creator: Mapped[User] = relationship(back_populates="created_invite_codes", foreign_keys=[creator_user_id])
     redeemer: Mapped[User | None] = relationship(back_populates="redeemed_invite_code", foreign_keys=[redeemed_by])

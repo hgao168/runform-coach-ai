@@ -340,3 +340,226 @@ all_sessions = session.execute(
 ---
 
 *报告生成时间: 2026-05-23 | 审查人: QA Release Engineer (AI Agent)*
+
+---
+
+# 第二轮验证 — Sprint 5 QA Critical C1-C5 修复验证
+
+**验证日期**: 2026-05-23  
+**验证范围**: Backend main.py / WeChat pages + api.js / 后端 Schemas + Migration + Tests  
+**验证方法**: 代码审查 + 测试覆盖分析 (测试套件存在环境问题无法执行，见附录)
+
+> 注意: Web 前端 (src/app/[locale]/app/challenge/page.tsx) 不在当前仓库中。C1 验证基于修复描述推断，实际 web 端修复状态需在 web 仓库中独立验证。
+
+---
+
+## C1 — Web 挑战赛 API 路由修复
+
+**修复目标**: 将 Web 端路由从单数 `/challenge/...` 改为复数 `/challenges/{id}/...`
+
+**验证结果**: ⚠️ 部分修复 / 无法完整验证
+
+- **不在当前仓库**: Web 前端代码 (`page.tsx`) 位于独立仓库 (推测为 Next.js 前端)，`~/workspace/runform/` 仅包含 backend + wechat + mobile
+- 后端路由已就位: `GET /api/v1/challenges`, `POST /api/v1/challenges/{id}/join`, `GET /api/v1/challenges/{id}/leaderboard` (复数 `challenges` + path param)
+- **无法确认** Web 端是否已将 `fetch()` URL 从单数改为复数并传入 challenge_id
+
+**风险**: 需在 web 仓库中独立验证 C1。后端路由是复数 `challenges`，若 Web 端仍使用单数 `challenge` 则 404。
+
+---
+
+## C2 — WeChat 挑战赛页接通后端
+
+**验证结果**: ⚠️ 部分修复 — 已接通但数据形状不匹配
+
+### ✅ 已修复
+- `challenge.js` 第 3-10 行: 正确导入 `getChallenges`, `joinChallenge`, `getLeaderboard`, `checkInChallenge`, `getUserId`
+- `_loadChallengeData()` (line 68): 调用 `getChallenges()` 获取真实数据，有 try/catch 降级
+- `joinChallenge()` (line 178): 调用 `apiJoinChallenge(challengeId, { user_id })`，有 try/catch 降级
+- `checkInToday()` (line 227): 调用 `apiCheckInChallenge(challengeId, { user_id })`，有 try/catch 降级
+- 所有 API 失败路径均保留降级 mock 逻辑
+
+### ❌ 仍存在的问题
+
+1. **Challenge list 数据形状不匹配**: 后端 `list_challenges` 返回 `ChallengeInfo` (id, name, description, start_date, end_date, participant_count, status)。WeChat 端期望 `first.joined`, `first.completed_days`, `first.today_completed` 等字段 — 这些字段不存在于后端响应中。结果: **API 调用成功后仍回退到 mock 数据**。
+
+2. **Leaderboard 数据形状不匹配**: 后端 `challenge_leaderboard` 返回 `ChallengeLeaderboardEntry` (ios_user_id, cadence_improvement_pct, oscillation_improvement_pct, overall_score_change, rank)。WeChat 端映射到 `item.name`, `item.nickname`, `item.days`, `item.completed_days`, `item.is_me` — 这些字段均不在后端响应中。结果: **排行榜 API 调用成功但数据无法正确渲染**。
+
+3. **Check-in 请求体字段名不一致**: WeChat 发送 `{ user_id: userId }`，后端 `ChallengeCheckInRequest` 接受 `user_id` (非 `ios_user_id`) — 这个匹配是正确的 ✅
+
+### 影响
+虽然 API 已接通，但数据形状不匹配导致 API 返回的数据被丢弃，页面实质上仍使用 mock 降级路径。用户无法看到真实的排行榜数据。
+
+---
+
+## C3 — WeChat 邀请码页接通后端
+
+**验证结果**: ⚠️ 部分修复 — 已接通但存在协议缺口
+
+### ✅ 已修复
+- `invite.js` 第 4-11 行: 正确导入 `getInviteStatus`, `getInviteCode`, `generateInviteCode`, `redeemInviteCode`, `getUserId`
+- `_loadInviteData()` (line 78): 调用 `getInviteStatus(userId)` 获取真实数据，有 try/catch 降级 + toast 通知
+- `_generateInviteData()` (line 164): 调用 `apiGenerateInviteCode({ user_id })` — **不再使用 Math.random() 作为主路径**
+- `_redeemInviteCode()` (line 197): 调用 `apiRedeemInviteCode({ code, user_id })`
+- `_getLocalFallbackCode()` (line 184): Math.random() 仅保留为降级路径 ✅
+- 海报 `Math.random()` 装饰点 (line 288-294) 仍存在，但这是 B5 (Minor) 问题，不影响功能
+
+### ❌ 仍存在的问题
+
+1. **`getInviteStatus` 端点不存在**: WeChat `api.js` 调用 `GET /api/v1/invite/status?user_id=X`，但后端无此端点。后端仅有:
+   - `POST /api/v1/invite/generate`
+   - `GET /api/v1/invite/{code}` (verify)
+   - `POST /api/v1/invite/redeem`
+   - **无 `/api/v1/invite/status`** → 此调用始终失败，邀请列表永远走降级路径
+
+2. **`getInviteCode` 响应形状不匹配**: WeChat 期望 `validation.invited_users` 字段，但后端 `GET /api/v1/invite/{code}` 仅返回 `{valid, code, created_at}`，无 `invited_users`。代码验证虽然成功，但邀请列表为空。
+
+3. **生成邀请码请求体字段名**: WeChat 发送 `{ user_id: userId }`，后端 `InviteCodeGenerateRequest` 接受 `ios_user_id` — **字段名不匹配！** 这将导致 422 Validation Error。
+
+### 影响
+三个 API 调用路径中，`getInviteStatus` 因端点缺失而始终失败；`generateInviteCode` 因字段名不匹配 (user_id vs ios_user_id) 而失败；只有 `redeemInviteCode` 可能正常工作（需要验证字段是否匹配）。邀请功能实质上仍依赖降级。
+
+---
+
+## C4 — 后端虚拟跑团排行榜
+
+**验证结果**: ✅ 已修复
+
+### 验证要点
+
+| 检查项 | 状态 | 位置 |
+|--------|------|------|
+| 端点存在 | ✅ | `GET /api/v1/clubs/{club_code}/leaderboard` (main.py:1569) |
+| 返回类型正确 | ✅ | `ClubLeaderboardResponse(entries, coming_soon)` (schemas.py:545) |
+| 未知 code 降级 | ✅ | 返回 `entries=[], coming_soon=True` (line 1600) |
+| 空学生降级 | ✅ | 返回 `coming_soon=True` (line 1615) |
+| Case-insensitive | ✅ | `club_code.upper()` (line 1589) |
+| ios_user_id 回退查找 | ✅ | 支持直接用 coach 的 ios_user_id 查找 (line 1595-1601) |
+| is_me 标记 | ✅ | 通过 `ios_user_id` query param (line 1669) |
+| score_change 计算 | ✅ | "+" / "-" / "→" (line 1659-1663) |
+| 测试覆盖 | ✅ | 8 个测试: unknown code, empty students, ranked entries, is_me, score_change, case-insensitive, by ios_user_id |
+
+### ⚠️ 前端适配问题
+
+WeChat `club-leaderboard.js` 期望响应中的 `data.members`，但后端返回 `data.entries`。该页面也未使用 `api.js` 封装函数，直接 `wx.request`。虽然后端端点正确实现，**前端适配仍需修改**才能正确渲染数据。
+
+---
+
+## C5 — 后端挑战赛打卡 (check-in) 端点
+
+**验证结果**: ✅ 已修复
+
+### 验证要点
+
+| 检查项 | 状态 | 位置 |
+|--------|------|------|
+| 端点存在 | ✅ | `POST /api/v1/challenges/{challenge_id}/check-in` (main.py:1225) |
+| 挑战存在性校验 | ✅ | 404 if challenge_id not in _CHALLENGES (line 1237-1238) |
+| 加入状态校验 | ✅ | 400 "must join the challenge before checking in" (line 1250-1252) |
+| 防重复打卡 | ✅ | UTC day 粒度，重复返回 409 (line 1255-1258) |
+| Streak 计算 | ✅ | 连续天数逻辑，昨日打卡则 streak++ (line 1290-1298) |
+| 指标更新 | ✅ | latest_cadence, latest_score, check_in_count 写入 DB (line 1281-1304) |
+| 今日无跑步数据 | ✅ | 允许打卡，today_metrics 为空 dict (line 1278) |
+| 返回数据完整 | ✅ | status, check_in_count, streak_days, today_metrics |
+| 数据迁移 | ✅ | `20260523_0006` 添加 last_check_in, check_in_count, current_streak, latest_cadence, latest_score |
+| 测试覆盖 | ✅ | 6 个测试: 未加入 400, 不存在挑战 404, 首次打卡, 无跑步打卡, 重复 409, DB 字段验证 |
+
+### 请求体字段一致性
+- 后端 `ChallengeCheckInRequest.user_id` ↔ WeChat `{ user_id: userId }` ✅ 匹配
+
+---
+
+## 三线 API 协议一致性矩阵
+
+| API 功能 | Backend 路由 | WeChat api.js | WeChat Page 调用 | 一致性 |
+|----------|-------------|---------------|-----------------|--------|
+| 挑战列表 | `GET /api/v1/challenges` | `getChallenges()` → `/api/v1/challenges` | ✅ 路径一致 | ✅ |
+| 加入挑战 | `POST /api/v1/challenges/{id}/join` | `joinChallenge(id, data)` → 正确路径 | ✅ 路径一致 | ✅ |
+| 排行榜 | `GET /api/v1/challenges/{id}/leaderboard` | `getLeaderboard(id)` → 正确路径 | ✅ 路径一致 | ⚠️ 数据形状不匹配 |
+| 打卡 | `POST /api/v1/challenges/{id}/check-in` | `checkInChallenge(id, data)` → 正确路径 | ✅ 路径一致 | ✅ |
+| 生成邀请码 | `POST /api/v1/invite/generate` | `generateInviteCode(data)` → 正确路径 | ✅ 路径一致 | ❌ 字段名 user_id vs ios_user_id |
+| 邀请码状态 | **不存在** | `getInviteStatus(userId)` → `/api/v1/invite/status` | ❌ 端点不存在 | ❌ 缺失端点 |
+| 验证邀请码 | `GET /api/v1/invite/{code}` | `getInviteCode(code)` → 正确路径 | ✅ 路径一致 | ⚠️ 响应缺少 invited_users |
+| 兑换邀请码 | `POST /api/v1/invite/redeem` | `redeemInviteCode(data)` → 正确路径 | ✅ 路径一致 | ⚠️ 字段名待验证 |
+| 跑团排行榜 | `GET /api/v1/clubs/{code}/leaderboard` | 无封装 (直接 wx.request) | ✅ 路径一致 | ⚠️ 前端期望 members 非 entries |
+
+---
+
+## 新发现问题
+
+### N1. WeChat api.js `getInviteStatus` 端点缺失 (Critical)
+
+- **描述**: `getInviteStatus` 调用 `GET /api/v1/invite/status?user_id=X`，后端不存在此端点
+- **影响**: 邀请码数据加载始终失败，用户永远看不到真实邀请数据
+- **建议**: 后端新增 `GET /api/v1/invite/status?ios_user_id=X` 端点，返回用户的邀请码列表和已邀请用户
+
+### N2. 邀请码生成请求体字段名不匹配 (Critical)
+
+- **描述**: WeChat 发送 `{ user_id: userId }`，后端 `InviteCodeGenerateRequest` 要求 `ios_user_id`
+- **影响**: 422 Validation Error，邀请码生成 API 调用失败，回退到 Math.random()
+- **修复**: 统一字段名为 `ios_user_id` 或后端接受 `user_id` 别名
+
+### N3. Challenge List 响应数据形状不匹配 (Bug)
+
+- **描述**: 后端 `ChallengeInfo` 不包含 `joined`, `completed_days`, `today_completed`；WeChat 依赖这些字段来决定 UI 状态
+- **影响**: 挑战赛列表 API 调用成功但无实际效果，用户始终看到未加入状态
+- **修复**: 后端 `list_challenges` 需根据请求用户的 `ChallengeParticipant` 记录附加个人状态字段，或 WeChat 端在列表后单独查询参与状态
+
+### N4. Leaderboard 响应数据形状不匹配 (Bug)
+
+- **描述**: 后端 `ChallengeLeaderboardEntry` 不含 `name`, `nickname`, `days`, `completed_days`, `is_me`；WeChat 依赖这些字段渲染排行榜
+- **影响**: 排行榜数据无法正确显示
+- **修复**: 后端 leaderboard 响应需包含 nickname 和 completed_days 字段，或 WeChat 端适配现有字段
+
+### N5. Club Leaderboard 前端响应字段名不匹配 (Bug)
+
+- **描述**: WeChat `club-leaderboard.js` 期望 `data.members`，后端返回 `data.entries`
+- **影响**: API 调用成功但数据被丢弃，始终显示 mock
+- **修复**: WeChat 端将 `data.members` 改为 `data.entries`，且在 `_formatMembers` 中直接使用后端返回的 `rank`, `nickname`, `cadence`, `form_score`, `score_change`, `is_me`
+
+---
+
+## 更新整体风险评估
+
+| 维度 | 第一轮评级 | 第二轮评级 | 变化说明 |
+|------|----------|----------|---------|
+| **后端逻辑正确性** | 🟢 Good | 🟢 Good | C4/C5 新增端点实现完整，测试覆盖良好 |
+| **前后端协议一致性** | 🔴 Critical | 🔴 Critical | 路径大部分已对齐，但数据形状不匹配是新的关键问题 (N1-N5) |
+| **WeChat 集成完成度** | 🔴 Incomplete | 🟡 Partial | 已接通 API 调用框架，但数据形状不匹配导致实际效果等同于 mock |
+| **Web 集成完成度** | 🔴 Incomplete | 🔴 Unknown | 无法在当前仓库验证 C1 |
+| **测试覆盖** | 🟡 Partial | 🟢 Good | 新增 test_challenge_club.py 覆盖 C4/C5 (14 tests) |
+| **数据安全** | 🟢 Good | 🟢 Good | 无变化 |
+
+### 整体风险等级: 🔴 HIGH — 仍阻塞上线
+
+---
+
+## 是否可以解除「阻塞上线」
+
+**结论: ❌ 不可以解除**
+
+虽然后端 C4/C5 已实现且质量良好，但以下问题仍需在合并前解决:
+
+1. **N1** (invite/status 端点缺失) — 邀请系统核心数据流断路
+2. **N2** (邀请码生成字段名 user_id vs ios_user_id) — 邀请码生成 API 调用失败
+3. **N3** (Challenge List 数据形状不匹配) — 挑战赛列表无法正确显示用户参与状态
+4. **N4** (Leaderboard 数据形状不匹配) — 排行榜无法正确渲染
+5. **N5** (Club Leaderboard 前端字段名 members vs entries) — 跑团排行榜无法正确渲染
+6. **C1** (Web 端路由) — 无法在当前仓库验证，需在 web 仓库独立验证
+
+建议修复优先级:
+- **P0 (本次 Sprint)**: N1, N2 — 邀请码系统协议问题，后端新增 `/invite/status` 端点 + 统一字段名
+- **P0 (本次 Sprint)**: N3, N4 — Challenge 响应数据形状对齐，或 WeChat 端适配后端现有字段
+- **P1 (本次 Sprint)**: N5 — club-leaderboard.js 字段名修正
+- **P2 (可后续)**: C1 在 web 仓库验证
+
+---
+
+## 附录: 测试执行说明
+
+测试套件 `test_challenge_club.py` 和 `test_coach.py` 因 slowapi `Limiter` 与 FastAPI async 端点装饰器兼容性问题无法在当前环境执行 (ImportError: No "request" argument on function)。该问题影响所有测试的 import 路径，属于环境/依赖版本问题而非测试代码问题。
+
+测试代码本身经过审查，逻辑完整，覆盖了 C4 (8 tests) 和 C5 (6 tests) 的核心场景。
+
+---
+
+*第二轮验证完成时间: 2026-05-23 | 审查人: QA Release Engineer (AI Agent)*

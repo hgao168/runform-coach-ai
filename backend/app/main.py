@@ -46,6 +46,9 @@ from .schemas import (
     InviteCodeGenerateResponse,
     InviteRedeemRequest,
     InviteRedeemResponse,
+    InviteStatusRedeemedUser,
+    InviteStatusCodeItem,
+    InviteStatusResponse,
     PoseMetricsInput,
     ProfileSaveRequest,
     ProfileSaveResponse,
@@ -913,7 +916,7 @@ def generate_invite(payload: InviteCodeGenerateRequest, _api_key: str = Depends(
     """Generate a unique 8-character invite code. Each user can create up to 5 codes."""
     try:
         with get_db_session() as session:
-            user = _resolve_user(session, payload.ios_user_id)
+            user = _resolve_user(session, payload.user_id)
 
             active_codes = session.execute(
                 select(InviteCode).where(
@@ -981,7 +984,7 @@ def redeem_invite(payload: InviteRedeemRequest, _api_key: str = Depends(verify_a
 
     try:
         with get_db_session() as session:
-            user = _resolve_user(session, payload.ios_user_id)
+            user = _resolve_user(session, payload.user_id)
             code = payload.code.strip().upper()
 
             invite = session.scalar(select(InviteCode).where(InviteCode.code == code))
@@ -1018,6 +1021,54 @@ def redeem_invite(payload: InviteRedeemRequest, _api_key: str = Depends(verify_a
         raise HTTPException(status_code=500, detail=f"Failed to redeem invite code: {exc}") from exc
 
 
+@app.get("/api/v1/invite/status", response_model=InviteStatusResponse)
+def invite_status(user_id: str = Query(..., min_length=3, description="iOS user identifier"), _api_key: str = Depends(verify_api_key)) -> InviteStatusResponse:
+    """Return the user's active invite codes and the list of users who redeemed them.
+
+    Called by WeChat invite.js onLoad to populate the invite sharing screen.
+    """
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, user_id)
+
+            # Fetch all active invite codes created by this user
+            codes = session.execute(
+                select(InviteCode).where(
+                    InviteCode.creator_user_id == user.id,
+                    InviteCode.is_active.is_(True),
+                ).order_by(InviteCode.created_at.desc())
+            ).scalars().all()
+
+            code_items: list[InviteStatusCodeItem] = []
+            total_invited = 0
+
+            for invite in codes:
+                redeemed_users: list[InviteStatusRedeemedUser] = []
+                if invite.redeemed_by is not None:
+                    redeemer = session.scalar(select(User).where(User.id == invite.redeemed_by))
+                    redeemed_users.append(InviteStatusRedeemedUser(
+                        nickname=redeemer.nickname if redeemer else None,
+                        joined_at=invite.redeemed_at.isoformat() if invite.redeemed_at else invite.created_at.isoformat(),
+                    ))
+                    total_invited += 1
+
+                code_items.append(InviteStatusCodeItem(
+                    code=invite.code,
+                    created_at=invite.created_at.isoformat(),
+                    redeemed_count=1 if invite.redeemed_by is not None else 0,
+                    redeemed_users=redeemed_users,
+                ))
+
+            return InviteStatusResponse(
+                codes=code_items,
+                total_invited=total_invited,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to get invite status: {exc}") from exc
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # RF-601  Challenge Platform API ───────────────────────────────────────────
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1037,10 +1088,17 @@ _CHALLENGES = {
 
 
 @app.get("/api/v1/challenges", response_model=list[ChallengeInfo])
-def list_challenges() -> list[ChallengeInfo]:
-    """Return all challenges. Currently hardcoded to the 14-day form challenge."""
+def list_challenges(
+    ios_user_id: str | None = Query(None, min_length=3),
+) -> list[ChallengeInfo]:
+    """Return all challenges. Optionally include personal participation state when ios_user_id is provided."""
     try:
         with get_db_session() as session:
+            # N3: Optionally resolve the requesting user
+            user = None
+            if ios_user_id:
+                user = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
+
             results = []
             for cid, cdata in _CHALLENGES.items():
                 count = session.scalar(
@@ -1050,15 +1108,46 @@ def list_challenges() -> list[ChallengeInfo]:
                 ) or 0
                 now = datetime.now(timezone.utc)
                 end_dt = datetime.fromisoformat(cdata["end_date"]).replace(tzinfo=timezone.utc)
+                start_dt = datetime.fromisoformat(cdata["start_date"]).replace(tzinfo=timezone.utc)
+                days = (end_dt.date() - start_dt.date()).days
                 status = "active" if now <= end_dt else "ended"
+
+                # N3: Personal participation state
+                joined = None
+                completed_days = None
+                today_completed = None
+                if user is not None:
+                    participant = session.scalar(
+                        select(ChallengeParticipant).where(
+                            ChallengeParticipant.challenge_id == cid,
+                            ChallengeParticipant.user_id == user.id,
+                        )
+                    )
+                    if participant is not None:
+                        joined = True
+                        completed_days = participant.check_in_count or 0
+                        # Check if user completed today
+                        if participant.last_check_in is not None:
+                            today_completed = participant.last_check_in.date() == now.date()
+                        else:
+                            today_completed = False
+                    else:
+                        joined = False
+                        completed_days = 0
+                        today_completed = False
+
                 results.append(ChallengeInfo(
                     id=cdata["id"],
                     name=cdata["name"],
                     description=cdata["description"],
                     start_date=cdata["start_date"],
                     end_date=cdata["end_date"],
+                    days=days,
                     participant_count=count,
                     status=status,
+                    joined=joined,
+                    completed_days=completed_days,
+                    today_completed=today_completed,
                 ))
             return results
     except Exception as exc:
@@ -1138,8 +1227,11 @@ def join_challenge(challenge_id: str, payload: ChallengeJoinRequest, _api_key: s
 
 
 @app.get("/api/v1/challenges/{challenge_id}/leaderboard", response_model=list[ChallengeLeaderboardEntry])
-def challenge_leaderboard(challenge_id: str) -> list[ChallengeLeaderboardEntry]:
-    """Return the leaderboard sorted by overall improvement magnitude."""
+def challenge_leaderboard(
+    challenge_id: str,
+    ios_user_id: str | None = Query(None, min_length=3),
+) -> list[ChallengeLeaderboardEntry]:
+    """Return the leaderboard sorted by overall improvement magnitude. Optionally mark is_me."""
     if challenge_id not in _CHALLENGES:
         raise HTTPException(status_code=404, detail=f"Challenge '{challenge_id}' not found.")
 
@@ -1197,12 +1289,22 @@ def challenge_leaderboard(challenge_id: str) -> list[ChallengeLeaderboardEntry]:
                 # Look up ios_user_id
                 user = session.scalar(select(User).where(User.id == p.user_id))
 
+                # N4: Compute display_name and is_me
+                ios_uid = user.ios_user_id if user else f"user_{p.user_id}"
+                display_name = (
+                    user.nickname or user.first_name or ios_uid
+                ) if user else ios_uid
+                is_me = (ios_user_id is not None and ios_user_id == ios_uid)
+
                 entries.append(ChallengeLeaderboardEntry(
-                    ios_user_id=user.ios_user_id if user else f"user_{p.user_id}",
+                    ios_user_id=ios_uid,
                     cadence_improvement_pct=cadence_improvement,
                     oscillation_improvement_pct=osc_improvement,
                     overall_score_change=overall_change,
                     rank=0,  # placeholder, filled below
+                    display_name=display_name,
+                    completed_days=p.check_in_count or 0,
+                    is_me=is_me,
                 ))
 
             # Sort by overall_score_change descending, then cadence improvement
@@ -1597,7 +1699,7 @@ def club_leaderboard(
                     select(User).where(User.ios_user_id == club_code)
                 )
                 if coach_user is None:
-                    return ClubLeaderboardResponse(entries=[], coming_soon=True)
+                    return ClubLeaderboardResponse(members=[], coming_soon=True)
                 coach_id = coach_user.id
             else:
                 coach_id = coach_code.coach_id
@@ -1612,7 +1714,7 @@ def club_leaderboard(
             ).all()
 
             if not rows:
-                return ClubLeaderboardResponse(entries=[], coming_soon=True)
+                return ClubLeaderboardResponse(members=[], coming_soon=True)
 
             # Build leaderboard entries with latest run session metrics
             entries: list[ClubLeaderboardEntry] = []
@@ -1688,7 +1790,7 @@ def club_leaderboard(
             for i, entry in enumerate(entries):
                 entry.rank = i + 1
 
-            return ClubLeaderboardResponse(entries=entries, coming_soon=False)
+            return ClubLeaderboardResponse(members=entries, coming_soon=False)
     except HTTPException:
         raise
     except Exception as exc:

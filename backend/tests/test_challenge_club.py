@@ -174,7 +174,7 @@ async def test_club_leaderboard_unknown_code_returns_coming_soon(client: AsyncCl
     resp = await client.get("/api/v1/clubs/UNKNOWNXY/leaderboard")
     assert resp.status_code == 200, resp.text
     data = resp.json()
-    assert data["entries"] == []
+    assert data["members"] == []
     assert data["coming_soon"] is True
 
 
@@ -208,10 +208,10 @@ async def test_club_leaderboard_returns_ranked_entries(client: AsyncClient, club
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["coming_soon"] is False
-    assert len(data["entries"]) == 2
+    assert len(data["members"]) == 2
 
     # Check structure
-    e0 = data["entries"][0]
+    e0 = data["members"][0]
     assert "rank" in e0
     assert "nickname" in e0
     assert "cadence" in e0
@@ -226,7 +226,7 @@ async def test_club_leaderboard_returns_ranked_entries(client: AsyncClient, club
     assert e0["form_score"] > 0
 
     # Second entry should be rank 2
-    e1 = data["entries"][1]
+    e1 = data["members"][1]
     assert e1["rank"] == 2
 
 
@@ -241,14 +241,14 @@ async def test_club_leaderboard_is_me_flag(client: AsyncClient, club_setup):
     resp = await client.get(f"/api/v1/clubs/{coach_code}/leaderboard?ios_user_id={s2_id}")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data["entries"]) == 2
+    assert len(data["members"]) == 2
 
     # Find student 2's entry
-    s2_entry = [e for e in data["entries"] if e["nickname"] == "Runner Two"]
+    s2_entry = [e for e in data["members"] if e["nickname"] == "Runner Two"]
     assert len(s2_entry) == 1
     assert s2_entry[0]["is_me"] is True
 
-    s1_entry = [e for e in data["entries"] if e["nickname"] == "Runner One"]
+    s1_entry = [e for e in data["members"] if e["nickname"] == "Runner One"]
     assert len(s1_entry) == 1
     assert s1_entry[0]["is_me"] is False
 
@@ -266,7 +266,7 @@ async def test_club_leaderboard_score_change(client: AsyncClient, club_setup):
     assert resp.status_code == 200
     data = resp.json()
 
-    s1_entry = [e for e in data["entries"] if e["nickname"] == "Runner One"][0]
+    s1_entry = [e for e in data["members"] if e["nickname"] == "Runner One"][0]
     assert s1_entry["score_change"] == "+"
 
 
@@ -280,7 +280,7 @@ async def test_club_leaderboard_case_insensitive_code(client: AsyncClient, club_
     assert resp.status_code == 200
     data = resp.json()
     assert data["coming_soon"] is False
-    assert len(data["entries"]) >= 1
+    assert len(data["members"]) >= 1
 
 
 @pytest.mark.anyio
@@ -306,4 +306,4 @@ async def test_club_leaderboard_by_ios_user_id(client: AsyncClient):
     assert resp.status_code == 200
     data = resp.json()
     assert data["coming_soon"] is False
-    assert len(data["entries"]) == 1
+    assert len(data["members"]) == 1

@@ -460,7 +460,7 @@ class WeeklyInsightResponse(BaseModel):
 # ── RF-600: Invite code schemas ───────────────────────────────────────────
 
 class InviteCodeGenerateRequest(BaseModel):
-    ios_user_id: str = Field(
+    user_id: str = Field(
         ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
     )
 
@@ -472,7 +472,7 @@ class InviteCodeGenerateResponse(BaseModel):
 
 
 class InviteRedeemRequest(BaseModel):
-    ios_user_id: str = Field(
+    user_id: str = Field(
         ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
     )
     code: str = Field(..., min_length=8, max_length=8)
@@ -483,6 +483,23 @@ class InviteRedeemResponse(BaseModel):
     message: str
 
 
+class InviteStatusRedeemedUser(BaseModel):
+    nickname: Optional[str] = None
+    joined_at: str
+
+
+class InviteStatusCodeItem(BaseModel):
+    code: str
+    created_at: str
+    redeemed_count: int
+    redeemed_users: List[InviteStatusRedeemedUser] = []
+
+
+class InviteStatusResponse(BaseModel):
+    codes: List[InviteStatusCodeItem] = []
+    total_invited: int = 0
+
+
 # ── RF-601: Challenge schemas ─────────────────────────────────────────────
 
 class ChallengeInfo(BaseModel):
@@ -491,8 +508,13 @@ class ChallengeInfo(BaseModel):
     description: str
     start_date: str
     end_date: str
+    days: int  # duration of challenge in days
     participant_count: int
     status: str  # "active" | "ended"
+    # N3: Personal participation state (only set when ios_user_id is provided)
+    joined: Optional[bool] = None
+    completed_days: Optional[int] = None
+    today_completed: Optional[bool] = None
 
 
 class ChallengeJoinRequest(BaseModel):
@@ -513,6 +535,10 @@ class ChallengeLeaderboardEntry(BaseModel):
     oscillation_improvement_pct: Optional[float] = None
     overall_score_change: Optional[float] = None
     rank: int
+    # N4: Rendering fields for frontend display
+    display_name: Optional[str] = None
+    completed_days: Optional[int] = None
+    is_me: bool = False
 
 
 # ── C5: Challenge check-in schemas ────────────────────────────────────────
@@ -543,7 +569,7 @@ class ClubLeaderboardEntry(BaseModel):
 
 
 class ClubLeaderboardResponse(BaseModel):
-    entries: list[ClubLeaderboardEntry] = []
+    members: list[ClubLeaderboardEntry] = []
     coming_soon: bool = False
 
 
