@@ -29,6 +29,8 @@ from .schemas import (
     ChallengeJoinRequest,
     ChallengeJoinResponse,
     ChallengeLeaderboardEntry,
+    ChallengeNotifyRequest,
+    ChallengeNotifyResponse,
     ClubLeaderboardEntry,
     ClubLeaderboardResponse,
     CoachCodeGenerateRequest,
@@ -49,6 +51,7 @@ from .schemas import (
     InviteStatusRedeemedUser,
     InviteStatusCodeItem,
     InviteStatusResponse,
+    NotificationItem,
     PoseMetricsInput,
     ProfileSaveRequest,
     ProfileSaveResponse,
@@ -1795,3 +1798,644 @@ def club_leaderboard(
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to load club leaderboard: {exc}") from exc
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RF-606  Challenge Notification Push ──────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+
+# WeChat subscribe message template IDs (placeholder — replace with real ones)
+_WX_TEMPLATE_RANK_CHANGE = "TEMPLATE_RANK_CHANGE_001"
+_WX_TEMPLATE_OVERTAKEN = "TEMPLATE_OVERTAKEN_002"
+_WX_TEMPLATE_DEADLINE = "TEMPLATE_DEADLINE_003"
+_WX_TEMPLATE_WEEKLY_DIGEST = "TEMPLATE_WEEKLY_DIGEST_004"
+
+
+def _build_wx_subscribe_data(template_id: str, openid: str, page: str, fields: dict) -> dict:
+    """Build a WeChat subscribe message template payload.
+    
+    Returns the full payload as would be sent to WeChat API. The caller (WeChat
+    mini-program) receives this and triggers wx.requestSubscribeMessage.
+    """
+    data = {}
+    for key, value in fields.items():
+        data[key] = {"value": str(value) if value is not None else ""}
+    return {
+        "touser": openid,
+        "template_id": template_id,
+        "page": page,
+        "data": data,
+    }
+
+
+def _get_latest_sessions_for_users(session, user_ids: list[int], since: datetime | None = None) -> dict[int, list]:
+    """Fetch latest run sessions (up to 10) for a list of user IDs, optionally since a date."""
+    result: dict[int, list] = {}
+    for uid in user_ids:
+        q = select(RunSession).where(RunSession.user_id == uid)
+        if since is not None:
+            q = q.where(RunSession.start_time >= since)
+        rows = session.execute(
+            q.order_by(RunSession.start_time.desc()).limit(10)
+        ).scalars().all()
+        result[uid] = rows
+    return result
+
+
+def _compute_current_metrics(sessions: list) -> dict:
+    """Compute current avg cadence, oscillation, and score from a list of sessions."""
+    cadences = [s.avg_cadence for s in sessions if s.avg_cadence is not None]
+    oscillations = [s.avg_vertical_oscillation for s in sessions if s.avg_vertical_oscillation is not None]
+
+    avg_cadence = round(sum(cadences) / len(cadences), 2) if cadences else None
+    avg_osc = round(sum(oscillations) / len(oscillations), 4) if oscillations else None
+    score = None
+    if avg_cadence and avg_osc:
+        score = round((avg_cadence / 180.0 * 0.5) + ((0.12 / max(avg_osc, 0.001)) * 0.5), 3)
+
+    return {"cadence": avg_cadence, "oscillation": avg_osc, "score": score}
+
+
+@app.post("/api/v1/challenges/{challenge_id}/notify", response_model=ChallengeNotifyResponse)
+def challenge_notify(
+    challenge_id: str,
+    payload: ChallengeNotifyRequest,
+    _api_key: str = Depends(verify_api_key),
+) -> ChallengeNotifyResponse:
+    """RF-606: Generate WeChat subscribe message push data for challenge participants.
+
+    trigger_type:
+      - rank_change: Notify users whose leaderboard rank has changed
+      - overtaken: Notify users who have been overtaken by others
+      - deadline: Remind participants the challenge ends within 3 days
+      - weekly_digest: Weekly summary of check-in days and cadence change
+
+    Returns notification payloads ready for WeChat mini-program to trigger
+    wx.requestSubscribeMessage. No actual push is performed server-side.
+    """
+    from datetime import timedelta
+
+    if challenge_id not in _CHALLENGES:
+        raise HTTPException(status_code=404, detail=f"Challenge '{challenge_id}' not found.")
+
+    valid_triggers = {"rank_change", "overtaken", "deadline", "weekly_digest"}
+    trigger = payload.trigger_type
+    if trigger not in valid_triggers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid trigger_type '{trigger}'. Must be one of: {', '.join(sorted(valid_triggers))}",
+        )
+
+    challenge_data = _CHALLENGES[challenge_id]
+    end_dt = datetime.fromisoformat(challenge_data["end_date"]).replace(tzinfo=timezone.utc)
+    start_dt = datetime.fromisoformat(challenge_data["start_date"]).replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+
+    try:
+        with get_db_session() as session:
+            # Fetch all participants for this challenge
+            participants = session.execute(
+                select(ChallengeParticipant).where(
+                    ChallengeParticipant.challenge_id == challenge_id,
+                )
+            ).scalars().all()
+
+            if not participants:
+                return ChallengeNotifyResponse(
+                    challenge_id=challenge_id,
+                    trigger_type=trigger,
+                    notifications=[],
+                )
+
+            user_ids = [p.user_id for p in participants]
+            # Fetch user records
+            user_map: dict[int, User] = {}
+            for u in session.execute(select(User).where(User.id.in_(user_ids))).scalars().all():
+                user_map[u.id] = u
+
+            notifications: list[NotificationItem] = []
+
+            # Build participant lookup
+            p_map: dict[int, ChallengeParticipant] = {p.user_id: p for p in participants}
+
+            if trigger == "deadline":
+                # ── Deadline check: last 3 days ──
+                days_left = (end_dt.date() - now.date()).days
+                if days_left > 3:
+                    return ChallengeNotifyResponse(
+                        challenge_id=challenge_id,
+                        trigger_type=trigger,
+                        notifications=[],
+                    )
+
+                template_id = _WX_TEMPLATE_DEADLINE
+                for p in participants:
+                    u = user_map.get(p.user_id)
+                    if u is None:
+                        continue
+                    notifications.append(NotificationItem(
+                        user_id=u.ios_user_id,
+                        template_id=template_id,
+                        data=_build_wx_subscribe_data(
+                            template_id, u.ios_user_id,
+                            page="pages/challenge/challenge",
+                            fields={
+                                "thing1": f"距离挑战结束仅剩{days_left}天",
+                                "thing2": f"{p.check_in_count or 0}/{end_dt.date()}天打卡",
+                                "thing3": f"当前步频 {p.latest_cadence or '--'} SPM",
+                            },
+                        ),
+                    ))
+
+            elif trigger == "weekly_digest":
+                # ── Weekly digest: this week's stats per user ──
+                template_id = _WX_TEMPLATE_WEEKLY_DIGEST
+                monday = now - timedelta(days=now.weekday())
+                monday = monday.replace(hour=0, minute=0, second=0, microsecond=0)
+                sunday = monday + timedelta(days=6, hours=23, minutes=59, seconds=59)
+
+                sessions_by_user = _get_latest_sessions_for_users(session, user_ids, since=monday)
+
+                for p in participants:
+                    u = user_map.get(p.user_id)
+                    if u is None:
+                        continue
+                    user_sessions = sessions_by_user.get(p.user_id, [])
+                    this_week_sessions = [s for s in user_sessions if monday <= s.start_time <= sunday]
+                    check_in_days = p.check_in_count or 0
+
+                    metrics = _compute_current_metrics(user_sessions)
+                    cadence_now = metrics["cadence"]
+                    cadence_baseline = p.baseline_cadence
+                    cadence_delta = None
+                    if cadence_now is not None and cadence_baseline is not None and cadence_baseline > 0:
+                        cadence_delta = round(cadence_now - cadence_baseline, 1)
+
+                    cadence_text = f"{cadence_now or '--'} SPM"
+                    if cadence_delta is not None and cadence_delta > 0:
+                        cadence_text += f" (↑+{cadence_delta})"
+                    elif cadence_delta is not None and cadence_delta < 0:
+                        cadence_text += f" (↓{cadence_delta})"
+
+                    notifications.append(NotificationItem(
+                        user_id=u.ios_user_id,
+                        template_id=template_id,
+                        data=_build_wx_subscribe_data(
+                            template_id, u.ios_user_id,
+                            page="pages/challenge/challenge",
+                            fields={
+                                "thing1": f"本周打卡{len(this_week_sessions)}天",
+                                "thing2": cadence_text,
+                                "thing3": f"连续打卡{p.current_streak or 0}天",
+                            },
+                        ),
+                    ))
+
+            elif trigger in ("rank_change", "overtaken"):
+                # ── Rank change / Overtaken: compute leaderboard and detect changes ──
+                # Compute full leaderboard (same logic as leaderboard endpoint)
+                leaderboard: list[dict] = []
+                for p in participants:
+                    u = user_map.get(p.user_id)
+                    if u is None:
+                        continue
+                    user_sessions = session.execute(
+                        select(RunSession)
+                        .where(RunSession.user_id == p.user_id, RunSession.start_time >= p.joined_at)
+                        .order_by(RunSession.start_time.desc())
+                        .limit(10)
+                    ).scalars().all()
+
+                    metrics = _compute_current_metrics(user_sessions)
+                    overall_change = None
+                    current_score = metrics["score"]
+                    if p.baseline_overall_score is not None and current_score is not None:
+                        overall_change = round(current_score - p.baseline_overall_score, 3)
+
+                    leaderboard.append({
+                        "user_id": p.user_id,
+                        "ios_user_id": u.ios_user_id,
+                        "overall_change": overall_change,
+                        "cadence": metrics["cadence"],
+                        "oscillation": metrics["oscillation"],
+                        "check_in_count": p.check_in_count or 0,
+                    })
+
+                # Sort by overall_change desc
+                leaderboard.sort(
+                    key=lambda e: e["overall_change"] if e["overall_change"] is not None else float("-inf"),
+                    reverse=True,
+                )
+
+                # Assign current ranks
+                for i, entry in enumerate(leaderboard):
+                    entry["rank"] = i + 1
+
+                if trigger == "rank_change":
+                    # Simulate "previous rank" by sorting by check_in_count then cadence
+                    # (a reasonable proxy — earlier participants with fewer check-ins)
+                    prev_sorted = sorted(leaderboard, key=lambda e: (
+                        e["check_in_count"],
+                        e["cadence"] if e["cadence"] is not None else 0,
+                    ), reverse=True)
+                    prev_rank_map: dict[int, int] = {}
+                    for i, entry in enumerate(prev_sorted):
+                        prev_rank_map[entry["user_id"]] = i + 1
+
+                    template_id = _WX_TEMPLATE_RANK_CHANGE
+                    for entry in leaderboard:
+                        current_rank = entry["rank"]
+                        prev_rank = prev_rank_map.get(entry["user_id"], current_rank)
+                        rank_delta = prev_rank - current_rank  # positive = improved
+
+                        if rank_delta == 0:
+                            continue  # No change, skip
+
+                        direction = "上升" if rank_delta > 0 else "下降"
+                        notifications.append(NotificationItem(
+                            user_id=entry["ios_user_id"],
+                            template_id=template_id,
+                            data=_build_wx_subscribe_data(
+                                template_id, entry["ios_user_id"],
+                                page="pages/challenge/challenge",
+                                fields={
+                                    "thing1": f"排名{direction}{abs(rank_delta)}位",
+                                    "thing2": f"当前第{current_rank}名",
+                                    "thing3": f"步频{entry['cadence'] or '--'} SPM",
+                                },
+                            ),
+                        ))
+
+                elif trigger == "overtaken":
+                    # Detect users overtaken: compare each user's rank against a
+                    # recency-adjusted rank (users who just got a good session pass others)
+                    # Sort by cadence improvement to find who's surging
+                    overtaken_users: set[int] = set()
+
+                    for i, entry in enumerate(leaderboard):
+                        # Check if anyone below this entry has higher recent cadence
+                        for j in range(i + 1, len(leaderboard)):
+                            below = leaderboard[j]
+                            if entry["overall_change"] is not None and below["overall_change"] is not None:
+                                if below["overall_change"] > entry["overall_change"]:
+                                    # The lower-ranked user has better improvement — overtaken risk
+                                    overtaken_users.add(entry["user_id"])
+
+                    template_id = _WX_TEMPLATE_OVERTAKEN
+                    for entry in leaderboard:
+                        if entry["user_id"] not in overtaken_users:
+                            continue
+                        notifications.append(NotificationItem(
+                            user_id=entry["ios_user_id"],
+                            template_id=template_id,
+                            data=_build_wx_subscribe_data(
+                                template_id, entry["ios_user_id"],
+                                page="pages/challenge/challenge",
+                                fields={
+                                    "thing1": "有人正在超越你！",
+                                    "thing2": f"当前排名第{entry['rank']}",
+                                    "thing3": f"步频{entry['cadence'] or '--'} SPM",
+                                },
+                            ),
+                        ))
+
+            return ChallengeNotifyResponse(
+                challenge_id=challenge_id,
+                trigger_type=trigger,
+                notifications=notifications,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to generate notifications: {exc}") from exc
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RF-607  Share Image Server-Side Generation ───────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+
+from fastapi.responses import Response as FastAPIResponse
+
+
+def _svg_circular_progress(percent: float, label: str, sublabel: str,
+                           color: str = "#3B82F6", size: int = 200) -> str:
+    """Generate an SVG circular progress ring.
+
+    percent: 0-100
+    label: main text in center (e.g. "8/14")
+    sublabel: smaller text below (e.g. "days")
+    """
+    stroke_width = 12
+    radius = (size // 2) - stroke_width - 4
+    circumference = 2 * 3.14159265 * radius
+    dash_offset = circumference * (1 - percent / 100)
+
+    return f'''<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="{size//2}" cy="{size//2}" r="{radius}" fill="none" stroke="#E5E7EB" stroke-width="{stroke_width}"/>
+  <circle cx="{size//2}" cy="{size//2}" r="{radius}" fill="none" stroke="{color}" stroke-width="{stroke_width}"
+    stroke-linecap="round" stroke-dasharray="{circumference:.1f}" stroke-dashoffset="{dash_offset:.1f}"
+    transform="rotate(-90 {size//2} {size//2})"/>
+  <text x="{size//2}" y="{size//2-8}" text-anchor="middle" font-family="system-ui,sans-serif"
+    font-size="36" font-weight="bold" fill="#111827">{label}</text>
+  <text x="{size//2}" y="{size//2+22}" text-anchor="middle" font-family="system-ui,sans-serif"
+    font-size="14" fill="#6B7280">{sublabel}</text>
+</svg>'''
+
+
+def _svg_trend_arrow(direction: str, x: int, y: int, size: int = 24) -> str:
+    """Generate an SVG trend arrow: 'up', 'down', or 'flat'."""
+    if direction == "up":
+        return f'''<polygon points="{x},{y+size} {x+size//2},{y} {x+size},{y+size}"
+          fill="#10B981" stroke="#10B981" stroke-width="2"/>'''
+    elif direction == "down":
+        return f'''<polygon points="{x},{y} {x+size//2},{y+size} {x+size},{y}"
+          fill="#EF4444" stroke="#EF4444" stroke-width="2"/>'''
+    else:
+        return f'''<line x1="{x}" y1="{y+size//2}" x2="{x+size}" y2="{y+size//2}"
+          stroke="#9CA3AF" stroke-width="3" stroke-linecap="round"/>'''
+
+
+def _generate_challenge_progress_svg(
+    user_display: str, check_in_count: int, total_days: int,
+    cadence: float | None, cadence_delta: float | None,
+    rank: int | None, total_participants: int,
+) -> str:
+    """Generate the challenge_progress share image as SVG."""
+    percent = min(round(check_in_count / total_days * 100), 100) if total_days > 0 else 0
+    cadence_str = f"{cadence:.0f}" if cadence is not None else "--"
+    delta_str = ""
+    trend_dir = "flat"
+    if cadence_delta is not None and cadence_delta > 0:
+        delta_str = f"+{cadence_delta:.1f}"
+        trend_dir = "up"
+    elif cadence_delta is not None and cadence_delta < 0:
+        delta_str = f"{cadence_delta:.1f}"
+        trend_dir = "down"
+
+    rank_str = f"#{rank}" if rank is not None else "--"
+    total_str = f"/{total_participants}" if total_participants else ""
+
+    return f'''<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E3A5F;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#111827;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#bg)" rx="16"/>
+  <!-- Title -->
+  <text x="30" y="40" font-family="system-ui,sans-serif" font-size="14" fill="#9CA3AF"
+    text-anchor="start">14-Day Running Form Challenge</text>
+  <!-- User name -->
+  <text x="30" y="68" font-family="system-ui,sans-serif" font-size="20" font-weight="bold"
+    fill="#FFFFFF" text-anchor="start">{user_display}</text>
+  <!-- Circular progress (left side) -->
+  <g transform="translate(80, 160)">
+    {_svg_circular_progress(percent, f"{check_in_count}/{total_days}", "days", color="#3B82F6", size=160)}
+  </g>
+  <!-- Stats panel (right side) -->
+  <g transform="translate(330, 140)">
+    <!-- Cadence -->
+    <rect x="0" y="0" width="240" height="52" rx="10" fill="rgba(255,255,255,0.08)"/>
+    <text x="16" y="24" font-family="system-ui,sans-serif" font-size="12" fill="#9CA3AF">步频 Cadence</text>
+    <text x="16" y="44" font-family="system-ui,sans-serif" font-size="20" font-weight="bold"
+      fill="#FFFFFF">{cadence_str} <tspan font-size="12" fill="#9CA3AF">SPM</tspan></text>
+    {_svg_trend_arrow(trend_dir, 180, 14, 24)}
+    <text x="210" y="36" font-family="system-ui,sans-serif" font-size="13" fill="#10B981">{delta_str}</text>
+    <!-- Rank -->
+    <rect x="0" y="62" width="240" height="42" rx="10" fill="rgba(255,255,255,0.08)"/>
+    <text x="16" y="90" font-family="system-ui,sans-serif" font-size="12" fill="#9CA3AF">排名 Rank</text>
+    <text x="180" y="90" font-family="system-ui,sans-serif" font-size="20" font-weight="bold"
+      fill="#FBBF24" text-anchor="end">{rank_str} <tspan font-size="12" fill="#9CA3AF">{total_str}</tspan></text>
+    <!-- Score -->
+    <rect x="0" y="114" width="240" height="42" rx="10" fill="rgba(255,255,255,0.08)"/>
+    <text x="16" y="142" font-family="system-ui,sans-serif" font-size="12" fill="#9CA3AF">连续打卡 Streak</text>
+    <text x="180" y="142" font-family="system-ui,sans-serif" font-size="20" font-weight="bold"
+      fill="#FFFFFF" text-anchor="end">{check_in_count} 天</text>
+  </g>
+  <!-- Brand -->
+  <text x="300" y="380" font-family="system-ui,sans-serif" font-size="11" fill="#4B5563"
+    text-anchor="middle">RunForm · runformcoach.com</text>
+</svg>'''
+
+
+@app.get("/api/v1/share-image")
+def share_image(
+    type: str = Query(..., description="challenge_progress | invite | milestone"),
+    user_id: str = Query(..., min_length=3),
+    challenge_id: str | None = Query(None),
+    _api_key: str = Depends(verify_api_key),
+) -> FastAPIResponse:
+    """RF-607: Generate share images server-side as SVG.
+
+    Types:
+      - challenge_progress: Circular progress ring + cadence trend + rank
+      - invite: Invite poster (placeholder)
+      - milestone: Milestone celebration (placeholder)
+
+    Returns SVG content (image/svg+xml). The client can render directly
+    or convert to PNG via Canvas on the mini-program side.
+    """
+    try:
+        with get_db_session() as session:
+            user = _resolve_user(session, user_id)
+
+            if type == "challenge_progress":
+                cid = challenge_id or _FOURTEEN_DAY_CHALLENGE_ID
+                if cid not in _CHALLENGES:
+                    raise HTTPException(status_code=404, detail=f"Challenge '{cid}' not found.")
+
+                ch_data = _CHALLENGES[cid]
+                total_days = (datetime.fromisoformat(ch_data["end_date"]).date()
+                              - datetime.fromisoformat(ch_data["start_date"]).date()).days
+
+                # Get participant data
+                participant = session.scalar(
+                    select(ChallengeParticipant).where(
+                        ChallengeParticipant.challenge_id == cid,
+                        ChallengeParticipant.user_id == user.id,
+                    )
+                )
+
+                check_in_count = participant.check_in_count if participant else 0
+
+                # Get cadence data
+                recent_sessions = session.execute(
+                    select(RunSession)
+                    .where(RunSession.user_id == user.id)
+                    .order_by(RunSession.start_time.desc())
+                    .limit(10)
+                ).scalars().all()
+
+                metrics = _compute_current_metrics(recent_sessions)
+                cadence = metrics["cadence"]
+                cadence_delta = None
+                if participant and participant.baseline_cadence and cadence:
+                    cadence_delta = round(cadence - participant.baseline_cadence, 1)
+
+                # Get rank from leaderboard
+                all_participants = session.execute(
+                    select(ChallengeParticipant).where(
+                        ChallengeParticipant.challenge_id == cid,
+                    )
+                ).scalars().all()
+
+                total_participants = len(all_participants)
+                rank = None
+
+                if participant:
+                    lb_entries = []
+                    for p in all_participants:
+                        p_sessions = session.execute(
+                            select(RunSession)
+                            .where(RunSession.user_id == p.user_id, RunSession.start_time >= p.joined_at)
+                            .order_by(RunSession.start_time.desc())
+                            .limit(10)
+                        ).scalars().all()
+                        p_metrics = _compute_current_metrics(p_sessions)
+                        overall_change = None
+                        if p.baseline_overall_score is not None and p_metrics["score"] is not None:
+                            overall_change = round(p_metrics["score"] - p.baseline_overall_score, 3)
+                        lb_entries.append({
+                            "user_id": p.user_id,
+                            "overall_change": overall_change,
+                        })
+
+                    lb_entries.sort(
+                        key=lambda e: e["overall_change"] if e["overall_change"] is not None else float("-inf"),
+                        reverse=True,
+                    )
+                    for i, entry in enumerate(lb_entries):
+                        if entry["user_id"] == user.id:
+                            rank = i + 1
+                            break
+
+                display_name = user.nickname or user.first_name or user_id
+                svg_content = _generate_challenge_progress_svg(
+                    user_display=display_name,
+                    check_in_count=check_in_count,
+                    total_days=total_days,
+                    cadence=cadence,
+                    cadence_delta=cadence_delta,
+                    rank=rank,
+                    total_participants=total_participants,
+                )
+
+                return FastAPIResponse(
+                    content=svg_content,
+                    media_type="image/svg+xml",
+                    headers={"Cache-Control": "public, max-age=300"},
+                )
+
+            elif type == "invite":
+                # MVP: placeholder invite poster with invite code
+                # Get user's first active invite code
+                invite = session.scalar(
+                    select(InviteCode).where(
+                        InviteCode.creator_user_id == user.id,
+                        InviteCode.redeemed_by.is_(None),
+                        InviteCode.is_active.is_(True),
+                    ).order_by(InviteCode.created_at.desc()).limit(1)
+                )
+
+                code = invite.code if invite else "--------"
+                display_name = user.nickname or user.first_name or user_id
+
+                svg = f'''<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="invbg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#1E1B4B;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#invbg)" rx="16"/>
+  <text x="300" y="60" font-family="system-ui,sans-serif" font-size="28" font-weight="bold"
+    fill="#FFFFFF" text-anchor="middle">Join the Challenge!</text>
+  <text x="300" y="100" font-family="system-ui,sans-serif" font-size="16" fill="#C4B5FD"
+    text-anchor="middle">{display_name} invites you to RunForm</text>
+  <!-- Invite code box -->
+  <rect x="140" y="140" width="320" height="80" rx="12" fill="rgba(255,255,255,0.12)"
+    stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <text x="300" y="175" font-family="system-ui,sans-serif" font-size="12" fill="#A78BFA"
+    text-anchor="middle">INVITE CODE</text>
+  <text x="300" y="208" font-family="monospace" font-size="36" font-weight="bold"
+    fill="#FBBF24" text-anchor="middle" letter-spacing="6">{code}</text>
+  <!-- QR placeholder -->
+  <rect x="220" y="250" width="160" height="100" rx="10" fill="rgba(255,255,255,0.06)"
+    stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+  <text x="300" y="290" font-family="system-ui,sans-serif" font-size="12" fill="#6D28D9"
+    text-anchor="middle">Scan to join</text>
+  <text x="300" y="310" font-family="system-ui,sans-serif" font-size="10" fill="#5B21B6"
+    text-anchor="middle">WeChat Mini Program</text>
+  <!-- Brand -->
+  <text x="300" y="380" font-family="system-ui,sans-serif" font-size="11" fill="#5B21B6"
+    text-anchor="middle">RunForm · runformcoach.com</text>
+</svg>'''
+                return FastAPIResponse(
+                    content=svg,
+                    media_type="image/svg+xml",
+                    headers={"Cache-Control": "public, max-age=300"},
+                )
+
+            elif type == "milestone":
+                # MVP: milestone celebration placeholder
+                display_name = user.nickname or user.first_name or user_id
+
+                # Get cadence improvement
+                participant = session.scalar(
+                    select(ChallengeParticipant).where(
+                        ChallengeParticipant.challenge_id == _FOURTEEN_DAY_CHALLENGE_ID,
+                        ChallengeParticipant.user_id == user.id,
+                    )
+                )
+
+                cadence_delta = None
+                if participant and participant.baseline_cadence and participant.latest_cadence:
+                    cadence_delta = round(participant.latest_cadence - participant.baseline_cadence, 1)
+
+                delta_text = f"+{cadence_delta} SPM" if cadence_delta and cadence_delta > 0 else (
+                    f"{cadence_delta} SPM" if cadence_delta else "Keep going!"
+                )
+
+                svg = f'''<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="milebg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#064E3B;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#milebg)" rx="16"/>
+  <!-- Celebration emoji -->
+  <text x="300" y="90" font-family="system-ui,sans-serif" font-size="60" text-anchor="middle">🎉</text>
+  <text x="300" y="150" font-family="system-ui,sans-serif" font-size="28" font-weight="bold"
+    fill="#FFFFFF" text-anchor="middle">Milestone Reached!</text>
+  <text x="300" y="190" font-family="system-ui,sans-serif" font-size="16" fill="#6EE7B7"
+    text-anchor="middle">{display_name}</text>
+  <!-- Stats -->
+  <rect x="140" y="220" width="320" height="60" rx="12" fill="rgba(255,255,255,0.1)"/>
+  <text x="300" y="248" font-family="system-ui,sans-serif" font-size="14" fill="#A7F3D0"
+    text-anchor="middle">Cadence Improvement</text>
+  <text x="300" y="272" font-family="system-ui,sans-serif" font-size="24" font-weight="bold"
+    fill="#FBBF24" text-anchor="middle">{delta_text}</text>
+  <!-- Trend arrow -->
+  {_svg_trend_arrow('up' if cadence_delta and cadence_delta > 0 else 'flat', 430, 234, 28)}
+  <!-- Brand -->
+  <text x="300" y="380" font-family="system-ui,sans-serif" font-size="11" fill="#047857"
+    text-anchor="middle">RunForm · runformcoach.com</text>
+</svg>'''
+                return FastAPIResponse(
+                    content=svg,
+                    media_type="image/svg+xml",
+                    headers={"Cache-Control": "public, max-age=300"},
+                )
+
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown type '{type}'. Must be: challenge_progress, invite, milestone",
+                )
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to generate share image: {exc}") from exc

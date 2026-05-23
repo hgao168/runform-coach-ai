@@ -120,6 +120,12 @@
   </view>
 
   <button class="btn-primary full-btn" bindtap="saveProfile">{{i.saveProfile}}</button>
+
+  <!-- RF-604: UGC submissions entry -->
+  <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="goUgc">
+    📤 {{isZh ? '我的投稿' : 'My Submissions'}}
+  </button>
+
   <view style="height: 60rpx;"></view>
 
 </view>

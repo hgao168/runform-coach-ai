@@ -626,3 +626,31 @@ class CoachDashboardResponse(BaseModel):
     student_count: int
     students: List[CoachStudentResponse]
     form_summaries: List[CoachStudentFormSummary]
+
+
+# ── RF-606: Challenge notification schemas ─────────────────────────────────
+
+class NotificationItem(BaseModel):
+    user_id: str                     # ios_user_id
+    template_id: str                 # WeChat subscribe message template ID
+    data: dict = {}                  # { thing1: {value: "..."}, ... }
+
+
+class ChallengeNotifyRequest(BaseModel):
+    trigger_type: str = Field(
+        ..., description="rank_change | overtaken | deadline | weekly_digest"
+    )
+
+
+class ChallengeNotifyResponse(BaseModel):
+    challenge_id: str
+    trigger_type: str
+    notifications: List[NotificationItem] = []
+
+
+# ── RF-607: Share image schemas ────────────────────────────────────────────
+
+class ShareImageRequest(BaseModel):
+    type: str = Field(..., description="challenge_progress | invite | milestone")
+    user_id: str = Field(..., min_length=3, max_length=128)
+    challenge_id: str | None = None

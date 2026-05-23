@@ -195,6 +195,73 @@
     <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="saveShareToAlbum">
       🖼️ {{i.saveToAlbum}}
     </button>
+
+    <!-- RF-604: UGC Content Submission -->
+    <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" bindtap="onUgcSubmitBtn">
+      {{i.ugcSubmitBtn}}
+    </button>
+  </view>
+
+  <!-- RF-604: UGC Submission Modal -->
+  <view wx:if="{{ugcModalVisible}}" class="ugc-modal-backdrop" bindtap="onUgcModalClose">
+    <view class="ugc-modal" catchtap="onUgcModalPrevent">
+      <view class="ugc-modal-header">
+        <text class="ugc-modal-title">{{i.ugcModalTitle}}</text>
+        <text class="ugc-modal-close" bindtap="onUgcModalClose">✕</text>
+      </view>
+
+      <!-- Platform selector -->
+      <view class="ugc-section">
+        <text class="ugc-label">{{i.ugcPlatformLabel}}</text>
+        <view class="ugc-platform-row">
+          <view
+            wx:for="{{ugcPlatforms}}"
+            wx:key="key"
+            class="ugc-platform-chip {{ugcPlatform === item.key ? 'ugc-platform-chip-active' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onUgcPlatformSelect"
+          >
+            <text>{{item.label}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Link input -->
+      <view class="ugc-section">
+        <text class="ugc-label">{{i.ugcLinkLabel}}</text>
+        <input
+          class="ugc-input"
+          placeholder="{{i.ugcLinkPlaceholder}}"
+          placeholder-style="color: rgba(255,255,255,0.3);"
+          value="{{ugcLink}}"
+          bindinput="onUgcLinkInput"
+        />
+      </view>
+
+      <!-- Note input -->
+      <view class="ugc-section">
+        <text class="ugc-label">{{i.ugcNoteLabel}}</text>
+        <textarea
+          class="ugc-textarea"
+          placeholder="{{i.ugcNotePlaceholder}}"
+          placeholder-style="color: rgba(255,255,255,0.3);"
+          maxlength="300"
+          auto-height
+          value="{{ugcNote}}"
+          bindinput="onUgcNoteInput"
+        />
+      </view>
+
+      <!-- Submit button -->
+      <button
+        class="btn-primary ugc-submit-btn"
+        bindtap="submitUgc"
+        loading="{{ugcSubmitting}}"
+        disabled="{{ugcSubmitting || !ugcPlatform || !ugcLink}}"
+      >
+        {{ugcSubmitting ? i.ugcSubmitting : i.ugcSubmitAction}}
+      </button>
+    </view>
   </view>
 
   <!-- RF-963: Rewarded video ad -->

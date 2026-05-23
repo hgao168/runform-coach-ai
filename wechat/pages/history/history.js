@@ -114,6 +114,10 @@ Page({
       startFirstAnalysis: t('startFirstAnalysis'),
     },
     items: [],
+    // ── Milestone RF-605 ──
+    milestone: null,            // { cadence, gct, score } or null
+    milestoneVisible: false,    // celebration card modal
+    _milestoneImagePath: '',
 
     // Trend chart state
     trendExpanded: false,
@@ -197,6 +201,73 @@ Page({
     // Redraw chart if visible
     if (this.data.trendExpanded && this._ctx) {
       this._drawChart()
+    }
+
+    // RF-605: Milestone detection
+    this._detectMilestone(raw)
+  },
+
+  /**
+   * RF-605: Detect running form improvement milestones.
+   * Compares earliest record vs latest record for:
+   *   - Cadence increase ≥ 10 SPM
+   *   - GCT decrease ≥ 20 ms
+   *   - Form score increase ≥ 10 points (out of 100)
+   */
+  _detectMilestone(rawHistory) {
+    if (!rawHistory || rawHistory.length < 2) return
+
+    const earliest = rawHistory[0]  // oldest (raw history is oldest-first)
+    const latest = rawHistory[rawHistory.length - 1]  // newest
+
+    const earlyRes = earliest && earliest.result ? earliest.result : null
+    const lateRes = latest && latest.result ? latest.result : null
+    if (!earlyRes || !lateRes) return
+
+    const milestones = {}
+
+    // Check cadence: raw cadence_spm or derived from score
+    const earlyCadence = extractMetric(earlyRes, 'cadence', 'cadence_spm', [100, 120])
+    const lateCadence = extractMetric(lateRes, 'cadence', 'cadence_spm', [100, 120])
+    if (earlyCadence != null && lateCadence != null && lateCadence - earlyCadence >= 10) {
+      milestones.cadence = Math.round(lateCadence - earlyCadence)
+    }
+
+    // Check GCT: raw ground_contact_time_ms, lower is better
+    const earlyGct = extractMetric(earlyRes, 'ground_contact_time', 'ground_contact_time_ms', [150, 150])
+    const lateGct = extractMetric(lateRes, 'ground_contact_time', 'ground_contact_time_ms', [150, 150])
+    if (earlyGct != null && lateGct != null && earlyGct - lateGct >= 20) {
+      milestones.gct = Math.round(earlyGct - lateGct)
+    }
+
+    // Check overall score: scale 0-1, 10 points = 0.1
+    const earlyScore = earlyRes.overall_score || earlyRes.confidence_score || 0
+    const lateScore = lateRes.overall_score || lateRes.confidence_score || 0
+    if (lateScore - earlyScore >= 0.1) {
+      milestones.score = Math.round((lateScore - earlyScore) * 100)
+    }
+
+    // Check if any milestone was triggered
+    if (Object.keys(milestones).length > 0) {
+      // Store earliest/latest reference data for celebration card
+      milestones.earlyDate = earliest.date
+      milestones.lateDate = latest.date
+
+      // Persist so we don't show repeatedly for same records
+      var cacheKey = 'rf_milestone_shown_' + (latest.id || latest.date)
+      try {
+        var alreadyShown = wx.getStorageSync(cacheKey)
+        if (alreadyShown) return
+      } catch (_) { /* ignore */ }
+
+      this.setData({ milestone: milestones })
+
+      // Mark shown
+      try {
+        wx.setStorageSync(cacheKey, true)
+      } catch (_) { /* ignore */ }
+    } else {
+      this.setData({ milestone: null })
     }
   },
 
@@ -576,6 +647,318 @@ Page({
     const imageUrl = this._shareImagePath || ''
 
     return { title, path, imageUrl }
+  },
+
+  // ──────────── RF-605: Milestone Celebration ────────────
+
+  /**
+   * Dismiss the milestone banner.
+   */
+  dismissMilestone() {
+    // Capture milestone before nulling
+    var m = this.data.milestone
+    this.setData({ milestone: null })
+
+    // Also persist dismiss
+    try {
+      if (m) {
+        var items = wx.getStorageSync('rf_dismissed_milestones') || []
+        var key = (m.cadence || '') + '_' + (m.gct || '') + '_' + (m.score || '')
+        if (items.indexOf(key) === -1) items.push(key)
+        if (items.length > 10) items = items.slice(-10)
+        wx.setStorageSync('rf_dismissed_milestones', items)
+      }
+    } catch (_) { /* ignore */ }
+  },
+
+  /**
+   * Open the milestone celebration card modal.
+   * Generates a Canvas share image showing improvement stats.
+   */
+  onMilestoneTap() {
+    this.setData({ milestoneVisible: true })
+    // Delay generation so DOM renders
+    setTimeout(() => {
+      this._generateMilestoneCard()
+    }, 300)
+  },
+
+  /**
+   * Close the milestone celebration modal.
+   */
+  closeMilestoneModal() {
+    this.setData({ milestoneVisible: false })
+  },
+
+  /**
+   * RF-605: Generate a celebration share card via Canvas.
+   * Shows cadence/GCT/score improvements with RunForm branding.
+   */
+  _generateMilestoneCard() {
+    var that = this
+    var milestone = this.data.milestone
+    if (!milestone) return
+
+    var query = wx.createSelectorQuery().in(this)
+    query.select('#milestoneCanvas')
+      .fields({ node: true, size: true })
+      .exec(function (res) {
+        if (!res || !res[0] || !res[0].node) {
+          console.error('[history] Milestone canvas not found')
+          return
+        }
+
+        try {
+          var canvas = res[0].node
+          var ctx = canvas.getContext('2d')
+          var dpr = wx.getSystemInfoSync().pixelRatio || 2
+
+          var cardW = 375
+          var cardH = 580
+          canvas.width = cardW * dpr
+          canvas.height = cardH * dpr
+          ctx.scale(dpr, dpr)
+
+          var PAD = 24
+          var FONT = '-apple-system, "PingFang SC", sans-serif'
+
+          // ── Background ──
+          var bgGrad = ctx.createLinearGradient(0, 0, 0, cardH)
+          bgGrad.addColorStop(0, '#0a0a15')
+          bgGrad.addColorStop(0.5, '#12101f')
+          bgGrad.addColorStop(1, '#0a0a15')
+          ctx.fillStyle = bgGrad
+          ctx.fillRect(0, 0, cardW, cardH)
+
+          // Accent top band
+          ctx.fillStyle = '#ff9f30'
+          ctx.fillRect(0, 0, cardW, 4)
+
+          // ── Header ──
+          var y = 30
+          ctx.fillStyle = '#ff9f30'
+          ctx.beginPath()
+          ctx.arc(PAD + 16, y + 18, 16, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = '#0a0a15'
+          ctx.font = 'bold 10px ' + FONT
+          ctx.textAlign = 'center'
+          ctx.fillText('🏃', PAD + 16, y + 22)
+
+          ctx.textAlign = 'left'
+          ctx.fillStyle = '#ffffff'
+          ctx.font = 'bold 16px ' + FONT
+          ctx.fillText(isZh ? 'RunForm 跑步教练' : 'RunForm Coach AI', PAD + 40, y + 14)
+          ctx.fillStyle = 'rgba(255,255,255,0.4)'
+          ctx.font = '11px ' + FONT
+          ctx.fillText(isZh ? '跑姿改善里程碑' : 'Form Milestone', PAD + 40, y + 32)
+          y += 58
+
+          // Divider
+          ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(PAD, y)
+          ctx.lineTo(cardW - PAD, y)
+          ctx.stroke()
+          y += 20
+
+          // ── Big celebration title ──
+          ctx.textAlign = 'center'
+          ctx.fillStyle = '#ffffff'
+          ctx.font = 'bold 22px ' + FONT
+          ctx.fillText(isZh ? '🎉 里程碑达成！' : '🎉 Milestone Achieved!', cardW / 2, y + 10)
+          y += 40
+
+          ctx.fillStyle = 'rgba(255,255,255,0.5)'
+          ctx.font = '13px ' + FONT
+          ctx.fillText(isZh ? '你的跑姿取得了显著进步' : 'Your form has improved significantly', cardW / 2, y)
+          y += 28
+
+          // ── Metric cards ──
+          var metrics = []
+          if (milestone.cadence) {
+            metrics.push({
+              icon: '⬆️',
+              label: isZh ? '步频提升' : 'Cadence Gain',
+              value: milestone.cadence,
+              unit: 'SPM',
+              color: '#00f5a0',
+            })
+          }
+          if (milestone.gct) {
+            metrics.push({
+              icon: '⬇️',
+              label: isZh ? '触地时间缩短' : 'GCT Reduction',
+              value: milestone.gct,
+              unit: 'ms',
+              color: '#00d4ff',
+            })
+          }
+          if (milestone.score) {
+            metrics.push({
+              icon: '🏆',
+              label: isZh ? '跑姿评分提升' : 'Form Score Gain',
+              value: milestone.score,
+              unit: isZh ? '分' : 'pts',
+              color: '#ff9f30',
+            })
+          }
+
+          var cardY = y + 8
+          var cardBgH = 16 + metrics.length * 72 + 12
+          ctx.fillStyle = 'rgba(255,159,48,0.06)'
+          // roundRect simplified
+          ctx.beginPath()
+          ctx.moveTo(PAD + 12, cardY)
+          ctx.lineTo(cardW - PAD - 12, cardY)
+          ctx.lineTo(cardW - PAD - 12, cardY + cardBgH)
+          ctx.lineTo(PAD + 12, cardY + cardBgH)
+          ctx.closePath()
+          ctx.fill()
+          ctx.strokeStyle = 'rgba(255,159,48,0.12)'
+          ctx.stroke()
+
+          for (var i = 0; i < metrics.length; i++) {
+            var m = metrics[i]
+            var my = cardY + 16 + i * 72
+
+            // Icon + label
+            ctx.textAlign = 'left'
+            ctx.font = '28px ' + FONT
+            ctx.fillText(m.icon, PAD + 24, my + 6)
+            ctx.fillStyle = 'rgba(255,255,255,0.7)'
+            ctx.font = '13px ' + FONT
+            ctx.fillText(m.label, PAD + 56, my + 6)
+
+            // Big value
+            ctx.textAlign = 'right'
+            ctx.fillStyle = m.color
+            ctx.font = 'bold 40px ' + FONT
+            ctx.fillText('+' + m.value, cardW - PAD - 24, my + 4)
+
+            // Unit
+            ctx.fillStyle = 'rgba(255,255,255,0.4)'
+            ctx.font = '14px ' + FONT
+            ctx.fillText(m.unit, cardW - PAD - 24, my + 40)
+
+            // Arrow separator if not last
+            if (i < metrics.length - 1) {
+              ctx.strokeStyle = 'rgba(255,255,255,0.04)'
+              ctx.lineWidth = 1
+              ctx.beginPath()
+              ctx.moveTo(PAD + 32, my + 66)
+              ctx.lineTo(cardW - PAD - 32, my + 66)
+              ctx.stroke()
+            }
+          }
+          y = cardY + cardBgH + 16
+
+          // ── Trend arrow ──
+          ctx.textAlign = 'center'
+          ctx.fillStyle = '#00f5a0'
+          ctx.font = 'bold 28px ' + FONT
+          ctx.fillText('📈 ' + (isZh ? '趋势向好 ↑' : 'Trending Up ↑'), cardW / 2, y)
+          y += 36
+
+          // ── User nickname ──
+          try {
+            var app = getApp()
+            var profile = app.globalData.profile || {}
+            var nickname = profile.nickname || (isZh ? '跑者' : 'Runner')
+            ctx.fillStyle = 'rgba(255,255,255,0.7)'
+            ctx.font = '14px ' + FONT
+            ctx.fillText(nickname, cardW / 2, y)
+            y += 22
+          } catch (_) { /* ignore */ }
+
+          // ── Footer ──
+          y += 8
+          ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(PAD, y)
+          ctx.lineTo(cardW - PAD, y)
+          ctx.stroke()
+          y += 18
+
+          // CTA
+          ctx.textAlign = 'left'
+          ctx.fillStyle = 'rgba(255,255,255,0.6)'
+          ctx.font = '12px ' + FONT
+          ctx.fillText(isZh ? '扫码加入 RunForm →' : 'Scan to join RunForm →', PAD, y + 14)
+
+          // QR placeholder
+          var qrX = cardW - PAD - 48
+          var qrY = y - 4
+          var qrSize = 48
+          var cols = 7
+          var cell = Math.floor(qrSize / (cols + 1))
+          var ox = qrX + Math.floor((qrSize - cell * cols) / 2)
+          var oy = qrY + Math.floor((qrSize - cell * cols) / 2)
+          ctx.fillStyle = 'rgba(255,159,48,0.45)'
+          for (var r = 0; r < cols; r++) {
+            for (var c = 0; c < cols; c++) {
+              if ((c < 2 && r < 2) || (c < 2 && r >= cols - 2) || (c >= cols - 2 && r < 2)) continue
+              if ((r * 7 + c * 3 + c * r) % 3 !== 0) {
+                ctx.fillRect(ox + c * cell, oy + r * cell, cell, cell)
+              }
+            }
+          }
+          ctx.fillStyle = 'rgba(255,159,48,0.7)'
+          ctx.beginPath()
+          ctx.arc(qrX + qrSize / 2, qrY + qrSize / 2, cell * 1.2, 0, Math.PI * 2)
+          ctx.fill()
+          y += 58
+
+          // Bottom branding
+          ctx.textAlign = 'center'
+          ctx.fillStyle = 'rgba(255,255,255,0.2)'
+          ctx.font = '9px ' + FONT
+          ctx.fillText('Powered by RunForm · movenova.ai', cardW / 2, y + 6)
+
+          // Export to temp file
+          wx.canvasToTempFilePath({
+            canvas: canvas,
+            success: function (tempRes) {
+              that._milestoneImagePath = tempRes.tempFilePath
+            },
+            fail: function (err) {
+              console.error('[history] Milestone canvasToTempFilePath failed:', err)
+            },
+          })
+        } catch (e) {
+          console.error('[history] Milestone canvas draw error:', e)
+        }
+      })
+  },
+
+  /**
+   * Save milestone celebration card to album.
+   */
+  saveMilestoneToAlbum() {
+    if (this._milestoneImagePath) {
+      ShareCard.saveToAlbum(this._milestoneImagePath)
+    } else {
+      // Generate first
+      this._generateMilestoneCard()
+      setTimeout(() => {
+        if (this._milestoneImagePath) {
+          ShareCard.saveToAlbum(this._milestoneImagePath)
+        } else {
+          wx.showToast({ title: t('milestoneGenFailed'), icon: 'none' })
+        }
+      }, 800)
+    }
+  },
+
+  /**
+   * Share milestone celebration (triggers WeChat share).
+   */
+  onMilestoneShare() {
+    // WeChat share via open-type="share" on the button in wxml
+    // This is a fallback
+    wx.showToast({ title: isZh ? '请点击右上角分享' : 'Tap top-right to share', icon: 'none', duration: 2000 })
   },
 
   goAnalyze() {

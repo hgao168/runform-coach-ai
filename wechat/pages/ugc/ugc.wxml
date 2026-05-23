@@ -1,0 +1,65 @@
+<!-- pages/ugc/ugc.wxml -->
+<!-- RF-604: UGC Content Submission — List & Management -->
+
+<view class="page-container">
+
+  <!-- Header -->
+  <view class="ugc-header">
+    <text class="title">{{i.ugcListTitle}}</text>
+  </view>
+
+  <!-- Empty state -->
+  <view wx:if="{{submissions.length === 0}}" class="empty-state">
+    <text class="empty-icon" style="font-size: 72rpx;">📭</text>
+    <text class="empty-title">{{i.ugcListEmpty}}</text>
+    <text class="empty-sub">{{i.ugcListEmptySub}}</text>
+  </view>
+
+  <!-- Submission list -->
+  <view wx:else>
+    <view
+      wx:for="{{submissions}}"
+      wx:key="id"
+      class="ugc-card"
+      bindtap="toggleExpand"
+      data-id="{{item.id}}"
+      bindlongpress="deleteSubmission"
+      data-id="{{item.id}}"
+    >
+      <view class="ugc-card-header">
+        <view class="ugc-card-left">
+          <text class="ugc-platform-badge">{{item.platformName}}</text>
+          <text class="ugc-status-badge" style="color: {{item.statusColor}}; border-color: {{item.statusColor}};">
+            {{item.statusName}}
+          </text>
+        </view>
+        <text class="ugc-date">{{item.dateDisplay}}</text>
+      </view>
+
+      <!-- Link row -->
+      <view class="ugc-link-row" catchtap="copyLink" data-link="{{item.link}}">
+        <text class="ugc-link-text">{{item.link}}</text>
+        <text class="ugc-copy-hint">📋</text>
+      </view>
+
+      <!-- Expandable note -->
+      <view wx:if="{{expandedId === item.id && item.note}}" class="ugc-note-expanded">
+        <text class="ugc-note-label">{{isZh ? '备注' : 'Note'}}:</text>
+        <text class="ugc-note-text">{{item.note}}</text>
+      </view>
+
+      <view wx:elif="{{item.noteShort}}" class="ugc-note-collapsed">
+        <text class="ugc-note-collapsed-text">{{item.noteShort}}</text>
+        <text class="ugc-expand-hint">{{isZh ? '展开 ›' : 'More ›'}}</text>
+      </view>
+
+      <!-- Expand hint for no-note items -->
+      <view wx:else class="ugc-note-collapsed">
+        <text class="ugc-expand-hint" style="color: rgba(255,255,255,0.2);">
+          {{isZh ? '长按删除' : 'Long-press to delete'}}
+        </text>
+      </view>
+    </view>
+  </view>
+
+</view>

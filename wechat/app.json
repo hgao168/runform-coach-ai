@@ -12,7 +12,9 @@
     "pages/insight/insight",
     "pages/invite/invite",
     "pages/challenge/challenge",
-    "pages/club-leaderboard/club-leaderboard"
+    "pages/club-leaderboard/club-leaderboard",
+    "pages/coach/coach",
+    "pages/ugc/ugc"
   ],
   "tabBar": {
     "color": "#888888",

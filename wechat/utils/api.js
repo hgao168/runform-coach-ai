@@ -209,6 +209,45 @@ function checkInChallenge(challengeId, data) {
   return request('POST', `/api/v1/challenges/${encodeURIComponent(challengeId)}/check-in`, data)
 }
 
+// ─── Coach APIs (RF-602) ───
+
+/**
+ * Generate a coach code for the current user.
+ * POST /api/v1/coach/generate-code
+ * @param {string} userId
+ */
+function generateCoachCode(userId) {
+  return request('POST', '/api/v1/coach/generate-code', { user_id: userId })
+}
+
+/**
+ * Student joins a coach via code.
+ * POST /api/v1/coach/join
+ * @param {string} studentId
+ * @param {string} coachCode
+ */
+function joinCoach(studentId, coachCode) {
+  return request('POST', '/api/v1/coach/join', { student_id: studentId, coach_code: coachCode })
+}
+
+/**
+ * Get students list for a coach.
+ * GET /api/v1/coach/students?coach_id=X
+ * @param {string} coachId
+ */
+function getCoachStudents(coachId) {
+  return request('GET', `/api/v1/coach/students?coach_id=${encodeURIComponent(coachId)}`)
+}
+
+/**
+ * Get coach dashboard summary.
+ * GET /api/v1/coach/dashboard?coach_id=X
+ * @param {string} coachId
+ */
+function getCoachDashboard(coachId) {
+  return request('GET', `/api/v1/coach/dashboard?coach_id=${encodeURIComponent(coachId)}`)
+}
+
 // ─── Shared helpers ───
 
 /**
@@ -254,6 +293,11 @@ module.exports = {
   joinChallenge,
   getLeaderboard,
   checkInChallenge,
+  // Coach (RF-602)
+  generateCoachCode,
+  joinCoach,
+  getCoachStudents,
+  getCoachDashboard,
   // Helpers
   getUserId,
 }

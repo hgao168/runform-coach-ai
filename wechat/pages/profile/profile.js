@@ -129,4 +129,9 @@ Page({
     storage.saveProfile(this.data.form)
     wx.showToast({ title: t('profileSaved'), icon: 'success' })
   },
+
+  // RF-604: Navigate to UGC submissions
+  goUgc() {
+    wx.navigateTo({ url: '/pages/ugc/ugc' })
+  },
 })

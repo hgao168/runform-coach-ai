@@ -69,6 +69,19 @@ Page({
 
     // RF-963: Rewarded video ad
     rewardedAdAvailable: false,
+
+    // RF-604: UGC Content Submission
+    ugcModalVisible: false,
+    ugcPlatform: '',
+    ugcLink: '',
+    ugcNote: '',
+    ugcSubmitting: false,
+    ugcPlatforms: [
+      { key: 'douyin', label: t('ugcPlatformDouyin') },
+      { key: 'bilibili', label: t('ugcPlatformBilibili') },
+      { key: 'xiaohongshu', label: t('ugcPlatformXiaohongshu') },
+      { key: 'pengyouquan', label: t('ugcPlatformPengyouquan') },
+    ],
   },
 
   onLoad() {
@@ -639,6 +652,126 @@ Page({
     }
     if (current) lines.push(current)
     return lines.slice(0, 4) // Max 4 lines
+  },
+
+  // ──────────── RF-604: UGC Content Submission ────────────
+
+  /**
+   * Open the UGC submission modal.
+   */
+  onUgcSubmitBtn() {
+    this.setData({
+      ugcModalVisible: true,
+      ugcPlatform: '',
+      ugcLink: '',
+      ugcNote: '',
+      ugcSubmitting: false,
+    })
+  },
+
+  /**
+   * Close the UGC modal.
+   */
+  onUgcModalClose() {
+    this.setData({ ugcModalVisible: false })
+  },
+
+  /**
+   * Prevent tap-through on modal backdrop.
+   */
+  onUgcModalPrevent() {
+    // no-op, prevents bubbling
+  },
+
+  /**
+   * Select a platform.
+   */
+  onUgcPlatformSelect(e) {
+    const platform = e.currentTarget.dataset.key
+    this.setData({ ugcPlatform: platform })
+  },
+
+  /**
+   * Handle link input.
+   */
+  onUgcLinkInput(e) {
+    this.setData({ ugcLink: e.detail.value })
+  },
+
+  /**
+   * Handle note input.
+   */
+  onUgcNoteInput(e) {
+    this.setData({ ugcNote: e.detail.value })
+  },
+
+  /**
+   * Submit UGC content.
+   * Tries POST /api/v1/ugc/submit first, falls back to local storage.
+   */
+  submitUgc() {
+    const { ugcPlatform, ugcLink, ugcSubmitting } = this.data
+    if (ugcSubmitting) return
+
+    if (!ugcPlatform) {
+      wx.showToast({ title: isZh ? '请选择发布平台' : 'Please select a platform', icon: 'none' })
+      return
+    }
+    if (!ugcLink || !ugcLink.trim()) {
+      wx.showToast({ title: t('ugcNoLink'), icon: 'none' })
+      return
+    }
+
+    const submission = {
+      id: 'ugc_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+      platform: ugcPlatform,
+      link: ugcLink.trim(),
+      note: this.data.ugcNote.trim() || '',
+      analysisId: this.data.analysisId || '',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    }
+
+    this.setData({ ugcSubmitting: true })
+
+    // Try backend API first
+    const api = require('../../utils/api')
+    api.ugcSubmit ? api.ugcSubmit(submission)
+      .then(() => {
+        this._onUgcSubmitSuccess(submission)
+      })
+      .catch(() => {
+        this._saveUgcLocal(submission)
+      })
+      : (() => {
+        // API method doesn't exist — save locally
+        this._saveUgcLocal(submission)
+      })()
+  },
+
+  /**
+   * Save UGC submission to local storage.
+   */
+  _saveUgcLocal(submission) {
+    try {
+      let list = wx.getStorageSync('rf_ugc_submissions') || []
+      list.push(submission)
+      wx.setStorageSync('rf_ugc_submissions', list)
+    } catch (e) {
+      console.error('[result] Failed to save UGC submission:', e)
+    }
+    this._onUgcSubmitSuccess(submission)
+  },
+
+  /**
+   * Handle successful UGC submission (API or local).
+   */
+  _onUgcSubmitSuccess(submission) {
+    this.setData({
+      ugcModalVisible: false,
+      ugcSubmitting: false,
+    })
+    wx.showToast({ title: t('ugcSubmitted'), icon: 'success', duration: 2500 })
   },
 })
 
