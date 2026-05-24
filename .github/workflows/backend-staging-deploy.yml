@@ -15,17 +15,12 @@ jobs:
       - name: Install Railway CLI
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          bash <(curl -fsSL cli.new)
+        run: bash <(curl -fsSL cli.new)
 
-      - name: List Railway environments
+      - name: Deploy to Railway
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          ~/.railway/bin/railway environment
-
-      - name: Deploy to Railway staging
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
+          cd backend
+          ~/.railway/bin/railway link d2bdff7b-1da5-4144-838b-681527e8ee8d
           ~/.railway/bin/railway up --detach
