@@ -105,7 +105,7 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="RunFormCoachAI-Prod" \
             BACKEND_BASE_URL="https://runform-coach-ai-staging.up.railway.app" \
             CURRENT_PROJECT_VERSION="2.${{ github.run_number }}" \
-            MARKETING_VERSION="1.1"
+            MARKETING_VERSION="1.2"
           # Note: BACKEND_BASE_URL is now explicitly overridden to staging URL.
 
       # ── Export IPA ──────────────────────────────────────────────────────────
