@@ -218,7 +218,7 @@ final class APIClient {
 
     func compareWithAthlete(athleteId: String, metrics: PoseMetrics) async throws -> CompareResponse {
         let baseURL = try Self.resolvedBaseURL()
-        let endpoint = baseURL.appendingPathComponent("compare")
+        let endpoint = baseURL.appendingPathComponent("api/v1/compare")
         return try await Self.withRetry {
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
@@ -240,7 +240,7 @@ final class APIClient {
 
     func fetchSessions() async throws -> [RunSessionResponse] {
         let baseURL = try Self.resolvedBaseURL()
-        let endpoint = baseURL.appendingPathComponent("sessions")
+        let endpoint = baseURL.appendingPathComponent("api/v1/sessions")
         return try await Self.withRetry {
             var request = URLRequest(url: endpoint)
             request.httpMethod = "GET"

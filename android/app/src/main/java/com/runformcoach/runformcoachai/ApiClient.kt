@@ -29,29 +29,29 @@ interface RunFormApi {
     suspend fun fetchAthletes(): List<AthleteListItem>
 
     /** Compare user metrics against a specific elite athlete. */
-    @POST("compare")
+    @POST("api/v1/compare")
     suspend fun compareWithAthlete(@Body request: CompareRequest): CompareResponse
 
     // ── Feedback ───────────────────────────────────────────────────────────────
 
     /** Submit user feedback rating for an analysis. RF-203 */
-    @POST("feedback")
+    @POST("api/v1/feedback")
     suspend fun submitFeedback(@Body request: FeedbackRequest): FeedbackResponse
 
     // ── Weekly Trends (RF-912) ─────────────────────────────────────────────────
 
     /** Fetch 4-week training trend data for the weekly insight report. */
-    @GET("sessions/trends")
+    @GET("api/v1/sessions/trends")
     suspend fun fetchWeeklyTrends(): WeeklyTrendsResponse
 
     // ── RunSession History & Replay (RF-1000) ─────────────────────────────────
 
     /** Fetch list of historical run sessions. */
-    @GET("sessions")
+    @GET("api/v1/sessions")
     suspend fun fetchSessions(): List<RunSessionSummary>
 
     /** Fetch a single session with full time-series data for replay. */
-    @GET("sessions/{sessionId}")
+    @GET("api/v1/sessions/{sessionId}")
     suspend fun fetchSessionDetail(
         @retrofit2.http.Path("sessionId") sessionId: String
     ): RunSessionDetail

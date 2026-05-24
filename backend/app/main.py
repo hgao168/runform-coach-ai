@@ -297,7 +297,7 @@ def list_athletes() -> list[AthleteListItem]:
     return get_all_athletes()
 
 
-@app.post("/compare", response_model=CompareResponse)
+@app.post("/api/v1/compare", response_model=CompareResponse)
 @limiter.limit("10/minute")
 async def compare(request: CompareRequest, _api_key: str = Depends(verify_api_key)) -> CompareResponse:
     """Compare user running metrics against an elite athlete benchmark."""
@@ -364,7 +364,7 @@ def _session_to_response(session_row: RunSession, ios_user_id: str | None = None
     )
 
 
-@app.post("/sessions", response_model=RunSessionResponse, status_code=201)
+@app.post("/api/v1/sessions", response_model=RunSessionResponse, status_code=201)
 def create_session(payload: RunSessionCreate, _api_key: str = Depends(verify_api_key)) -> RunSessionResponse:
     """Create a new run session with metrics snapshot."""
     from datetime import datetime as _dt
@@ -398,7 +398,7 @@ def create_session(payload: RunSessionCreate, _api_key: str = Depends(verify_api
         raise HTTPException(status_code=500, detail=f"Failed to create session: {exc}") from exc
 
 
-@app.get("/sessions", response_model=list[RunSessionResponse])
+@app.get("/api/v1/sessions", response_model=list[RunSessionResponse])
 def list_sessions(
     ios_user_id: str = Query(..., min_length=3),
     limit: int = Query(20, ge=1, le=100),
@@ -423,7 +423,7 @@ def list_sessions(
         raise HTTPException(status_code=500, detail=f"Failed to list sessions: {exc}") from exc
 
 
-@app.get("/sessions/trends", response_model=SessionTrendsResponse)
+@app.get("/api/v1/sessions/trends", response_model=SessionTrendsResponse)
 def session_trends(
     ios_user_id: str = Query(..., min_length=3),
     metrics: str = Query("cadence,oscillation,gct"),
@@ -467,7 +467,7 @@ def session_trends(
         raise HTTPException(status_code=500, detail=f"Failed to compute trends: {exc}") from exc
 
 
-@app.post("/sessions/compare", response_model=SessionCompareResponse)
+@app.post("/api/v1/sessions/compare", response_model=SessionCompareResponse)
 def compare_sessions(payload: SessionCompareRequest, _api_key: str = Depends(verify_api_key)) -> SessionCompareResponse:
     """Compare two run sessions side-by-side."""
     try:
@@ -540,7 +540,7 @@ def compare_sessions(payload: SessionCompareRequest, _api_key: str = Depends(ver
         raise HTTPException(status_code=500, detail=f"Failed to compare sessions: {exc}") from exc
 
 
-@app.get("/sessions/{session_id}", response_model=RunSessionResponse)
+@app.get("/api/v1/sessions/{session_id}", response_model=RunSessionResponse)
 def get_session(session_id: int, ios_user_id: str = Query(..., min_length=3), _api_key: str = Depends(verify_api_key)) -> RunSessionResponse:
     """Get a single run session by ID with full metrics."""
     try:
@@ -561,7 +561,7 @@ def get_session(session_id: int, ios_user_id: str = Query(..., min_length=3), _a
         raise HTTPException(status_code=500, detail=f"Failed to get session: {exc}") from exc
 
 
-@app.delete("/sessions/{session_id}", status_code=204)
+@app.delete("/api/v1/sessions/{session_id}", status_code=204)
 def delete_session(session_id: int, ios_user_id: str = Query(..., min_length=3), _api_key: str = Depends(verify_api_key)):
     """Delete a run session."""
     try:

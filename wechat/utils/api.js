@@ -110,7 +110,7 @@ function fetchAthletes() {
  * @param {string} language
  */
 function compareWithAthlete(athleteId, userMetrics, language) {
-  return request('POST', '/compare', {
+  return request('POST', '/api/v1/compare', {
     athlete_id: athleteId,
     user_metrics: userMetrics,
     language: language || 'zh-Hans',
