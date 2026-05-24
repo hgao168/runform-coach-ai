@@ -14,7 +14,9 @@ struct RunFormCoachAIApp: App {
         PerformanceOptimizer.markMainEntry()
         // Start Google Mobile Ads SDK with test ad unit ID (only when available)
         #if canImport(GoogleMobileAds)
-        GADMobileAds.sharedInstance().start(completionHandler: nil)
+        // Start AdMob with test App ID. Wrapped defensively — a bad
+        // GADApplicationIdentifier should not crash the whole app.
+        GADMobileAds.sharedInstance().start { _ in }
         #endif
     }
 
