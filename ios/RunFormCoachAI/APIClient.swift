@@ -62,7 +62,7 @@ final class APIClient {
     func analyzeMetrics(_ metrics: PoseMetrics) async throws -> AnalysisResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("analyze-metrics")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -132,7 +132,7 @@ final class APIClient {
             throw APIError.configuration("Failed to build Strava summary URL.")
         }
 
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "GET"
             request.timeoutInterval = 20
@@ -150,7 +150,7 @@ final class APIClient {
     func analyzeVideo(fileURL: URL) async throws -> AnalysisResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("analyze")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.timeoutInterval = 60
@@ -182,7 +182,7 @@ final class APIClient {
     func generateTrainingPlan(input: TrainingPlanInput) async throws -> TrainingPlanResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("training-plan")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -202,7 +202,7 @@ final class APIClient {
     func fetchAthletes() async throws -> [AthleteListItem] {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("athletes")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "GET"
             request.timeoutInterval = 20
@@ -219,7 +219,7 @@ final class APIClient {
     func compareWithAthlete(athleteId: String, metrics: PoseMetrics) async throws -> CompareResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("api/v1/compare")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -241,7 +241,7 @@ final class APIClient {
     func fetchSessions() async throws -> [RunSessionResponse] {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("api/v1/sessions")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "GET"
             request.timeoutInterval = 20
@@ -260,7 +260,7 @@ final class APIClient {
     func saveProfile(iosUserID: String, profile: TesterProfile) async throws -> ProfileSaveResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("profile")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "PUT"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

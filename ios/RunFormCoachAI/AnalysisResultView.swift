@@ -22,10 +22,11 @@ struct AnalysisResultView: View {
 #if canImport(GoogleMobileAds)
 #if DEBUG
             AdBannerView(adUnitID: AdBannerView.testAdUnitID)
+                .frame(height: 50)
 #else
             AdBannerView(adUnitID: AdBannerView.productionAdUnitID)
-#endif
                 .frame(height: 50)
+#endif
 #endif
         }
         .sheet(isPresented: $showCompare) {
