@@ -48,6 +48,7 @@ jobs:
         run: xcrun simctl list devices available | head -20
 
       - name: Pre-boot simulator
+        id: simulator
         run: |
           DEST="iPhone 16"
           RUNTIME=$(xcrun simctl list runtimes | grep iOS | tail -1 | sed 's/.* - //')
@@ -57,18 +58,25 @@ jobs:
           fi
           UDID=$(xcrun simctl list devices | grep "$DEST (" | grep -v "Unavailable" | head -1 | sed -E 's/.*\\(([A-F0-9-]+)\\).*/\\1/')
           if [ -n "$UDID" ]; then
+            echo "simulator_udid=$UDID" >> "$GITHUB_OUTPUT"
             echo "Booting simulator: $UDID"
             xcrun simctl boot "$UDID" || true
           else
+            echo "simulator_udid=" >> "$GITHUB_OUTPUT"
             echo "⚠️  Simulator '$DEST' not found, will let xcodebuild create it"
           fi
 
       - name: Run XCTest
         run: |
+          SIM_DEST="platform=iOS Simulator,name=iPhone 16"
+          if [ -n "${{ steps.simulator.outputs.simulator_udid }}" ]; then
+            SIM_DEST="platform=iOS Simulator,id=${{ steps.simulator.outputs.simulator_udid }}"
+            echo "Using simulator UDID: ${{ steps.simulator.outputs.simulator_udid }}"
+          fi
           xcodebuild test \
             -project RunFormCoachAI.xcodeproj \
             -scheme RunFormCoachAI \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination "$SIM_DEST" \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             | tee xcode_test.log
