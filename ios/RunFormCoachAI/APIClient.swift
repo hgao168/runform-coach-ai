@@ -162,7 +162,7 @@ final class APIClient {
             let filename = fileURL.lastPathComponent.isEmpty ? "running-video.mov" : fileURL.lastPathComponent
             let mimeType = filename.lowercased().hasSuffix(".mp4") ? "video/mp4" : "video/quicktime"
 
-            request.httpBody = makeMultipartBody(
+            request.httpBody = self.makeMultipartBody(
                 fieldName: "video",
                 filename: filename,
                 mimeType: mimeType,

@@ -19,14 +19,15 @@ struct AnalysisResultView: View {
             metricsSection
             issuesSection
 
-#if canImport(GoogleMobileAds)
-#if DEBUG
+            #if canImport(GoogleMobileAds)
+            #if DEBUG
             AdBannerView(adUnitID: AdBannerView.testAdUnitID)
-#else
-            AdBannerView(adUnitID: AdBannerView.productionAdUnitID)
-#endif
                 .frame(height: 50)
-#endif
+            #else
+            AdBannerView(adUnitID: AdBannerView.productionAdUnitID)
+                .frame(height: 50)
+            #endif
+            #endif
         }
         .sheet(isPresented: $showCompare) {
             if let metrics = poseMetrics {
