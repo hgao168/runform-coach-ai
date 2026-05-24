@@ -263,6 +263,12 @@
 "share.archaeology.title_race %@" = "My %@ running form was just analyzed by AI archaeology";
 "share.archaeology.subtitle_race %lld" = "%lld form issues found — Is your form ready for AI archaeology?";
 
+/* Share card: full report sections */
+"share.report.score" = "Form Score:";
+"share.report.metrics" = "Movement Metrics:";
+"share.report.issues" = "Strength Focus";
+"share.report.download" = "Get RunForm AI on App Store:";
+
 /* Adjustment 3: Injury-prevention narratives */
 "injury.cadence_low %@" = "%@ → Low cadence may increase knee impact. Consider adding a cadence drill day to your training.";
 "injury.gct_high %@" = "%@ → Long ground contact time increases braking forces and injury risk. Focus on shortening contact time.";

@@ -260,6 +260,12 @@
 "share.archaeology.title_race %@" = "我在%@的跑姿被AI考古了";
 "share.archaeology.subtitle_race %lld" = "发现了%lld个跑姿问题——你的跑姿经得起考古吗？";
 
+/* Share card: full report sections */
+"share.report.score" = "跑姿评分：";
+"share.report.metrics" = "运动指标：";
+"share.report.issues" = "强化重点";
+"share.report.download" = "下载 RunForm AI（App Store）：";
+
 /* Adjustment 3: Injury-prevention narratives */
 "injury.cadence_low %@" = "%@ → 步频偏低可能增加膝盖冲击力。建议在训练中加入步频练习日。";
 "injury.gct_high %@" = "%@ → 触地时间偏长会增加刹车效应和受伤风险。专注缩短着地时间。";

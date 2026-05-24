@@ -1,6 +1,8 @@
 import SwiftUI
 import os.signpost
+#if canImport(GoogleMobileAds)
 import GoogleMobileAds
+#endif
 
 @main
 struct RunFormCoachAIApp: App {
@@ -10,8 +12,10 @@ struct RunFormCoachAIApp: App {
     init() {
         // Mark the instant main() is entered for launch timing.
         PerformanceOptimizer.markMainEntry()
-        // Start Google Mobile Ads SDK with test ad unit ID
+        // Start Google Mobile Ads SDK with test ad unit ID (only when available)
+        #if canImport(GoogleMobileAds)
         GADMobileAds.sharedInstance().start(completionHandler: nil)
+        #endif
     }
 
     var body: some Scene {

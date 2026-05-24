@@ -55,7 +55,6 @@ targets:
           GCC_OPTIMIZATION_LEVEL: "s"
           SWIFT_OPTIMIZATION_LEVEL: "-O"
     dependencies:
-      - target: RunFormCoachAI
       - package: GoogleMobileAds
     preBuildScripts:
       - name: SwiftLint

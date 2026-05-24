@@ -19,12 +19,14 @@ struct AnalysisResultView: View {
             metricsSection
             issuesSection
 
+#if canImport(GoogleMobileAds)
 #if DEBUG
             AdBannerView(adUnitID: AdBannerView.testAdUnitID)
 #else
             AdBannerView(adUnitID: AdBannerView.productionAdUnitID)
 #endif
                 .frame(height: 50)
+#endif
         }
         .sheet(isPresented: $showCompare) {
             if let metrics = poseMetrics {
@@ -47,21 +49,59 @@ struct AnalysisResultView: View {
         }
     }
 
-    // MARK: - Adjustment 2: Share card "旧片考古" template
+    // MARK: - Adjustment 2: Share card "旧片考古" template (full report)
     private func buildShareItems() -> [Any]? {
         let issueCount = result.issues.count
-        // Try to get race name from last race plan or profile
-        let raceName: String? = nil // No persistent race data; use fallback
+        let raceName: String? = nil
         let title: String
         let subtitle: String
         if let race = raceName, !race.isEmpty {
-            title = String(localized: "share.archaeology.title_race \\(race)")
-            subtitle = String(localized: "share.archaeology.subtitle_race \\(issueCount)")
+            title = String(format: NSLocalizedString("share.archaeology.title_race %@", comment: ""), race)
+            subtitle = String(format: NSLocalizedString("share.archaeology.subtitle_race %lld", comment: ""), issueCount)
         } else {
-            title = String(localized: "share.archaeology.title_default")
-            subtitle = String(localized: "share.archaeology.subtitle_default \\(issueCount)")
+            title = String(format: NSLocalizedString("share.archaeology.title_default", comment: ""), issueCount)
+            subtitle = NSLocalizedString("share.archaeology.subtitle_default", comment: "")
         }
-        let shareText = "\(title)\n\(subtitle)\n\n— RunForm AI"
+
+        var shareText = "\(title)\n\(subtitle)\n"
+
+        // ── Form Score ──
+        let scorePercent = Int(result.confidence * 100)
+        shareText += "\n📊 \(NSLocalizedString("share.report.score", comment: "")) \(scorePercent)%\n"
+        shareText += "\"\(result.summary)\"\n"
+
+        // ── Movement Metrics ──
+        if !result.metrics.isEmpty {
+            shareText += "\n📐 \(NSLocalizedString("share.report.metrics", comment: ""))\n"
+            for metric in result.metrics {
+                let metricPct = Int(metric.score * 100)
+                let statusIcon = metric.score >= 0.70 ? "✅" : (metric.score >= 0.45 ? "⚠️" : "❌")
+                shareText += "\(statusIcon) \(metric.name) — \(metric.status) (\(metricPct)%)\n"
+                shareText += "   \(metric.explanation)\n"
+            }
+        }
+
+        // ── Strength Focus (issues) ──
+        if !result.issues.isEmpty {
+            shareText += "\n⚠️ \(NSLocalizedString("share.report.issues", comment: "")) (\(issueCount)):\n"
+            for (index, issue) in result.issues.enumerated() {
+                shareText += "\n\(index + 1). \(issue.title) [\(issue.severity)]\n"
+                shareText += "\(issue.explanation)\n"
+                if !issue.recommendedExercises.isEmpty {
+                    shareText += "→ "
+                    shareText += issue.recommendedExercises.prefix(3).map { ex in
+                        "\(ex.name): \(ex.sets)×\(ex.reps)"
+                    }.joined(separator: " | ")
+                    shareText += "\n"
+                }
+            }
+        }
+
+        // ── App Store link ──
+        shareText += "\n📲 \(NSLocalizedString("share.report.download", comment: ""))\n"
+        shareText += "https://apps.apple.com/au/app/runformai/id6765745720\n"
+
+        shareText += "\n— RunForm AI"
         return [shareText]
     }
 

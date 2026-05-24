@@ -260,6 +260,12 @@
 "share.archaeology.title_race %@" = "Mijn %@ loopvorm is net geanalyseerd door AI-archeologie";
 "share.archaeology.subtitle_race %lld" = "%lld vormproblemen gevonden — Is jouw vorm klaar voor AI-archeologie?";
 
+/* Share card: full report sections */
+"share.report.score" = "Vorm Score:";
+"share.report.metrics" = "Bewegingsindicatoren:";
+"share.report.issues" = "Kracht Focus";
+"share.report.download" = "Download RunForm AI in de App Store:";
+
 /* Adjustment 3: Injury-prevention narratives */
 "injury.cadence_low %@" = "%@ → Lage cadans kan knie-impact vergroten. Voeg een cadansdrill-dag toe aan je training.";
 "injury.gct_high %@" = "%@ → Lange grondcontacttijd verhoogt remkrachten en blessurerisico. Focus op korter contact.";
