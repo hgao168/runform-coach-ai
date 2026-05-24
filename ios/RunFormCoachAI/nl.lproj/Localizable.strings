@@ -10,10 +10,11 @@
 "Manual Week Plan" = "Handmatig weekplan";
 "Saved Plans" = "Opgeslagen plannen";
 
-/* Analyze tab - hero */
-"AI Running Form Coach" = "AI Loopvorm Coach";
-"Unlock Your Speed with a Better Form" = "Verbeter je looptechniek en verhoog je snelheid";
-"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "Upload een korte clip voor nauwkeurige feedback, efficiëntiemetrieken en gerichte training.";
+/* Analyze tab - hero (Adjustment 5: injury-prevention messaging) */
+"AI Running Form Coach" = "AI Blessurepreventie Loopcoach";
+"Unlock Your Speed with a Better Form" = "Hardlopen is geen zelfbeschadiging — voorkom eerst blessures";
+"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "Upload een korte clip voor blessurerisicofeedback, techniekmetrieken en preventiegerichte training.";
+"injury.tagline" = "Hardlopen is geen zelfbeschadiging — je AI-blessurecoach ziet elke stap.";
 
 /* Analyze tab - video card */
 "Running clip" = "Loopvideo";
@@ -251,3 +252,23 @@
 "Best" = "Beste";
 "Good" = "Goed";
 "Limited" = "Beperkt";
+
+/* Adjustment 2: Share card "旧片考古" template */
+"share.archaeology.button" = "Deel je loopanalyse";
+"share.archaeology.title_default" = "Mijn loopvorm is net geanalyseerd door AI-archeologie — %lld problemen gevonden";
+"share.archaeology.subtitle_default" = "Kan jouw loopvorm de AI-archeologie doorstaan?";
+"share.archaeology.title_race %@" = "Mijn %@ loopvorm is net geanalyseerd door AI-archeologie";
+"share.archaeology.subtitle_race %lld" = "%lld vormproblemen gevonden — Is jouw vorm klaar voor AI-archeologie?";
+
+/* Adjustment 3: Injury-prevention narratives */
+"injury.cadence_low %@" = "%@ → Lage cadans kan knie-impact vergroten. Voeg een cadansdrill-dag toe aan je training.";
+"injury.gct_high %@" = "%@ → Lange grondcontacttijd verhoogt remkrachten en blessurerisico. Focus op korter contact.";
+"injury.knee_risk %@" = "%@ → Knie-instabiliteit kan leiden tot IT-band of patellaire problemen. Doe heupversterkende oefeningen.";
+"injury.trunk_lean %@" = "%@ → Overmatig voorover leunen belast onderrug en hamstrings. Werk aan rechte houding.";
+"injury.overstride %@" = "%@ → Overstap vergroot impact op knieën en schenen. Verkort je pas en land onder je heupen.";
+"injury.hip_drop %@" = "%@ → Heupdaling kan IT-band syndroom en kniepijn veroorzaken. Versterk gluteus medius.";
+
+/* Adjustment 4: Weekly form recheck card */
+"plan.recheck.title" = "Wekelijkse looptechniek-check";
+"plan.recheck.body" = "Het is maandag — tijd om je loopvorm opnieuw te analyseren. Upload een nieuwe video om te vergelijken met vorige week.";
+"plan.recheck.button" = "Ga naar Analyse-tab";

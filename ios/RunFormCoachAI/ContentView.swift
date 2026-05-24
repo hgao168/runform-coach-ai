@@ -13,20 +13,25 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var statusMessage: String?
     @State private var videoMode: VideoMode = .side
+    @State private var selectedTab = 0
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             analyzeTab
                 .tabItem { Label("Analyze", systemImage: "figure.run") }
+                .tag(0)
 
             HistoryView()
                 .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                .tag(1)
 
-            PlanBuilderView()
+            PlanBuilderView(selectedTab: $selectedTab)
                 .tabItem { Label("Plan", systemImage: "calendar.badge.plus") }
+                .tag(2)
 
             ProfileView()
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+                .tag(3)
         }
         .tint(AppTheme.mint)
         .preferredColorScheme(.dark)
@@ -101,6 +106,11 @@ struct ContentView: View {
                             .font(.callout)
                             .foregroundStyle(.white.opacity(0.68))
                             .fixedSize(horizontal: false, vertical: true)
+                        // Adjustment 5: Injury-prevention tagline
+                        Text("injury.tagline")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(AppTheme.orange.opacity(0.85))
+                            .padding(.top, 4)
                     }
                     Spacer(minLength: 8)
                     IconBubble(systemImage: "figure.run", gradient: AppTheme.actionGradient, size: 62)

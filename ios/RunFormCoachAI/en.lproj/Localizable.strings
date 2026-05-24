@@ -10,10 +10,11 @@
 "Manual Week Plan" = "Manual Week Plan";
 "Saved Plans" = "Saved Plans";
 
-/* Analyze tab - hero */
-"AI Running Form Coach" = "AI Running Form Coach";
-"Unlock Your Speed with a Better Form" = "Unlock Your Speed with a Better Form";
-"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "Upload a short clip and get precision feedback, efficiency metrics, and targeted training.";
+/* Analyze tab - hero (Adjustment 5: injury-prevention messaging) */
+"AI Running Form Coach" = "AI Injury-Prevention Run Coach";
+"Unlock Your Speed with a Better Form" = "Run Smarter, Not Harder — Prevent Injury First";
+"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "Upload a short clip and get injury-risk feedback, form metrics, and prevention-focused training.";
+"injury.tagline" = "Running is not self-harm — your AI防伤 coach watches every stride.";
 
 /* Analyze tab - video card */
 "Running clip" = "Running clip";
@@ -254,3 +255,23 @@
 "Coach" = "Coach";
 "GCT" = "GCT";
 "Oscillation" = "Oscillation";
+
+/* Adjustment 2: Share card "旧片考古" template */
+"share.archaeology.button" = "Share Your Form Analysis";
+"share.archaeology.title_default" = "My running form was just analyzed by AI archaeology — %lld issues found";
+"share.archaeology.subtitle_default" = "Can your running form survive AI archaeology?";
+"share.archaeology.title_race %@" = "My %@ running form was just analyzed by AI archaeology";
+"share.archaeology.subtitle_race %lld" = "%lld form issues found — Is your form ready for AI archaeology?";
+
+/* Adjustment 3: Injury-prevention narratives */
+"injury.cadence_low %@" = "%@ → Low cadence may increase knee impact. Consider adding a cadence drill day to your training.";
+"injury.gct_high %@" = "%@ → Long ground contact time increases braking forces and injury risk. Focus on shortening contact time.";
+"injury.knee_risk %@" = "%@ → Knee instability may lead to IT band or patellar issues. Add hip-strengthening exercises.";
+"injury.trunk_lean %@" = "%@ → Excessive forward lean puts strain on lower back and hamstrings. Work on upright posture.";
+"injury.overstride %@" = "%@ → Overstriding increases impact shock to knees and shins. Shorten your stride and land under your hips.";
+"injury.hip_drop %@" = "%@ → Hip drop can cause IT band syndrome and knee pain. Strengthen gluteus medius.";
+
+/* Adjustment 4: Weekly form recheck card */
+"plan.recheck.title" = "Weekly Form Recheck";
+"plan.recheck.body" = "It's Monday — time to re-analyze your running form. Upload a new video to compare with last week.";
+"plan.recheck.button" = "Go to Analyze Tab";

@@ -1,6 +1,11 @@
 <!-- pages/analyze/analyze.wxml -->
 <view class="page-container">
 
+  <!-- Injury Prevention Banner (P1 marketing alignment) -->
+  <view class="injury-prevention-banner">
+    <text class="injury-banner-text">🛡️ {{i.injuryPreventionBanner || '别让错误跑姿毁了你的跑步热情'}}</text>
+  </view>
+
   <!-- Header card -->
   <view class="card">
     <view class="header-row">

@@ -10,10 +10,11 @@
 "Manual Week Plan" = "手动周计划";
 "Saved Plans" = "已保存的计划";
 
-/* Analyze tab - hero */
-"AI Running Form Coach" = "AI 跑步姿态教练";
-"Unlock Your Speed with a Better Form" = "改善跑姿，提升速度";
-"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "上传短视频，获取精准反馈、效率指标和针对性训练建议。";
+/* Analyze tab - hero (Adjustment 5: injury-prevention messaging) */
+"AI Running Form Coach" = "AI 防伤跑步教练";
+"Unlock Your Speed with a Better Form" = "跑步不是自残——先防伤，再提速";
+"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "上传短视频，获取伤病风险反馈、跑姿指标和防伤训练建议。";
+"injury.tagline" = "跑步不是自残——你的AI防伤教练关注每一步";
 
 /* Analyze tab - video card */
 "Running clip" = "跑步视频";
@@ -251,3 +252,23 @@
 "Best" = "最佳";
 "Good" = "良好";
 "Limited" = "有限";
+
+/* Adjustment 2: Share card "旧片考古" template */
+"share.archaeology.button" = "分享你的跑姿分析";
+"share.archaeology.title_default" = "我的跑姿被AI考古了——发现了%lld个问题";
+"share.archaeology.subtitle_default" = "你的跑姿经得起AI考古吗？";
+"share.archaeology.title_race %@" = "我在%@的跑姿被AI考古了";
+"share.archaeology.subtitle_race %lld" = "发现了%lld个跑姿问题——你的跑姿经得起考古吗？";
+
+/* Adjustment 3: Injury-prevention narratives */
+"injury.cadence_low %@" = "%@ → 步频偏低可能增加膝盖冲击力。建议在训练中加入步频练习日。";
+"injury.gct_high %@" = "%@ → 触地时间偏长会增加刹车效应和受伤风险。专注缩短着地时间。";
+"injury.knee_risk %@" = "%@ → 膝关节不稳可能导致髂胫束或髌骨问题。加入髋部强化练习。";
+"injury.trunk_lean %@" = "%@ → 躯干过度前倾会增加下背部和腘绳肌压力。练习保持直立姿态。";
+"injury.overstride %@" = "%@ → 步幅过大会增加膝盖和胫骨的冲击力。缩短步幅，落脚在髋部下方。";
+"injury.hip_drop %@" = "%@ → 髋下沉可能导致髂胫束综合征和膝盖疼痛。强化臀中肌。";
+
+/* Adjustment 4: Weekly form recheck card */
+"plan.recheck.title" = "本周跑姿复检";
+"plan.recheck.body" = "周一到了——是时候重新分析你的跑步姿态了。上传新视频与上周对比。";
+"plan.recheck.button" = "前往分析页面";

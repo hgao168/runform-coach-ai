@@ -4,7 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 /**
- * Main Room database for RunForm Coach AI.
+ * Main Room database for RunForm Injury Prevention Coach.
  *
  * Schema version history:
  *   version 1 — Initial schema (analysis_history, saved_plans, runner_profiles)

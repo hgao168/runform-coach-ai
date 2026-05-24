@@ -209,6 +209,20 @@ private fun WeeklyPlanContent(
             }
         }
 
+        // ── P1: Weekly Form Recheck card (Marketing alignment) ───────────────
+        item {
+            val today = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
+            val isMonday = today == java.util.Calendar.MONDAY
+            // For demo/minimal: always show
+            FormRecheckCard(
+                lastScore = null,      // TODO: wire to actual history data
+                thisScore = null,
+                onRecheck = {
+                    Toast.makeText(context, context.getString(R.string.form_recheck_no_data), Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
         // ── Form card ─────────────────────────────────────────────────────────
         item {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -570,5 +584,96 @@ internal fun IntensityPill(intensity: String) {
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(intensity, color = color, fontSize = 11.sp)
+    }
+}
+
+// ── P1: Form Recheck Card (Marketing alignment) ────────────────────────────
+
+@Composable
+internal fun FormRecheckCard(
+    lastScore: Int?,
+    thisScore: Int?,
+    onRecheck: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.Violet.copy(alpha = 0.12f))
+            .border(1.dp, AppColors.Violet.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+            .clickable { onRecheck() }
+            .padding(16.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.form_recheck_title),
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.form_recheck_subtitle),
+                        color = AppColors.TextSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.DirectionsRun,
+                    contentDescription = null,
+                    tint = AppColors.Violet,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            // Score comparison row
+            if (lastScore != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.form_recheck_last_score, lastScore),
+                        color = AppColors.TextMuted,
+                        fontSize = 13.sp
+                    )
+                    if (thisScore != null) {
+                        val diff = thisScore - lastScore
+                        val diffText = if (diff >= 0)
+                            stringResource(R.string.form_recheck_improved, diff)
+                        else
+                            stringResource(R.string.form_recheck_declined, -diff)
+                        Text(
+                            diffText,
+                            color = if (diff >= 0) AppColors.Mint else AppColors.Red,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
+            // CTA
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(AppColors.Violet.copy(alpha = 0.25f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    stringResource(R.string.form_recheck_cta),
+                    color = AppColors.Violet,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
     }
 }

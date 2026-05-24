@@ -9,6 +9,7 @@ Page({
     i: {
       analyzeTitle: t('analyzeTitle'),
       analyzeSubtitle: t('analyzeSubtitle'),
+      injuryPreventionBanner: t('injuryPreventionBanner'),
       videoGuide: t('videoGuide'),
       videoGuideBody: t('videoGuideBody'),
       pickVideo: t('pickVideo'),

@@ -14,6 +14,7 @@ const strings = {
     // Analyze page
     analyzeTitle: '跑步姿态分析',
     analyzeSubtitle: '上传跑步视频，AI 分析你的跑步姿态',
+    injuryPreventionBanner: '别让错误跑姿毁了你的跑步热情',
     pickVideo: '选择视频',
     recordVideo: '录制视频',
     analyzeBtn: '开始分析',
@@ -354,6 +355,7 @@ const strings = {
     profile: 'Profile',
     analyzeTitle: 'Running Analysis',
     analyzeSubtitle: 'Upload a running video for AI biomechanics coaching',
+    injuryPreventionBanner: 'Don\'t let bad running form ruin your passion',
     pickVideo: 'Pick Video',
     recordVideo: 'Record',
     analyzeBtn: 'Analyze',

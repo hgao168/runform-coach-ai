@@ -345,7 +345,7 @@ Page({
 
     let title = ''
     if (lang) {
-      // Chinese — three scenario templates
+      // Chinese — four scenario templates
       switch (scenario) {
         case 'analysis':
           title = cadence
@@ -362,13 +362,20 @@ Page({
             ? `⚡ 我的步频 ${cadence} SPM，Kipchoge 是 180 SPM。来对比你的跑姿？`
             : `⚡ 我的跑姿 vs Kipchoge：评分 ${score} 分。你也来对比一下？`
           break
+        case 'archaeology': {
+          const issueCount = (this.data.insights && this.data.insights.length) || 0
+          title = issueCount > 0
+            ? `🔍 我的跑姿被AI考古了——发现了${issueCount}个跑姿问题`
+            : `🔍 我的跑姿被AI考古了——你的跑姿经得起考古吗？`
+          break
+        }
         default:
           title = cadence
             ? `🏃 RunForm：步频 ${cadence} SPM，跑姿评分 ${score} 分`
             : `🏃 RunForm 跑步姿态分析 — ${score}%`
       }
     } else {
-      // English — three scenario templates
+      // English — four scenario templates
       switch (scenario) {
         case 'analysis':
           title = cadence
@@ -385,6 +392,13 @@ Page({
             ? `⚡ My cadence ${cadence} SPM vs Kipchoge 180 SPM. Compare yours?`
             : `⚡ My form vs Kipchoge: scored ${score}%. Compare your run?`
           break
+        case 'archaeology': {
+          const issueCount = (this.data.insights && this.data.insights.length) || 0
+          title = issueCount > 0
+            ? `🔍 AI "dug up" my running form — found ${issueCount} issues. Can yours survive the dig?`
+            : `🔍 My running form got AI-archaeologized. Can yours stand the test?`
+          break
+        }
         default:
           title = cadence
             ? `🏃 RunForm: cadence ${cadence} SPM, form score ${score}%`
@@ -406,9 +420,10 @@ Page({
 
   /**
    * RF-941: Detect the share scenario to pick the right template.
-   * - 'analysis':  just completed an analysis (confidence > 0)
-   * - 'weekly':    viewing historical / weekly report
-   * - 'kipchoge':  coming from compare page (Kipchoge comparison)
+   * - 'analysis':    just completed an analysis (confidence > 0)
+   * - 'weekly':      viewing historical / weekly report
+   * - 'kipchoge':    coming from compare page (Kipchoge comparison)
+   * - 'archaeology': viewing archived / historical analysis with detected issues
    */
   _detectShareScenario() {
     // Check if user came from compare page (Kipchoge scenario)
@@ -424,6 +439,15 @@ Page({
     const { analysisId } = this.data
     if (analysisId && analysisId.startsWith('weekly_')) {
       return 'weekly'
+    }
+
+    // RF-new: Archaeology — historical analysis with detected issues
+    // Triggered when user views an old result from history (not fresh)
+    if (analysisId && pages.length >= 2) {
+      const prevRoute = pages[pages.length - 2].route || ''
+      if (prevRoute.includes('history')) {
+        return 'archaeology'
+      }
     }
 
     // Default: fresh analysis

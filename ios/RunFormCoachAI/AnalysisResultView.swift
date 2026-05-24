@@ -5,11 +5,16 @@ struct AnalysisResultView: View {
     var poseMetrics: PoseMetrics? = nil
 
     @State private var showCompare = false
+    @State private var showShareSheet = false
+
+    private static let normalGreen = Color(red: 0.00, green: 0.96, blue: 0.63)  // #00f5a0
+    private static let abnormalRed = Color(red: 1.00, green: 0.27, blue: 0.27) // #ff4444
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             scoreCard
             if poseMetrics != nil { compareButton }
+            shareButton
             if let score = result.videoQualityScore { qualityCard(score: score) }
             metricsSection
             issuesSection
@@ -26,6 +31,97 @@ struct AnalysisResultView: View {
                 CompareView(poseMetrics: metrics)
             }
         }
+        .sheet(isPresented: $showShareSheet) {
+            if let shareItems = buildShareItems() {
+                ShareSheet(items: shareItems)
+            }
+        }
+    }
+
+    // MARK: - Adjustment 1: Metric status coloring based on biomechanical thresholds
+    private func metricColor(for metric: Metric) -> Color {
+        switch metric.status.lowercased() {
+        case "good": return Self.normalGreen
+        case "needs work": return Self.abnormalRed
+        default: return AppTheme.mint // Moderate → default mint
+        }
+    }
+
+    // MARK: - Adjustment 2: Share card "旧片考古" template
+    private func buildShareItems() -> [Any]? {
+        let issueCount = result.issues.count
+        // Try to get race name from last race plan or profile
+        let raceName: String? = nil // No persistent race data; use fallback
+        let title: String
+        let subtitle: String
+        if let race = raceName, !race.isEmpty {
+            title = String(localized: "share.archaeology.title_race \\(race)")
+            subtitle = String(localized: "share.archaeology.subtitle_race \\(issueCount)")
+        } else {
+            title = String(localized: "share.archaeology.title_default")
+            subtitle = String(localized: "share.archaeology.subtitle_default \\(issueCount)")
+        }
+        let shareText = "\(title)\n\(subtitle)\n\n— RunForm AI"
+        return [shareText]
+    }
+
+    // MARK: - Adjustment 3: Injury-prevention narrative helper
+    private func injuryNarrative(for metric: Metric) -> String {
+        let name = metric.name.lowercased()
+        // Keep original explanation but prepend/prepend injury context
+        switch true {
+        case name.contains("cadence") || name.contains("步频"):
+            if metric.score < 0.55 {
+                return String(localized: "injury.cadence_low \\(metric.explanation)")
+            }
+        case name.contains("ground contact") || name.contains("触地"):
+            if metric.score < 0.55 {
+                return String(localized: "injury.gct_high \\(metric.explanation)")
+            }
+        case name.contains("knee") || name.contains("膝") || name.contains("valgus"):
+            if metric.score < 0.55 {
+                return String(localized: "injury.knee_risk \\(metric.explanation)")
+            }
+        case name.contains("trunk") || name.contains("躯干") || name.contains("lean"):
+            if metric.score < 0.55 {
+                return String(localized: "injury.trunk_lean \\(metric.explanation)")
+            }
+        case name.contains("overstride") || name.contains("跨步") || name.contains("步幅"):
+            if metric.score < 0.55 {
+                return String(localized: "injury.overstride \\(metric.explanation)")
+            }
+        case name.contains("hip") || name.contains("髋"):
+            if metric.score < 0.55 {
+                return String(localized: "injury.hip_drop \\(metric.explanation)")
+            }
+        default:
+            break
+        }
+        return metric.explanation
+    }
+
+    private var shareButton: some View {
+        Button {
+            showShareSheet = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.headline)
+                Text(String(localized: "share.archaeology.button"))
+                    .font(.headline.weight(.semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .opacity(0.60)
+            }
+            .foregroundStyle(.black)
+            .padding(.vertical, 14)
+            .padding(.horizontal, 18)
+            .background(AppTheme.warmGradient)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: AppTheme.orange.opacity(0.25), radius: 12, x: 0, y: 6)
+        }
+        .buttonStyle(.plain)
     }
 
     private var compareButton: some View {
@@ -120,20 +216,25 @@ struct AnalysisResultView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
             ForEach(result.metrics) { metric in
+                let color = metricColor(for: metric)
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text(metric.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                        Text(metric.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(color.opacity(0.9))
                         Spacer()
                         Text(metric.status)
                             .font(.caption.bold())
                             .foregroundStyle(.black)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 5)
-                            .background(AppTheme.actionGradient)
+                            .background(color)
                             .clipShape(Capsule())
                     }
-                    ProgressView(value: metric.score).tint(AppTheme.mint)
-                    Text(metric.explanation).font(.caption).foregroundStyle(.white.opacity(0.64))
+                    ProgressView(value: metric.score).tint(color)
+                    Text(injuryNarrative(for: metric))
+                        .font(.caption)
+                        .foregroundStyle(color.opacity(0.75))
                 }
                 .padding(15)
                 .background(.white.opacity(0.08))
@@ -221,4 +322,16 @@ struct ExerciseCard: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+// MARK: - ShareSheet UIKit bridge (Adjustment 2)
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
