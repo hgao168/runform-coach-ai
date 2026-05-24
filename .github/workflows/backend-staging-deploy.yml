@@ -12,17 +12,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        shell: bash
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/railwayapp/cli/master/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
-      - name: Deploy to Railway staging
+      - name: Install and deploy via Railway CLI
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway up \
+          bash <(curl -fsSL cli.new)
+          ~/.railway/bin/railway up \
             --service d2bdff7b-1da5-4144-838b-681527e8ee8d \
             --environment ac84ae0a-1117-46da-a004-acdd44027184 \
             --detach
