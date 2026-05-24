@@ -44,6 +44,25 @@ jobs:
         run: swiftlint --config ios/.swiftlint.yml --strict
         continue-on-error: true
 
+      - name: List available simulators (debug)
+        run: xcrun simctl list devices available | head -20
+
+      - name: Pre-boot simulator
+        run: |
+          DEST="iPhone 16"
+          RUNTIME=$(xcrun simctl list runtimes | grep iOS | tail -1 | sed 's/.* - //')
+          UDID=$(xcrun simctl create "$DEST" "$DEST" "$RUNTIME" 2>/dev/null || echo "")
+          if [ -n "$UDID" ]; then
+            echo "Created simulator: $UDID"
+          fi
+          UDID=$(xcrun simctl list devices | grep "$DEST (" | grep -v "Unavailable" | head -1 | sed -E 's/.*\\(([A-F0-9-]+)\\).*/\\1/')
+          if [ -n "$UDID" ]; then
+            echo "Booting simulator: $UDID"
+            xcrun simctl boot "$UDID" || true
+          else
+            echo "⚠️  Simulator '$DEST' not found, will let xcodebuild create it"
+          fi
+
       - name: Run XCTest
         run: |
           xcodebuild test \
