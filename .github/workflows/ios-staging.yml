@@ -31,9 +31,16 @@ jobs:
       - name: Patch display name for staging
         run: |
           python3 - <<'EOF'
-          content = open('project.yml').read()
-          content = content.replace('CFBundleDisplayName: RunForm', 'CFBundleDisplayName: "RunForm (Staging)"')
-          open('project.yml', 'w').write(content)
+          import yaml, os
+          path = 'project.yml'
+          if not os.path.exists(path):
+              path = 'ios/project.yml'
+          with open(path) as f:
+              config = yaml.safe_load(f)
+          config['targets']['RunFormCoachAI']['info']['properties']['CFBundleDisplayName'] = 'RunForm (Staging)'
+          with open(path, 'w') as f:
+              yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+          print(f"Patched {path}: CFBundleDisplayName = RunForm (Staging)")
           EOF
 
       - name: Install XcodeGen
@@ -86,7 +93,10 @@ jobs:
       # ── Generate & Archive (DEBUG = staging backend) ────────────────────────
 
       - name: Generate Xcode project
-        run: xcodegen generate
+        run: |
+          SPEC=project.yml
+          [ -f "$SPEC" ] || SPEC=ios/project.yml
+          xcodegen generate --spec "$SPEC"
 
       - name: Archive app (Debug configuration → staging backend)
         run: |
@@ -100,10 +110,10 @@ jobs:
             DEVELOPMENT_TEAM=39CYNW3CYT \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="RunFormCoachAI-Prod" \
+            BACKEND_BASE_URL="https://runform-coach-ai-staging.up.railway.app" \
             CURRENT_PROJECT_VERSION="2.${{ github.run_number }}" \
             MARKETING_VERSION="1.1"
-          # Note: BACKEND_BASE_URL is NOT overridden here.
-          # The Debug config in project.yml embeds the staging backend URL automatically.
+          # Note: BACKEND_BASE_URL is now explicitly overridden to staging URL.
 
       # ── Export IPA ──────────────────────────────────────────────────────────
 
