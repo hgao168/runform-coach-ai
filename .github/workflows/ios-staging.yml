@@ -30,18 +30,11 @@ jobs:
 
       - name: Patch display name for staging
         run: |
-          python3 - <<'EOF'
-          import yaml, os
-          path = 'project.yml'
-          if not os.path.exists(path):
-              path = 'ios/project.yml'
-          with open(path) as f:
-              config = yaml.safe_load(f)
-          config['targets']['RunFormCoachAI']['info']['properties']['CFBundleDisplayName'] = 'RunForm (Staging)'
-          with open(path, 'w') as f:
-              yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-          print(f"Patched {path}: CFBundleDisplayName = RunForm (Staging)")
-          EOF
+          path=project.yml
+          [ -f "$path" ] || path=ios/project.yml
+          perl -0pi -e 's/(^\s*CFBundleDisplayName:\s*).*$/$1RunForm (Staging)/m' "$path"
+          grep -q '^\s*CFBundleDisplayName: RunForm (Staging)$' "$path"
+          echo "Patched $path: CFBundleDisplayName = RunForm (Staging)"
 
       - name: Install XcodeGen
         run: brew install xcodegen
