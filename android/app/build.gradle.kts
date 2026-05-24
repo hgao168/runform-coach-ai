@@ -123,16 +123,18 @@ dependencies {
     // ── AdMob (RF-962: Banner ads on analysis result) ─────────────────
     implementation(libs.play.services.ads)
 
-    // ── Test (JUnit5 + MockK + Turbine + Compose UI test) ───────────────────
+    // ── Test (JUnit5 + MockK + Turbine) ────────────────────────────────────
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    testImplementation(libs.androidx.compose.ui.test)
     testImplementation(libs.room.testing)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+// Enable JUnit5 Platform for unit tests
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 // Room schema export directory for versioned migrations
