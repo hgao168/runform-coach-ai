@@ -44,7 +44,7 @@ jobs:
 
       - name: Run unit tests
         working-directory: android
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Upload test reports
         if: always()
