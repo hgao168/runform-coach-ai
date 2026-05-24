@@ -12,12 +12,6 @@ struct RunFormCoachAIApp: App {
     init() {
         // Mark the instant main() is entered for launch timing.
         PerformanceOptimizer.markMainEntry()
-        // Start Google Mobile Ads SDK with test ad unit ID (only when available)
-        #if canImport(GoogleMobileAds)
-        // Start AdMob with test App ID. Wrapped defensively — a bad
-        // GADApplicationIdentifier should not crash the whole app.
-        GADMobileAds.sharedInstance().start { _ in }
-        #endif
     }
 
     var body: some Scene {
@@ -29,6 +23,11 @@ struct RunFormCoachAIApp: App {
                     if !launchCompleted {
                         launchCompleted = true
                         PerformanceOptimizer.markFirstFrameRender()
+
+                        // Initialize AdMob on the main thread after first frame.
+                        #if canImport(GoogleMobileAds)
+                        GADMobileAds.sharedInstance().start { _ in }
+                        #endif
 
                         // Deferred non-critical initialization on a background Task.
                         // This runs AFTER first frame so the UI is already visible.
