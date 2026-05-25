@@ -6,13 +6,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- 传感器 Phase 0: 加速度计 + 陀螺仪 -->
-    <uses-permission android:name="android.permission.BODY_SENSORS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-
     <application
-        android:name=".RunFormApplication"
         android:allowBackup="true"
         android:label="RunForm Coach AI"
         android:theme="@style/Theme.Material3.DynamicColors.DayNight"
@@ -38,17 +32,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-
-        <!-- 传感器前台服务 (Phase 0) -->
-        <service
-            android:name=".sensor.SensorService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false" />
-
-        <!-- RF-962: AdMob App ID — switched per build type via manifestPlaceholders -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="${admobAppId}" />
 
     </application>
 

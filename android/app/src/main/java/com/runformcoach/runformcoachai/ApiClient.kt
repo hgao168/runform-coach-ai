@@ -1,15 +1,20 @@
 package com.runformcoach.runformcoachai
 
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
-import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
+import java.io.File
+import java.util.concurrent.TimeUnit
 
 interface RunFormApi {
-    // ── Analysis ───────────────────────────────────────────────────────────────
-
     @Multipart
     @POST("analyze")
     suspend fun analyzeVideo(
@@ -17,30 +22,35 @@ interface RunFormApi {
         @Part mode: MultipartBody.Part
     ): AnalysisResponse
 
-    // ── Training Plan ──────────────────────────────────────────────────────────
-
     @POST("training-plan")
     suspend fun generatePlan(@Body request: TrainingPlanRequest): TrainingPlanResponse
-
-    // ── Elite Compare ──────────────────────────────────────────────────────────
-
-    /** Fetch the list of elite athletes available for comparison. */
-    @GET("athletes")
-    suspend fun fetchAthletes(): List<AthleteListItem>
-
-    /** Compare user metrics against a specific elite athlete. */
-    @POST("compare")
-    suspend fun compareWithAthlete(@Body request: CompareRequest): CompareResponse
-
-    // ── Feedback ───────────────────────────────────────────────────────────────
-
-    /** Submit user feedback rating for an analysis. RF-203 */
-    @POST("feedback")
-    suspend fun submitFeedback(@Body request: FeedbackRequest): FeedbackResponse
-
-    // ── Weekly Trends (RF-912) ─────────────────────────────────────────────────
-
-    /** Fetch 4-week training trend data for the weekly insight report. */
-    @GET("sessions/trends")
-    suspend fun fetchWeeklyTrends(): WeeklyTrendsResponse
 }
+
+object ApiClient {
+    private const val BASE_URL = "https://runform-coach-ai-staging.up.railway.app/"
+
+    private val okhttp = OkHttpClient.Builder()
+        .connectTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
+        .writeTimeout(120, TimeUnit.SECONDS)
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+        })
+        .build()
+
+    val api: RunFormApi = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        .client(okhttp)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+        .create(RunFormApi::class.java)
+
+    fun buildVideoPart(file: File): MultipartBody.Part {
+        val requestBody = file.asRequestBody("video/mp4".toMediaType())
+        return MultipartBody.Part.createFormData("video", file.name, requestBody)
+    }
+
+    fun buildModePart(mode: String): MultipartBody.Part =
+        MultipartBody.Part.createFormData("mode", mode)
+}
+

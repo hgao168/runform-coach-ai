@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -49,6 +48,7 @@ import kotlin.math.roundToInt
 @Composable
 fun ProfileScreen(vm: AppViewModel) {
     val profile = vm.profile
+
     var firstName by rememberSaveable { mutableStateOf(profile.firstName) }
     var lastName by rememberSaveable { mutableStateOf(profile.lastName) }
     var nickname by rememberSaveable { mutableStateOf(profile.nickname) }
@@ -64,12 +64,6 @@ fun ProfileScreen(vm: AppViewModel) {
     var injuryNote by rememberSaveable { mutableStateOf(profile.injuryNote) }
     var saved by remember { mutableStateOf(false) }
 
-    // ── RF-208: Gear & Fit fields ─────────────────────────────────────────
-    var shoeSizeEU by rememberSaveable { mutableStateOf(profile.shoeSizeEU) }
-    var shoeSizeUnit by rememberSaveable { mutableStateOf("EU") } // EU / US / UK
-    var legLengthCm by rememberSaveable { mutableStateOf(profile.legLengthCm.toFloat()) }
-    var shoeBrand by rememberSaveable { mutableStateOf(profile.shoeBrand) }
-    var shoeModel by rememberSaveable { mutableStateOf(profile.shoeModel) }
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = AppColors.Mint,
         unfocusedBorderColor = AppColors.Border,

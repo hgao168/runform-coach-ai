@@ -7,59 +7,12 @@
     <text wx:if="{{items.length > 0}}" class="clear-btn" bindtap="confirmClear">{{i.deleteHistory}}</text>
   </view>
 
-  <!-- Trend chart section (collapsible) -->
-  <view wx:if="{{items.length >= 2}}" class="trend-section">
-    <view class="trend-header" bindtap="toggleTrend">
-      <view class="trend-header-left">
-        <text class="trend-icon">📈</text>
-        <text class="trend-title">{{i.trendTitle}}</text>
-      </view>
-      <text class="trend-toggle">{{trendExpanded ? i.trendToggleHide : i.trendToggle}}</text>
-    </view>
-
-    <view wx:if="{{trendExpanded}}" class="trend-body">
-      <view wx:if="{{trendHasData}}" class="trend-canvas-wrap">
-        <canvas
-          type="2d"
-          id="trendCanvas"
-          class="trend-canvas"
-          bindtouchstart="onChartTap"
-        ></canvas>
-        <!-- Tooltip overlay -->
-        <view
-          wx:if="{{trendTooltip}}"
-          class="trend-tooltip"
-          style="left: {{trendTooltip.x}}px; top: {{trendTooltip.y}}px;"
-        >
-          <view class="trend-tooltip-inner" style="border-color: {{trendTooltip.color}};">
-            <text class="trend-tooltip-text">{{trendTooltip.text}}</text>
-          </view>
-        </view>
-        <!-- Legend hint -->
-        <view class="trend-legend-hint">
-          <view wx:for="{{trendDatasets}}" wx:key="label" class="trend-legend-item">
-            <view class="trend-legend-dot" style="background: {{item.color}};"></view>
-            <text class="trend-legend-label">{{item.label}}</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- Not enough data for chart -->
-      <view wx:else class="trend-empty">
-        <text class="trend-empty-icon">📉</text>
-        <text class="trend-empty-text">{{i.trendNoData}}</text>
-      </view>
-
-      <text class="trend-tap-hint">{{i.trendTapHint}}</text>
-    </view>
-  </view>
-
   <!-- Empty state -->
   <view wx:if="{{items.length === 0}}" class="empty-state">
     <text style="font-size: 72rpx; margin-bottom: 20rpx;">🏃‍♂️</text>
     <text class="empty-title">{{i.historyEmpty}}</text>
     <text class="empty-sub">{{i.historyEmptySub}}</text>
-    <button class="btn-primary" style="margin-top: 40rpx; padding: 0 48rpx; height: 88rpx; font-size: 28rpx;" bindtap="goAnalyze">{{i.startFirstAnalysis}}</button>
+    <button class="btn-primary" style="margin-top: 40rpx; padding: 0 48rpx; height: 88rpx; font-size: 28rpx;" bindtap="goAnalyze">开始第一次分析</button>
   </view>
 
   <!-- History list -->
@@ -82,24 +35,6 @@
       </view>
       <text class="chevron">›</text>
     </view>
-
-    <!-- RF-913: Share & Save buttons -->
-    <view class="action-section">
-      <button class="btn-mint-outline full-btn" style="margin-top: 8rpx;" open-type="share">
-        📤 {{isZh ? '分享记录' : 'Share Records'}}
-      </button>
-
-      <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="saveShareToAlbum">
-        🖼️ {{isZh ? '保存到相册' : 'Save to Album'}}
-      </button>
-    </view>
   </view>
-
-  <!-- RF-913: Hidden canvas for share image generation -->
-  <canvas
-    type="2d"
-    id="shareCanvas"
-    style="position: fixed; left: -9999rpx; top: -9999rpx; width: 600rpx; height: 928rpx;"
-  />
 
 </view>

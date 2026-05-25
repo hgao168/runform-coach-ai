@@ -24,40 +24,6 @@
     </view>
   </view>
 
-  <!-- RF-308: Angle selection -->
-  <view class="card angle-card">
-    <text class="section-title">{{i.cameraAngle}}</text>
-    <view class="angle-chips">
-      <view
-        class="angle-chip {{cameraAngle === 'side' ? 'angle-chip-active' : ''}}"
-        bindtap="selectAngle"
-        data-angle="side"
-      >
-        <view class="angle-chip-icon">📐🧑‍➡️</view>
-        <text class="angle-chip-label">{{i.angleSide}}</text>
-        <text class="angle-chip-desc">{{i.angleSideDesc}}</text>
-      </view>
-      <view
-        class="angle-chip {{cameraAngle === 'rear' ? 'angle-chip-active' : ''}}"
-        bindtap="selectAngle"
-        data-angle="rear"
-      >
-        <view class="angle-chip-icon">👤</view>
-        <text class="angle-chip-label">{{i.angleRear}}</text>
-        <text class="angle-chip-desc">{{i.angleRearDesc}}</text>
-      </view>
-      <view
-        class="angle-chip {{cameraAngle === 'front' ? 'angle-chip-active' : ''}}"
-        bindtap="selectAngle"
-        data-angle="front"
-      >
-        <view class="angle-chip-icon">🧑</view>
-        <text class="angle-chip-label">{{i.angleFront}}</text>
-        <text class="angle-chip-desc">{{i.angleFrontDesc}}</text>
-      </view>
-    </view>
-  </view>
-
   <!-- Video picker area -->
   <view class="card">
     <view class="video-area" bindtap="pickVideo">
@@ -106,15 +72,12 @@
   <!-- Upload progress bar -->
   <view wx:if="{{analyzing && uploadProgress > 0}}" class="progress-card">
     <view class="progress-label-row">
-      <text class="label">{{compressing ? '压缩中' : i.uploadProgress}}</text>
+      <text class="label">{{i.uploadProgress}}</text>
       <text class="text-mint">{{uploadProgress}}%</text>
     </view>
     <view class="progress-track">
       <view class="progress-fill" style="width: {{uploadProgress}}%;"></view>
     </view>
-    <text wx:if="{{compressResult && compressResult.compressed}}" class="caption" style="margin-top: 12rpx; display: block;">
-      视频已压缩：{{compressResult.originalSizeMB}}MB → {{compressResult.compressedSizeMB}}MB
-    </text>
   </view>
 
 </view>

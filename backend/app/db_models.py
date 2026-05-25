@@ -41,7 +41,6 @@ class User(Base):
     oauth_connections: Mapped[list["OAuthConnection"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     strava_runs: Mapped[list["StravaRun"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     strava_weekly_stats: Mapped[list["StravaWeeklyStat"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    run_sessions: Mapped[list["RunSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class OAuthConnection(Base):
@@ -101,20 +100,3 @@ class StravaWeeklyStat(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, onupdate=_utc_now)
 
     user: Mapped[User] = relationship(back_populates="strava_weekly_stats")
-
-
-class RunSession(Base):
-    __tablename__ = "run_sessions"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    duration_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
-    avg_cadence: Mapped[float | None] = mapped_column(Float, nullable=True)
-    avg_vertical_oscillation: Mapped[float | None] = mapped_column(Float, nullable=True)
-    avg_gct: Mapped[float | None] = mapped_column(Float, nullable=True)
-    metrics_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
-
-    user: Mapped[User] = relationship(back_populates="run_sessions")

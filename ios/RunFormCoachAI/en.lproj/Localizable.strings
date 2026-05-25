@@ -232,25 +232,3 @@
 "Close" = "Close";
 "Couldn't Load Athletes" = "Couldn't Load Athletes";
 "Comparison Failed" = "Comparison Failed";
-
-/* RunSessionReplayView — Sprint 3 RF-910 */
-"Run Replay" = "Run Replay";
-"Sessions" = "Sessions";
-"No Sessions Yet" = "No Sessions Yet";
-"Your live run sessions will appear here once you complete a tracked run." = "Your live run sessions will appear here once you complete a tracked run.";
-"Session Overview" = "Session Overview";
-"Avg Cadence" = "Avg Cadence";
-"Avg Oscillation" = "Avg Oscillation";
-"Avg GCT" = "Avg GCT";
-"Duration" = "Duration";
-"Distance" = "Distance";
-"Coach Prompts" = "Coach Prompts";
-"Coach prompt at %@" = "Coach prompt at %@";
-"Time Series" = "Time Series";
-"Tap & drag to seek" = "Tap & drag to seek";
-"Tap for details" = "Tap for details";
-"No coach prompts during this session." = "No coach prompts during this session.";
-"Priority %lld" = "Priority %lld";
-"Coach" = "Coach";
-"GCT" = "GCT";
-"Oscillation" = "Oscillation";

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional
 
 
@@ -198,9 +198,7 @@ class StravaStatusResponse(BaseModel):
 
 
 class StravaDisconnectRequest(BaseModel):
-    ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
-    )
+    ios_user_id: str
 
 
 class StravaDisconnectResponse(BaseModel):
@@ -214,9 +212,7 @@ class StravaDisconnectResponse(BaseModel):
 
 
 class StravaSyncRequest(BaseModel):
-    ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
-    )
+    ios_user_id: str
 
 
 class StravaWeeklySummaryItem(BaseModel):
@@ -270,13 +266,7 @@ class StravaCallbackResponse(BaseModel):
 
 
 class ProfileSaveRequest(BaseModel):
-    ios_user_id: str = Field(
-        ...,
-        min_length=3,
-        max_length=128,
-        pattern=r'^[a-zA-Z0-9._\-]+$',
-        description="iOS user identifier",
-    )
+    ios_user_id: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     nickname: Optional[str] = None
@@ -298,21 +288,6 @@ class ProfileSaveRequest(BaseModel):
 class ProfileSaveResponse(BaseModel):
     saved: bool
     ios_user_id: str
-
-# ── Tester feedback ─────────────────────────────────────────────────────
-# Mirrors the iOS AnalysisFeedback / FeedbackRating models
-
-class FeedbackSubmitRequest(BaseModel):
-    ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
-    )
-    analysis_id: str          # UUID of the AnalysisHistoryItem from iOS
-    rating: str               # "Accurate" | "Partly accurate" | "Not accurate" | "Confusing"
-    comment: str = ""
-
-class FeedbackSubmitResponse(BaseModel):
-    accepted: bool
-    message: str
 
 
 # ── Elite athlete comparison ────────────────────────────────────────────────
@@ -362,96 +337,3 @@ class CompareResponse(BaseModel):
     top_gaps: List[str]
     coaching_narrative: str
     overall_similarity_score: float
-
-
-# ── Run Session schemas ─────────────────────────────────────────────────────
-
-class RunSessionCreate(BaseModel):
-    ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
-    )
-    start_time: str  # ISO 8601
-    end_time: Optional[str] = None  # ISO 8601
-    duration_sec: Optional[float] = None
-    avg_cadence: Optional[float] = None
-    avg_vertical_oscillation: Optional[float] = None
-    avg_gct: Optional[float] = None
-    metrics_json: Optional[dict] = None
-
-
-class RunSessionResponse(BaseModel):
-    id: int
-    user_id: int
-    ios_user_id: Optional[str] = None
-    start_time: str
-    end_time: Optional[str] = None
-    duration_sec: Optional[float] = None
-    avg_cadence: Optional[float] = None
-    avg_vertical_oscillation: Optional[float] = None
-    avg_gct: Optional[float] = None
-    metrics_json: Optional[dict] = None
-    created_at: str
-
-
-class SessionTrendsResponse(BaseModel):
-    ios_user_id: str
-    session_count: int
-    cadence: List[Optional[float]]
-    vertical_oscillation: List[Optional[float]]
-    gct: List[Optional[float]]
-
-
-class SessionCompareRequest(BaseModel):
-    ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
-    )
-    session_id_a: int
-    session_id_b: int
-
-
-class SessionMetricPair(BaseModel):
-    metric: str
-    session_a_value: Optional[float] = None
-    session_b_value: Optional[float] = None
-    delta: Optional[float] = None
-    delta_pct: Optional[float] = None
-
-
-class SessionCompareResponse(BaseModel):
-    ios_user_id: str
-    session_a: RunSessionResponse
-    session_b: RunSessionResponse
-    comparisons: List[SessionMetricPair]
-
-
-# ── Weekly Insight schemas ─────────────────────────────────────────────────
-
-class WeeklyInsightMetric(BaseModel):
-    """Week-over-week change for a single metric."""
-    metric: str                          # e.g. 'avg_cadence', 'avg_oscillation', 'avg_gct', 'distance', 'session_count'
-    label: str                           # human-readable label
-    current_week_avg: Optional[float] = None
-    previous_week_avg: Optional[float] = None
-    delta: Optional[float] = None        # absolute change
-    delta_pct: Optional[float] = None    # percentage change
-    trend: str = 'stable'                # 'improving' | 'declining' | 'stable'
-
-
-class WeeklyInsightBadge(BaseModel):
-    """Achievement badge earned this week."""
-    id: str                              # e.g. 'consistency_streak', 'cadence_milestone'
-    name: str
-    description: str
-    icon: str = ''                       # emoji or icon name
-
-
-class WeeklyInsightResponse(BaseModel):
-    """Aggregated weekly insight for the iOS/Android weekly report screen."""
-    ios_user_id: str
-    week_start: str                      # ISO date of the current week's Monday
-    week_end: str                        # ISO date of the current week's Sunday
-    current_week_session_count: int
-    previous_week_session_count: int
-    metrics: List[WeeklyInsightMetric]   # cadence, oscillation, gct, distance, sessions
-    ai_coach_advice: str                 # AI-generated coaching narrative
-    badges: List[WeeklyInsightBadge] = []

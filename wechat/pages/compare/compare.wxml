@@ -44,15 +44,6 @@
       <text class="chevron">›</text>
     </view>
 
-    <!-- No analysis prompt at list level -->
-    <view wx:if="{{!hasAnalysis}}" class="info-card" style="border-color: rgba(255,159,48,0.3); background: rgba(255,159,48,0.06);">
-      <text class="info-icon">⚠️</text>
-      <view class="info-text-wrap">
-        <text class="info-text">{{i.noAnalysisForCompare}}</text>
-        <button class="btn-inline-mint" bindtap="goAnalyze">{{i.goAnalyzeNow}} →</button>
-      </view>
-    </view>
-
     <!-- iOS compare note -->
     <view class="info-card">
       <text class="info-icon">💡</text>
@@ -79,60 +70,9 @@
       <text class="body-text" style="margin-top: 12rpx;">{{selectedAthlete.bio}}</text>
     </view>
 
-    <!-- Comparison section -->
-    <view class="card">
-      <text class="section-title">⚡ {{i.compareResult}}</text>
-
-      <!-- No analysis state -->
-      <view wx:if="{{!hasAnalysis}}" class="no-analysis-block">
-        <text style="font-size: 56rpx; margin-bottom: 12rpx;">📊</text>
-        <text class="body-text" style="text-align: center;">{{i.noAnalysisForCompare}}</text>
-        <button class="btn-mint-outline" style="margin-top: 24rpx;" bindtap="goAnalyze">{{i.goAnalyzeNow}}</button>
-      </view>
-
-      <!-- Comparing loading -->
-      <view wx:elif="{{comparing}}" class="comparing-block">
-        <view class="loading-spinner" style="margin: 20rpx auto;"></view>
-        <text class="caption" style="margin-top: 16rpx;">{{i.comparing}}</text>
-      </view>
-
-      <!-- Comparison table -->
-      <view wx:elif="{{comparisonRows.length > 0}}" class="comparison-table">
-        <!-- Header row -->
-        <view class="comp-header-row">
-          <text class="comp-header-label"></text>
-          <text class="comp-header-you">🙋 {{i.yourMetrics}}</text>
-          <text class="comp-header-elite">🏅 {{i.eliteMetrics}}</text>
-          <text class="comp-header-gap">{{i.gap}}</text>
-        </view>
-
-        <!-- Data rows -->
-        <view wx:for="{{comparisonRows}}" wx:key="label" class="comp-data-row">
-          <text class="comp-metric-label">{{item.label}}</text>
-          <text class="comp-value-you">{{item.userDisplay}}</text>
-          <text class="comp-value-elite">{{item.eliteDisplay}}</text>
-          <text class="comp-value-gap" style="color: {{item.diffColor || 'rgba(255,255,255,0.45)'}};">{{item.diffDisplay}}</text>
-        </view>
-
-        <text class="comp-unit-hint" wx:if="{{comparisonRows.length > 0}}">
-          {{comparisonRows[0].unit}}
-        </text>
-      </view>
-
-      <!-- Comparison error fallback -->
-      <view wx:elif="{{compareError}}" class="error-card" style="margin-top: 8rpx;">
-        <text class="body-text">{{compareError}}</text>
-      </view>
-
-      <!-- No comparison data -->
-      <view wx:else class="no-analysis-block">
-        <text class="body-text" style="text-align: center;">{{i.noCompareData}}</text>
-      </view>
-    </view>
-
-    <!-- Elite stats (original) -->
+    <!-- Stats -->
     <view class="card" wx:if="{{selectedAthlete.stats.length > 0}}">
-      <text class="section-title">📊 {{i.trainingParams}}</text>
+      <text class="section-title">📊 训练参数</text>
       <view class="stats-grid">
         <view wx:for="{{selectedAthlete.stats}}" wx:key="label" class="stat-item">
           <text class="stat-value text-mint">{{item.value}}</text>
@@ -150,23 +90,12 @@
       </view>
     </view>
 
-    <!-- RF-304: Share button -->
-    <button class="btn-mint-outline" style="width: 100%; height: 96rpx; font-size: 30rpx; border-radius: 28rpx; margin-top: 8rpx;" open-type="share">
-      📤 {{i.shareResult}}
-    </button>
-
-    <!-- RF-913: Save share image to album -->
-    <button class="btn-secondary" style="width: 100%; height: 96rpx; font-size: 30rpx; border-radius: 28rpx; margin-top: 20rpx;" bindtap="saveShareToAlbum">
-      🖼️ {{isZh ? '保存到相册' : 'Save to Album'}}
-    </button>
+    <!-- iOS-only note for full compare -->
+    <view class="info-card">
+      <text class="info-icon">📱</text>
+      <text class="info-text">{{i.compareNote}}</text>
+    </view>
 
   </view>
-
-  <!-- RF-913: Hidden canvas for share image generation -->
-  <canvas
-    type="2d"
-    id="shareCanvas"
-    style="position: fixed; left: -9999rpx; top: -9999rpx; width: 600rpx; height: 928rpx;"
-  />
 
 </view>
