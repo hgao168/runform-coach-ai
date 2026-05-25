@@ -1,0 +1,109 @@
+<!-- pages/replay/replay.wxml -->
+<view class="page-container">
+
+  <!-- Header -->
+  <view class="replay-header">
+    <text class="back-btn" bindtap="goBack">‹ {{i.back}}</text>
+    <text class="replay-title">{{i.replayTitle}}</text>
+    <text class="replay-date">{{dateDisplay}}</text>
+  </view>
+
+  <!-- ── Stats Cards ── -->
+  <view class="stats-grid">
+    <view class="stat-card">
+      <text class="stat-label">{{i.duration}}</text>
+      <text class="stat-value">{{durationDisplay}}</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-label">{{i.distance}}</text>
+      <text class="stat-value">{{distanceDisplay}}</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-label">{{i.avgCadence}}</text>
+      <text class="stat-value stat-accent-green">{{avgCadenceDisplay}}</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-label">{{i.avgOscillation}}</text>
+      <text class="stat-value stat-accent-cyan">{{avgOscillationDisplay}}</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-label">{{i.gct}}</text>
+      <text class="stat-value stat-accent-orange">{{gctDisplay}}</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-label">{{i.postureScore}}</text>
+      <text class="stat-value" style="color: {{postureScoreColor}};">{{postureScoreDisplay}}</text>
+    </view>
+  </view>
+
+  <!-- ── Trend Chart ── -->
+  <view wx:if="{{trendHasData}}" class="section">
+    <view class="section-header">
+      <text class="section-icon">📈</text>
+      <text class="section-title">{{i.trendTitle}}</text>
+    </view>
+    <view class="trend-canvas-wrap">
+      <canvas
+        type="2d"
+        id="replayTrendCanvas"
+        class="trend-canvas"
+        bindtouchstart="onTrendChartTap"
+      ></canvas>
+      <!-- Tooltip -->
+      <view
+        wx:if="{{trendTooltip}}"
+        class="trend-tooltip"
+        style="left: {{trendTooltip.x}}px; top: {{trendTooltip.y}}px;"
+      >
+        <view class="trend-tooltip-inner" style="border-color: {{trendTooltip.color}};">
+          <text class="trend-tooltip-text">{{trendTooltip.text}}</text>
+        </view>
+      </view>
+    </view>
+    <text class="trend-tap-hint">{{i.trendTapHint}}</text>
+  </view>
+
+  <view wx:else class="section">
+    <view class="section-header">
+      <text class="section-icon">📈</text>
+      <text class="section-title">{{i.trendTitle}}</text>
+    </view>
+    <view class="trend-empty">
+      <text class="trend-empty-icon">📉</text>
+      <text class="trend-empty-text">{{i.trendNoData}}</text>
+    </view>
+  </view>
+
+  <!-- ── Running Path ── -->
+  <view wx:if="{{hasPath}}" class="section">
+    <view class="section-header">
+      <text class="section-icon">🗺️</text>
+      <text class="section-title">{{i.pathTitle}}</text>
+    </view>
+    <view class="path-canvas-wrap">
+      <canvas
+        type="2d"
+        id="replayPathCanvas"
+        class="path-canvas"
+      ></canvas>
+    </view>
+  </view>
+
+  <view wx:else class="section">
+    <view class="section-header">
+      <text class="section-icon">🗺️</text>
+      <text class="section-title">{{i.pathTitle}}</text>
+    </view>
+    <view class="path-empty">
+      <text class="path-empty-text">{{i.pathNoData}}</text>
+    </view>
+  </view>
+
+  <!-- ── View Detail Button ── -->
+  <view class="action-section">
+    <button class="btn-mint-outline full-btn" bindtap="viewDetail">
+      🔍 {{i.viewDetail}}
+    </button>
+  </view>
+
+</view>

@@ -505,8 +505,17 @@ Page({
     const idx = e.currentTarget.dataset.index
     const item = this.data.items[idx]
     if (!item || !item.result) return
-    wx.setStorageSync('rf_pendingResult', item.result)
-    wx.navigateTo({ url: '/pages/result/result' })
+
+    // Navigate to replay page with full session data
+    // Build session-like object from history item
+    const rawHistory = wx.getStorageSync('rf_history') || []
+    // Find the matching raw item (items are reversed in display, rawHistory is oldest-first)
+    const rawItems = [...rawHistory].reverse()
+    const rawItem = rawItems[idx]
+    const sessionData = rawItem || { id: item.id, date: item.dateDisplay, result: item.result }
+
+    wx.setStorageSync('rf_pendingReplay', sessionData)
+    wx.navigateTo({ url: '/pages/replay/replay' })
   },
 
   // RF-1010: Navigate to weekly insight

@@ -341,3 +341,278 @@
   margin-top: 8rpx;
   padding-right: 12rpx;
 }
+
+/* ═══════════════════════════════════════ */
+/* Rich Compare Result View               */
+/* ═══════════════════════════════════════ */
+
+.result-view {
+  margin-top: 8rpx;
+}
+
+/* ── 1. Similarity Ring Chart ── */
+
+.similarity-section {
+  display: flex;
+  justify-content: center;
+  padding: 20rpx 0 8rpx;
+}
+
+.ring-wrapper {
+  position: relative;
+  width: 220rpx;
+  height: 220rpx;
+}
+
+.ring-canvas {
+  width: 220rpx;
+  height: 220rpx;
+}
+
+.ring-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.ring-score-text {
+  font-size: 48rpx;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.ring-label-text {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+}
+
+/* ── 2. AI Coach Narrative ── */
+
+.coach-card {
+  background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,245,160,0.04));
+  border: 1rpx solid rgba(0,212,255,0.2);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-top: 20rpx;
+  position: relative;
+}
+
+.coach-card-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 16rpx;
+}
+
+.coach-quote-icon {
+  font-size: 48rpx;
+  color: #00d4ff;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.coach-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #ffffff;
+  flex: 1;
+}
+
+.ai-badge {
+  background: linear-gradient(135deg, #00f5a0, #00d4ff);
+  border-radius: 8rpx;
+  padding: 4rpx 14rpx;
+  flex-shrink: 0;
+}
+
+.ai-badge-text {
+  font-size: 20rpx;
+  font-weight: 800;
+  color: #0a0a0f;
+}
+
+.coach-narrative-text {
+  font-size: 26rpx;
+  color: rgba(255,255,255,0.72);
+  line-height: 1.7;
+}
+
+/* ── 3. Top Gaps List ── */
+
+.gaps-section {
+  margin-top: 24rpx;
+}
+
+.gaps-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 16rpx;
+  display: block;
+}
+
+.gap-card {
+  background: rgba(255,71,87,0.06);
+  border: 1rpx solid rgba(255,71,87,0.15);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
+}
+
+.gap-header-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.gap-metric-tag {
+  background: rgba(255,71,87,0.15);
+  border-radius: 8rpx;
+  padding: 6rpx 16rpx;
+}
+
+.gap-metric-text {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #ff4757;
+}
+
+.gap-value-text {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  text-align: right;
+}
+
+.gap-suggestion-text {
+  display: block;
+  font-size: 24rpx;
+  color: rgba(255,255,255,0.62);
+  line-height: 1.6;
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid rgba(255,255,255,0.06);
+}
+
+/* ── 4. Metric Comparison Grid ── */
+
+.metric-grid-section {
+  margin-top: 24rpx;
+}
+
+.metric-grid-row {
+  background: rgba(255,255,255,0.04);
+  border: 1rpx solid rgba(255,255,255,0.06);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
+}
+
+.metric-label-row {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8rpx;
+  margin-bottom: 14rpx;
+}
+
+.metric-label-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.metric-label-unit {
+  font-size: 20rpx;
+  color: rgba(255,255,255,0.38);
+}
+
+.metric-direction {
+  font-size: 18rpx;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.metric-values-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.metric-user-col,
+.metric-elite-col,
+.metric-gap-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.metric-col-label {
+  font-size: 20rpx;
+  color: rgba(255,255,255,0.4);
+  font-weight: 600;
+}
+
+.metric-col-value {
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+/* Progress bars */
+.metric-progress-section {
+  margin-top: 4rpx;
+}
+
+.metric-progress-track {
+  position: relative;
+  height: 12rpx;
+  border-radius: 6rpx;
+  overflow: visible;
+}
+
+.metric-progress-user {
+  height: 100%;
+  border-radius: 6rpx;
+  transition: width 0.6s ease;
+}
+
+.metric-progress-elite-marker {
+  position: absolute;
+  top: -4rpx;
+  width: 4rpx;
+  height: 20rpx;
+  background: #ff9f30;
+  border-radius: 2rpx;
+  transform: translateX(-50%);
+}
+
+.metric-progress-labels {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8rpx;
+}
+
+.metric-progress-status {
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.metric-progress-target-hint {
+  font-size: 20rpx;
+  color: rgba(255,255,255,0.36);
+}

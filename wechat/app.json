@@ -14,7 +14,8 @@
     "pages/challenge/challenge",
     "pages/club-leaderboard/club-leaderboard",
     "pages/coach/coach",
-    "pages/ugc/ugc"
+    "pages/ugc/ugc",
+    "pages/replay/replay"
   ],
   "tabBar": {
     "color": "#888888",
