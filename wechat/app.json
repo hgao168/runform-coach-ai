@@ -50,16 +50,5 @@
     "navigationBarTitleText": "RunForm Coach AI"
   },
   "style": "v2",
-  "sitemapLocation": "sitemap.json",
-  "permission": {
-    "scope.camera": {
-      "desc": "用于录制跑步视频进行姿态分析"
-    },
-    "scope.album": {
-      "desc": "用于选择跑步视频进行姿态分析"
-    },
-    "scope.record": {
-      "desc": "用于录制跑步视频"
-    }
-  }
+  "sitemapLocation": "sitemap.json"
 }
