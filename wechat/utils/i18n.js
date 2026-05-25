@@ -36,7 +36,7 @@ const strings = {
 
     // Result page
     resultTitle: '分析结果',
-    confidence: '置信度',
+    confidence: '姿态评分',
     metrics: '动作评估',
     insightsTitle: '姿态分析',
     strengthFocus: '强化重点',
@@ -428,7 +428,7 @@ const strings = {
     angleRearDesc: 'Rear view — stride width & pelvis',
     angleFrontDesc: 'Front view — knees & foot strike',
     resultTitle: 'Analysis Result',
-    confidence: 'Confidence',
+    confidence: 'Form Report',
     metrics: 'Form Metrics',
     insightsTitle: 'Posture Analysis',
     strengthFocus: 'Strength Focus',
@@ -784,12 +784,20 @@ const t = (key) => {
   return dict[key] !== undefined ? dict[key] : key
 }
 
-// All WeChat users are in China — always use B站
-const isChina = () => true
+// Detect China mainland for video platform links
+const isChina = () => {
+  const region = (sysInfo.region || '').toLowerCase()
+  // China mainland regions (CN), exclude TW, HK, MO
+  return region === 'cn' || (!region.includes('taiwan') && !region.includes('hong kong') && !region.includes('macau') && isZh)
+}
 
 const getVideoSearchUrl = (exerciseName) => {
-  const query = encodeURIComponent(`${exerciseName} 跑步训练`)
-  return `https://search.bilibili.com/all?keyword=${query}`
+  if (isChina()) {
+    // B站: use cleaner query without "跑步训练" suffix for better match
+    const query = encodeURIComponent(`${exerciseName} 动作教学`)
+    return `https://search.bilibili.com/all?keyword=${query}&order=click`
+  }
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(exerciseName + ' running exercise form')}`
 }
 
 const backendLang = isZh ? 'zh-Hans' : 'en'
