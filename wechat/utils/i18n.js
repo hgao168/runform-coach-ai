@@ -1,7 +1,8 @@
 // utils/i18n.js
+// WeChat mini-program defaults to Chinese; all users are in China
+const isZh = true
 const sysInfo = wx.getSystemInfoSync()
 const sysLang = sysInfo.language || 'zh_CN'
-const isZh = sysLang.toLowerCase().startsWith('zh')
 
 const strings = {
   zh: {
@@ -783,18 +784,12 @@ const t = (key) => {
   return dict[key] !== undefined ? dict[key] : key
 }
 
-// Detect China region for video platform links
-const isChina = () => {
-  const region = sysInfo.region || ''
-  return isZh && !region.toLowerCase().includes('taiwan') && !region.toLowerCase().includes('hong kong')
-}
+// All WeChat users are in China — always use B站
+const isChina = () => true
 
 const getVideoSearchUrl = (exerciseName) => {
   const query = encodeURIComponent(`${exerciseName} 跑步训练`)
-  if (isChina()) {
-    return `https://search.bilibili.com/all?keyword=${query}`
-  }
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(exerciseName + ' running exercise form')}`
+  return `https://search.bilibili.com/all?keyword=${query}`
 }
 
 const backendLang = isZh ? 'zh-Hans' : 'en'
