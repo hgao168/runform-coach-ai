@@ -61,10 +61,12 @@ function analyzeVideo(filePath, language, profile, onProgress) {
       },
       timeout: 120000,
       success(res) {
+        console.log('[api] upload response status:', res.statusCode)
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try {
             resolve(JSON.parse(res.data))
           } catch {
+            console.error('[api] upload parse error, raw:', res.data)
             reject(new Error('服务器返回格式错误'))
           }
         } else {
@@ -73,10 +75,12 @@ function analyzeVideo(filePath, language, profile, onProgress) {
             const parsed = JSON.parse(res.data)
             detail = parsed.detail || detail
           } catch { /* ignore */ }
+          console.error('[api] upload failed:', res.statusCode, detail)
           reject(new Error(detail))
         }
       },
       fail(err) {
+        console.error('[api] upload fail:', err)
         reject(new Error(err.errMsg || '上传失败'))
       },
     })

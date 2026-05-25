@@ -134,6 +134,7 @@ Page({
         wx.navigateTo({ url: '/pages/result/result' })
       })
       .catch((err) => {
+        console.error('[analyze] 分析失败:', err)
         this.setData({ analyzing: false, compressing: false, uploadProgress: 0, compressResult: null })
         wx.showModal({
           title: t('error'),
