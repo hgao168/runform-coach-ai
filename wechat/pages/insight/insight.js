@@ -105,11 +105,16 @@ Page({
   _parseData(data) {
     // Parse comparison metrics
     const comp = data.comparison || {}
+    const fmtPct = (v) => {
+      if (v == null) return null
+      return (v > 0 ? '+' : '') + v.toFixed(1)
+    }
     const comparison = [
       {
         label: t('insightCadence'),
         key: 'cadence_change_pct',
         changePct: comp.cadence_change_pct,
+        changePctDisplay: fmtPct(comp.cadence_change_pct),
         unit: 'spm',
         icon: '👟',
       },
@@ -117,6 +122,7 @@ Page({
         label: t('insightOscillation'),
         key: 'vertical_oscillation_change_pct',
         changePct: comp.vertical_oscillation_change_pct,
+        changePctDisplay: fmtPct(comp.vertical_oscillation_change_pct),
         unit: 'cm',
         icon: '↕️',
       },
@@ -124,6 +130,7 @@ Page({
         label: t('insightGCT'),
         key: 'ground_contact_time_change_pct',
         changePct: comp.ground_contact_time_change_pct,
+        changePctDisplay: fmtPct(comp.ground_contact_time_change_pct),
         unit: 'ms',
         icon: '⏱️',
       },
@@ -131,6 +138,7 @@ Page({
         label: t('insightDistance'),
         key: 'distance_change_pct',
         changePct: comp.distance_change_pct,
+        changePctDisplay: fmtPct(comp.distance_change_pct),
         unit: 'km',
         icon: '📏',
       },
@@ -138,6 +146,7 @@ Page({
         label: t('insightSessions'),
         key: 'session_count_change_pct',
         changePct: comp.session_count_change_pct,
+        changePctDisplay: fmtPct(comp.session_count_change_pct),
         unit: '',
         icon: '📅',
       },

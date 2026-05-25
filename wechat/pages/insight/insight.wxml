@@ -49,7 +49,7 @@
               <text
                 class="compare-value {{item.changePct > 0 ? 'text-mint' : item.changePct < 0 ? 'text-red' : 'text-dim'}}"
               >
-                {{item.changePct > 0 ? '+' : ''}}{{item.changePct.toFixed(1)}}%
+                {{item.changePctDisplay}}%
               </text>
               <text class="compare-arrow {{item.changePct > 0 ? 'text-mint' : item.changePct < 0 ? 'text-red' : 'text-dim'}}">
                 {{item.changePct > 0 ? '▲' : item.changePct < 0 ? '▼' : '–'}}
