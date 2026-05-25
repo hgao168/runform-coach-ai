@@ -9,18 +9,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Install Railway CLI
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: bash <(curl -fsSL cli.new)
+        run: curl -fsSL https://railway.com/install.sh | sh
 
-      - name: Deploy to Railway
+      - name: Redeploy staging service
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          cd backend
-          ~/.railway/bin/railway link d2bdff7b-1da5-4144-838b-681527e8ee8d
-          ~/.railway/bin/railway up --detach
+          railway link \
+            --project c9c80ae8-2103-4969-9420-fac60b0c38dd \
+            --environment staging \
+            --service d2bdff7b-1da5-4144-838b-681527e8ee8d
+          railway redeploy --yes
