@@ -1,6 +1,7 @@
 // pages/result/result.js
 const api = require('../../utils/api')
-const { t, isZh, backendLang, getVideoSearchUrl } = require('../../utils/i18n')
+const { t, isZh, backendLang, getVideoSearchUrl, isChina } = require('../../utils/i18n')
+const { getBestVideoUrl } = require('../../utils/exercise-video-map')
 const voiceCoach = require('../../utils/voice-coach')
 const ShareCard = require('../../utils/share-card')
 
@@ -199,6 +200,7 @@ Page({
     })
 
     // Build strengthFocusItems: each issue with its exercises extracted from recommended_exercises
+    const chinaUser = isChina()
     const strengthFocusItems = issues.map((iss) => {
       const sev = (iss.severity || 'low').toLowerCase()
       let color = '#00f5a0'
@@ -217,8 +219,8 @@ Page({
           duration: ex.duration,
           frequency_per_week: ex.frequency_per_week,
           category: ex.category || '',
-          searchUrl: getVideoSearchUrl(rawName),
-          bilibiliUrl: `https://search.bilibili.com/all?keyword=${encodeURIComponent(rawName + ' 跑步训练')}`,
+          searchUrl: getBestVideoUrl(rawName, chinaUser),
+          bilibiliUrl: chinaUser ? getBestVideoUrl(rawName, true) : getBestVideoUrl(rawName, true),
         }
       })
 
@@ -246,8 +248,8 @@ Page({
           duration: ex.duration,
           frequency_per_week: ex.frequency_per_week,
           category: ex.category || '',
-          searchUrl: getVideoSearchUrl(rawName),
-          bilibiliUrl: `https://search.bilibili.com/all?keyword=${encodeURIComponent(rawName + ' 跑步训练')}`,
+          searchUrl: getBestVideoUrl(rawName, chinaUser),
+          bilibiliUrl: chinaUser ? getBestVideoUrl(rawName, true) : getBestVideoUrl(rawName, true),
           targetIssue: iss.title || iss.name || '',
         })
       })
