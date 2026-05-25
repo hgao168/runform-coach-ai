@@ -43,6 +43,7 @@ Page({
     metrics: [],
     insights: [],
     exercises: [],
+    strengthFocusItems: [],  // merged issues+exercises for iOS-style section
 
     rawResult: null,
 
@@ -166,28 +167,12 @@ Page({
           }
         })
 
-    // Issues / insights
-    const issues = r.issues || r.insights || []
-    const insights = issues.map((iss) => {
-      const sev = (iss.severity || 'low').toLowerCase()
-      let color = '#00f5a0'
-      let severityText = '轻'
-      if (sev === 'high' || sev === 'critical') { color = '#ff4757'; severityText = '高' }
-      else if (sev === 'medium') { color = '#ff9f30'; severityText = '中' }
-      return {
-        title: iss.title || iss.name || '',
-        description: iss.description || iss.detail || '',
-        color,
-        severityText,
-      }
-    })
-
-    // Exercises — with B站 video link and iOS-style metadata
-    // Map exercise names to relevant icons and link to detected issues
+    // Exercise icon lookup
     const exerciseIcons = {
       squat: '🏋️', lunge: '🦵', plank: '🧘', bridge: '🌉', deadlift: '💪',
       calf: '🦶', hip: '🦿', core: '🎯', balance: '⚖️', stretch: '🤸',
-      mobility: '🔄', strength: '💪', default: '🏋️',
+      mobility: '🔄', strength: '💪', knee: '🦿', ankle: '🦶', shoulder: '💪',
+      default: '🏋️',
     }
     const getExerciseIcon = (name) => {
       const n = (name || '').toLowerCase()
@@ -197,39 +182,75 @@ Page({
       return exerciseIcons.default
     }
 
-    // Build target issue map from insights for cross-referencing
-    const issueMap = {}
-    issues.forEach((iss) => {
+    // Issues / insights (keep for backward compat: voice coach, share, etc.)
+    const issues = r.issues || r.insights || []
+    const insights = issues.map((iss) => {
       const sev = (iss.severity || 'low').toLowerCase()
-      const exName = iss.recommended_exercise || iss.exercise || ''
-      const targetKey = (iss.target_area || iss.area || '').toLowerCase()
-      if (exName) {
-        issueMap[exName.toLowerCase()] = {
-          title: iss.title || iss.name || '',
-          severity: sev,
-          area: targetKey,
-        }
+      let color = '#00f5a0'
+      let severityText = '轻'
+      if (sev === 'high' || sev === 'critical') { color = '#ff4757'; severityText = '高' }
+      else if (sev === 'medium') { color = '#ff9f30'; severityText = '中' }
+      return {
+        title: iss.title || iss.name || '',
+        description: iss.explanation || iss.description || iss.detail || '',
+        color,
+        severityText,
       }
     })
 
-    const exercises = (r.strength_focus || r.exercises || []).map((ex) => {
-      const rawName = ex.name || ex.exercise_name || ''
-      const exerciseQuery = encodeURIComponent(`${rawName} 跑步训练`)
-      const bilibiliUrl = `https://search.bilibili.com/all?keyword=${exerciseQuery}`
-      // Try to find a related issue
-      const relatedIssue = issueMap[rawName.toLowerCase()] || null
+    // Build strengthFocusItems: each issue with its exercises extracted from recommended_exercises
+    const strengthFocusItems = issues.map((iss) => {
+      const sev = (iss.severity || 'low').toLowerCase()
+      let color = '#00f5a0'
+      let severityText = '轻'
+      if (sev === 'high' || sev === 'critical') { color = '#ff4757'; severityText = '高' }
+      else if (sev === 'medium') { color = '#ff9f30'; severityText = '中' }
+
+      const exs = (iss.recommended_exercises || []).map((ex) => {
+        const rawName = ex.name || ex.exercise_name || ''
+        return {
+          name: rawName,
+          icon: getExerciseIcon(rawName),
+          description: ex.reason || ex.description || ex.detail || ex.explanation || '',
+          sets: ex.sets,
+          reps: ex.reps,
+          duration: ex.duration,
+          frequency_per_week: ex.frequency_per_week,
+          category: ex.category || '',
+          searchUrl: getVideoSearchUrl(rawName),
+          bilibiliUrl: `https://search.bilibili.com/all?keyword=${encodeURIComponent(rawName + ' 跑步训练')}`,
+        }
+      })
+
       return {
-        name: rawName,
-        icon: getExerciseIcon(rawName),
-        description: ex.description || ex.detail || '',
-        sets: ex.sets,
-        reps: ex.reps,
-        duration: ex.duration,
-        frequency_per_week: ex.frequency_per_week,
-        searchUrl: getVideoSearchUrl(rawName),
-        bilibiliUrl,
-        targetIssue: relatedIssue ? relatedIssue.title : (ex.target_issue || ''),
+        title: iss.title || iss.name || '',
+        description: iss.explanation || iss.description || iss.detail || '',
+        color,
+        severityText,
+        exercises: exs,
       }
+    })
+
+    // Flatten all exercises from issues for backward compat
+    const exercises = []
+    issues.forEach((iss) => {
+      const exs = iss.recommended_exercises || []
+      exs.forEach((ex) => {
+        const rawName = ex.name || ex.exercise_name || ''
+        exercises.push({
+          name: rawName,
+          icon: getExerciseIcon(rawName),
+          description: ex.reason || ex.description || ex.detail || '',
+          sets: ex.sets,
+          reps: ex.reps,
+          duration: ex.duration,
+          frequency_per_week: ex.frequency_per_week,
+          category: ex.category || '',
+          searchUrl: getVideoSearchUrl(rawName),
+          bilibiliUrl: `https://search.bilibili.com/all?keyword=${encodeURIComponent(rawName + ' 跑步训练')}`,
+          targetIssue: iss.title || iss.name || '',
+        })
+      })
     })
 
     // Check if feedback was already submitted for this analysis
@@ -248,6 +269,7 @@ Page({
       metrics,
       insights,
       exercises,
+      strengthFocusItems,
       analysisId,
       feedbackSubmitted: alreadySubmitted,
     })
@@ -349,15 +371,20 @@ Page({
   // ──────────── Original handlers ────────────
 
   openExercise(e) {
-    const idx = e.currentTarget.dataset.index
-    const ex = this.data.exercises[idx]
-    if (!ex) return
-    // Use B站 URL for China users, searchUrl (may be YouTube) otherwise
-    const url = isZh ? (ex.bilibiliUrl || ex.searchUrl) : ex.searchUrl
-    wx.setClipboardData({
-      data: url,
-      success: () => {
-        wx.showToast({ title: this.data.i.tutorialCopied, icon: 'none', duration: 2500 })
+    const { url: searchUrl, bilibili: bilibiliUrl } = e.currentTarget.dataset
+    const finalUrl = isZh ? (bilibiliUrl || searchUrl) : searchUrl
+    if (!finalUrl) return
+
+    // Try webview navigation first; fall back to clipboard on failure
+    wx.navigateTo({
+      url: `/pages/webview/webview?url=${encodeURIComponent(finalUrl)}&title=${encodeURIComponent(isZh ? '训练视频' : 'Exercise Video')}`,
+      fail: () => {
+        wx.setClipboardData({
+          data: finalUrl,
+          success: () => {
+            wx.showToast({ title: this.data.i.tutorialCopied, icon: 'none', duration: 2500 })
+          },
+        })
       },
     })
   },

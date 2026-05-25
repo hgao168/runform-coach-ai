@@ -25,77 +25,87 @@
     </view>
   </view>
 
-  <!-- Issues / Insights -->
-  <view class="card" wx:if="{{insights.length > 0}}">
-    <text class="section-title">⚠️ {{i.insightsTitle}}</text>
-    <view wx:for="{{insights}}" wx:key="index" class="insight-item">
-      <view class="insight-badge" style="background: {{item.color}}20; border-color: {{item.color}}40;">
-        <text class="insight-severity" style="color: {{item.color}};">{{item.severityText}}</text>
-      </view>
-      <view class="insight-body">
-        <text class="insight-title">{{item.title}}</text>
-        <text class="insight-desc">{{item.description}}</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- No issues -->
-  <view class="card" wx:if="{{insights.length === 0}}">
-    <view class="empty-good">
-      <text style="font-size: 64rpx;">✅</text>
-      <text class="text-mint" style="font-size: 30rpx; font-weight: 600; margin-top: 12rpx;">{{i.noIssues}}</text>
-    </view>
-  </view>
-
-  <!-- Strength Focus / Exercise recommendations -->
-  <view class="card card-dark strength-focus-card" wx:if="{{exercises.length > 0}}">
+  <!-- Strength Focus — merged issues + inline exercises (iOS-style) -->
+  <view class="card card-dark" wx:if="{{strengthFocusItems.length > 0}}">
     <view class="sf-header">
       <text class="sf-header-icon">🏋️</text>
       <text class="section-title sf-header-title">{{i.strengthFocus}}</text>
     </view>
     <text class="sf-subtitle">{{i.strengthFocusDesc}}</text>
 
-    <view wx:for="{{exercises}}" wx:key="index" class="exercise-card" bindtap="openExercise" data-index="{{index}}">
-      <!-- Exercise header: icon + name + target issue badge -->
-      <view class="ex-card-header">
-        <view class="ex-icon-wrap">
-          <text class="ex-icon">{{item.icon}}</text>
+    <view wx:for="{{strengthFocusItems}}" wx:key="index" class="sf-issue-block">
+      <!-- Issue header with severity badge -->
+      <view class="sf-issue-header">
+        <view class="insight-badge" style="background: {{item.color}}20; border-color: {{item.color}}40;">
+          <text class="insight-severity" style="color: {{item.color}};">{{item.severityText}}</text>
         </view>
-        <view class="ex-title-wrap">
-          <text class="ex-name">{{item.name}}</text>
-          <text class="ex-target" wx:if="{{item.targetIssue}}">🎯 {{i.targetsIssue}}: {{item.targetIssue}}</text>
-        </view>
-        <text class="ex-arrow">→</text>
-      </view>
-
-      <!-- Description -->
-      <text class="ex-desc">{{item.description}}</text>
-
-      <!-- Sets / Reps / Frequency -->
-      <view wx:if="{{item.sets || item.duration}}" class="ex-meta-row">
-        <view wx:if="{{item.sets}}" class="ex-meta-chip">
-          <text class="ex-meta-num">{{item.sets}}</text>
-          <text class="ex-meta-label">{{i.setLabel}}</text>
-          <text class="ex-meta-sep">×</text>
-          <text class="ex-meta-num">{{item.reps}}</text>
-          <text class="ex-meta-label">{{i.repLabel}}</text>
-        </view>
-        <view wx:if="{{item.duration}}" class="ex-meta-chip ex-meta-chip-alt">
-          <text>⏱ {{item.duration}}</text>
-        </view>
-        <view wx:if="{{item.frequency_per_week}}" class="ex-meta-chip ex-meta-chip-alt">
-          <text>📅 {{item.frequency_per_week}}{{i.perWeek}}</text>
+        <view class="insight-body">
+          <text class="insight-title">{{item.title}}</text>
+          <text class="insight-desc">{{item.description}}</text>
         </view>
       </view>
 
-      <!-- Video search link -->
-      <view class="ex-video-link">
-        <view class="ex-video-link-inner">
-          <text class="ex-video-icon">🎬</text>
-          <text class="ex-video-text">{{i.watchTutorial}}</text>
-          <text class="ex-video-arrow">›</text>
+      <!-- Exercises under this issue (inline) -->
+      <view wx:if="{{item.exercises.length > 0}}" class="sf-exercises">
+        <view
+          wx:for="{{item.exercises}}"
+          wx:key="name"
+          wx:for-item="ex"
+          class="exercise-card"
+          bindtap="openExercise"
+          data-url="{{ex.searchUrl}}"
+          data-bilibili="{{ex.bilibiliUrl}}"
+        >
+          <!-- Exercise header: icon + name -->
+          <view class="ex-card-header">
+            <view class="ex-icon-wrap">
+              <text class="ex-icon">{{ex.icon}}</text>
+            </view>
+            <view class="ex-title-wrap">
+              <text class="ex-name">{{ex.name}}</text>
+              <text class="ex-category" wx:if="{{ex.category}}">{{ex.category}}</text>
+            </view>
+            <text class="ex-arrow">→</text>
+          </view>
+
+          <!-- Description / reason -->
+          <text class="ex-desc" wx:if="{{ex.description}}">{{ex.description}}</text>
+
+          <!-- Sets / Reps / Frequency -->
+          <view wx:if="{{ex.sets || ex.duration}}" class="ex-meta-row">
+            <view wx:if="{{ex.sets}}" class="ex-meta-chip">
+              <text class="ex-meta-num">{{ex.sets}}</text>
+              <text class="ex-meta-label">{{i.setLabel}}</text>
+              <text class="ex-meta-sep">×</text>
+              <text class="ex-meta-num">{{ex.reps}}</text>
+              <text class="ex-meta-label">{{i.repLabel}}</text>
+            </view>
+            <view wx:if="{{ex.duration}}" class="ex-meta-chip ex-meta-chip-alt">
+              <text>⏱ {{ex.duration}}</text>
+            </view>
+            <view wx:if="{{ex.frequency_per_week}}" class="ex-meta-chip ex-meta-chip-alt">
+              <text>📅 {{ex.frequency_per_week}}{{i.perWeek}}</text>
+            </view>
+          </view>
+
+          <!-- Video search link -->
+          <view class="ex-video-link">
+            <view class="ex-video-link-inner">
+              <text class="ex-video-icon">🎬</text>
+              <text class="ex-video-text">{{i.watchTutorial}}</text>
+              <text class="ex-video-arrow">›</text>
+            </view>
+          </view>
         </view>
       </view>
+    </view>
+  </view>
+
+  <!-- No issues -->
+  <view class="card" wx:if="{{strengthFocusItems.length === 0}}">
+    <view class="empty-good">
+      <text style="font-size: 64rpx;">✅</text>
+      <text class="text-mint" style="font-size: 30rpx; font-weight: 600; margin-top: 12rpx;">{{i.noIssues}}</text>
     </view>
   </view>
 
