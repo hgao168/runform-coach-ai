@@ -297,6 +297,13 @@ def list_athletes() -> list[AthleteListItem]:
     return get_all_athletes()
 
 
+@app.post("/compare", response_model=CompareResponse)
+@limiter.limit("10/minute")
+async def compare_legacy(request: CompareRequest, _api_key: str = Depends(verify_api_key)) -> CompareResponse:
+    """Backward-compat alias — forwards to /api/v1/compare."""
+    return await compare(request, _api_key=_api_key)
+
+
 @app.post("/api/v1/compare", response_model=CompareResponse)
 @limiter.limit("10/minute")
 async def compare(request: CompareRequest, _api_key: str = Depends(verify_api_key)) -> CompareResponse:

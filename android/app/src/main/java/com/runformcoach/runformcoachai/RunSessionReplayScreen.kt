@@ -517,7 +517,7 @@ private fun ReplayContent(
     val secs = (elapsedSec % 60).toInt()
 
     LazyColumn(
-        modifier = Modifier.weight(1f),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {

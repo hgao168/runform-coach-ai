@@ -438,6 +438,7 @@ private fun MetricRow(metric: Metric) {
  * Map metric name + status to an injury risk hint string.
  * Returns null if no relevant hint.
  */
+@Composable
 private fun injuryRiskHint(metricName: String, status: String): String? {
     if (status.lowercase() in listOf("good", "excellent")) return null
     val nameLower = metricName.lowercase()
