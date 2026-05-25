@@ -38,13 +38,16 @@ function request(method, path, data) {
 function analyzeVideo(filePath, language, profile, onProgress) {
   let profileContext = ''
   if (profile) {
+    const legLen = profile.legLengthCm
+    const mileage = profile.weeklyMileageKm
+    const days = profile.runningDaysPerWeek
     profileContext = JSON.stringify({
       gender: profile.gender || 'unspecified',
       shoe_size: profile.shoeSize || '',
-      leg_length_cm: profile.legLengthCm || '',
+      leg_length_cm: legLen ? parseFloat(legLen) : null,
       shoe_brand_model: profile.shoeBrandModel || '',
-      weekly_mileage_km: profile.weeklyMileageKm || '',
-      running_days_per_week: profile.runningDaysPerWeek || '',
+      weekly_mileage_km: mileage ? parseFloat(mileage) : null,
+      running_days_per_week: days ? parseInt(days, 10) : null,
       injury_note: profile.injuryNote || '',
     })
   }
