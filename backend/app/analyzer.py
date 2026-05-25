@@ -29,8 +29,79 @@ def _parse_llm_json(raw: str | None, context: str) -> dict:
         raise RuntimeError(f"{context}: LLM returned invalid JSON.") from exc
 
 _SYSTEM_PROMPT = """You are an expert running coach and sports biomechanics analyst. Analyze the provided video frames of a person running and give a detailed biomechanical assessment.
-Return ONLY valid JSON with this exact structure: { "summary": "<1-2 sentence overall assessment>", "confidence": 0.0, "metrics": [ { "name": "", "score": 0.0, "status": "", "explanation": "" } ], "issues": [ { "title": "", "severity": "", "explanation": "", "recommended_exercises": [ { "name": "", "category": "", "sets": 0, "reps": "", "frequency_per_week": 0, "reason": "" } ] } ] }
-Always evaluate exactly these 4 metrics in order: 1. Hip stability 2. Knee tracking 3. Trunk control 4. Overstride risk. If unclear due to video angle or quality, assign a moderate score and note the limitation. Provide 1-3 issues with 2 exercises each."""
+
+You MUST evaluate ALL of the following 14 biomechanical metrics. For each metric, assign a score (0.0–1.0 where 1.0 is optimal), a status (one of: "Good", "Moderate", "Needs work", "Not measurable"), and a 1-2 sentence explanation of what you observe and how to improve:
+1. Cadence — step frequency; higher cadence (160–180 spm range) reduces overstride risk and landing impact. Look for quick, compact steps.
+2. Overstride risk — whether the foot lands ahead of the hip center of mass. A foot landing well in front of the body increases braking forces.
+3. Trunk lean — forward body lean initiated from the ankles (not bending at the hips). Slight whole-body forward lean is optimal.
+4. Knee valgus / hip stability — inward knee collapse toward the midline during stance phase. Knees should track over the toes.
+5. Vertical oscillation — excessive up-down bounce of the hips/head. Aim for a quiet, gliding stride with minimal vertical displacement.
+6. Shoulder elevation — hunching, raised, or tense shoulders that ride up toward the ears. Shoulders should stay low and relaxed.
+7. Arm swing — amplitude and rhythm of the elbow oscillation. Arms should pump smoothly in sync with leg cadence.
+8. Arm crossing (knitting) — whether arms swing across the body midline instead of front-to-back. Note dominant direction if present.
+9. Backward elbow drive — how far the elbow extends behind the body during the backswing. Strong rear drive aids propulsion.
+10. Elbow angle — average elbow flexion angle. Target is approximately 90°; too open or too tight reduces efficiency.
+11. Shoulder-arm independence — whether the arms swing independently of torso rotation. Arms should not be locked to shoulder turn.
+12. Pelvic drop / hip symmetry — left-right hip height balance during stance. Dropping on one side indicates weak glute medius.
+13. Step symmetry — left-right stride length and timing balance. Asymmetry increases injury risk.
+14. Head forward position — forward head posture where the chin juts ahead of the shoulders. Head should be neutral over spine.
+
+Also compute these composite scores (0.0–1.0) to summarize groups:
+- Posture score: aggregate of trunk lean, shoulder elevation, and head forward position.
+- Efficiency score: aggregate of cadence, overstride risk, and vertical oscillation.
+- Stability score: aggregate of knee valgus, pelvic drop, and step symmetry.
+- Propulsion score: aggregate of cadence, overstride risk, and backward elbow drive.
+- Arm mechanics score: aggregate of arm swing, arm crossing, elbow angle, backward elbow drive, and shoulder-arm independence.
+- Symmetry score: aggregate of pelvic drop and step symmetry.
+- Injury risk score: estimated injury likelihood derived from instability, asymmetry, overstride, and load-transfer patterns (higher score = higher risk, so 0.0 is safest).
+
+Additionally assess overall video quality:
+- video_quality_score (0.0–1.0): rate how suitable this video is for reliable analysis. Consider: camera angle (side view is best), lighting, resolution, whether full body is visible throughout, obstructions, motion blur, clothing that obscures joint positions.
+- quality_notes (list of strings): list specific quality issues if any (e.g. "Frontal angle limits knee tracking assessment", "Low light reduces joint visibility"). Empty list if quality is excellent.
+
+If a metric cannot be assessed due to video limitations (wrong angle, body part not visible, too blurry), set status to "Not measurable" with a moderate score (0.4–0.6) and explain why in the explanation.
+
+Provide 1-3 targeted issues focusing on the lowest-scoring metrics. Prioritize issues with status "Needs work" or "Moderate". Skip "Good" metrics. Each issue must have exactly 2 recommended exercises.
+
+Return ONLY valid JSON with this exact structure:
+{
+  "summary": "<1-2 sentence overall assessment>",
+  "video_quality_score": 0.0,
+  "quality_notes": ["<note>"],
+  "metrics": [
+    { "name": "Cadence", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Overstride risk", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Trunk lean", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Knee valgus / hip stability", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Vertical oscillation", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Shoulder elevation", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Arm swing", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Arm crossing (knitting)", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Backward elbow drive", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Elbow angle", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Shoulder-arm independence", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Pelvic drop / hip symmetry", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Step symmetry", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Head forward position", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Posture score", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Efficiency score", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Stability score", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Propulsion score", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Arm mechanics score", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Symmetry score", "score": 0.0, "status": "Good", "explanation": "" },
+    { "name": "Injury risk score", "score": 0.0, "status": "Good", "explanation": "" }
+  ],
+  "issues": [
+    {
+      "title": "",
+      "severity": "",
+      "explanation": "",
+      "recommended_exercises": [
+        { "name": "", "category": "", "sets": 0, "reps": "", "frequency_per_week": 0, "reason": "" }
+      ]
+    }
+  ]
+}"""
 
 _METRICS_SYSTEM_PROMPT = """You are an expert running coach and sports biomechanics analyst.
 You are given biomechanical metrics extracted from on-device Apple Vision pose detection.
@@ -101,7 +172,7 @@ def _build_metrics_prompt(language: str) -> str:
         )
     return prompt
 
-def _extract_frames(video_path: str, num_frames: int = 8) -> list[str]:
+def _extract_frames(video_path: str, num_frames: int = 30) -> list[str]:
     cap = cv2.VideoCapture(video_path)
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     if total == 0:
@@ -145,7 +216,7 @@ def analyze_running_video(
         tmp.write(video_bytes)
         tmp_path = tmp.name
     try:
-        frames_b64 = _extract_frames(tmp_path)
+        frames_b64 = _extract_frames(tmp_path, num_frames=30)
     finally:
         os.unlink(tmp_path)
     if not frames_b64:
@@ -163,16 +234,51 @@ def analyze_running_video(
             {"role": "system", "content": _build_video_prompt(language, profile_context)},
             {"role": "user", "content": content},
         ],
-        max_tokens=2000,
+        max_tokens=4000,
         temperature=0.2,
         response_format={"type": "json_object"},
     )
     data = _parse_llm_json(response.choices[0].message.content, "analyze_running_video")
+
+    # --- Parse LLM metrics into a lookup map ---
+    llm_metrics = [Metric(**m) for m in data.get("metrics", [])]
+    metric_map: dict[str, Metric] = {m.name: m for m in llm_metrics}
+
+    # --- Deterministic Form Score: weighted average of core biomechanical metrics ---
+    # Weights reflect injury-risk significance (mirrors iOS analyze_from_metrics logic).
+    # Cadence is excluded when "Not measurable" so it doesn't unfairly tank the score.
+    form_components: list[tuple[float, float]] = []  # (score, weight)
+    for metric_name, weight in [
+        ("Cadence", 0.30),
+        ("Overstride risk", 0.25),
+        ("Trunk lean", 0.25),
+        ("Knee valgus / hip stability", 0.20),
+    ]:
+        m = metric_map.get(metric_name)
+        if m and m.status != "Not measurable":
+            form_components.append((m.score, weight))
+
+    if form_components:
+        total_weight = sum(w for _, w in form_components)
+        form_score = sum(s * w for s, w in form_components) / total_weight
+    else:
+        form_score = 0.5  # fallback when no core metrics are measurable
+
+    # --- Quality factor: poor video reduces trust in the form score ---
+    # A perfect video gives full form score. A poor video (0.4) caps it at ~70%.
+    # This means good video does NOT inflate the score — only bad video deflates it.
+    video_quality = float(data.get("video_quality_score", 0.7))
+    quality_notes: list[str] = data.get("quality_notes", [])
+    quality_factor = min(1.0, 0.70 + 0.30 * video_quality)
+    confidence = round(form_score * quality_factor, 2)
+
     return AnalysisResponse(
         summary=data["summary"],
-        confidence=float(data["confidence"]),
-        metrics=[Metric(**m) for m in data["metrics"]],
+        confidence=confidence,
+        metrics=llm_metrics,
         issues=_parse_issues(data),
+        video_quality_score=round(video_quality, 2),
+        quality_notes=quality_notes,
     )
 
 
