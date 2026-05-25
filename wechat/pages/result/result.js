@@ -13,9 +13,11 @@ Page({
       metrics: t('metrics'),
       insightsTitle: t('insightsTitle'),
       strengthFocus: t('strengthFocus'),
+      strengthFocusDesc: isZh ? '针对你的跑姿弱点，推荐以下强化训练动作' : 'Targeted strengthening exercises for your form issues',
+      watchTutorial: t('watchTutorial'),
+      tutorialCopied: t('tutorialCopied'),
       noIssues: t('noIssues'),
       compareWithElite: t('compareWithElite'),
-      tutorialCopied: t('tutorialCopied'),
       shareResult: t('shareResult'),
       saveToAlbum: t('saveToAlbum'),
       adWatchTitle: t('adWatchTitle'),
@@ -28,6 +30,10 @@ Page({
       feedbackSubmitted: t('feedbackSubmitted'),
       feedbackSavedOffline: t('feedbackSavedOffline'),
       feedbackSubmitting: t('feedbackSubmitting'),
+      setLabel: t('sets'),
+      repLabel: t('times'),
+      perWeek: t('perWeek'),
+      targetsIssue: isZh ? '针对问题' : 'Targets',
     },
 
     confidenceDisplay: '–',
@@ -176,16 +182,55 @@ Page({
       }
     })
 
-    // Exercises
-    const exercises = (r.strength_focus || r.exercises || []).map((ex) => ({
-      name: ex.name || ex.exercise_name || '',
-      description: ex.description || ex.detail || '',
-      sets: ex.sets,
-      reps: ex.reps,
-      duration: ex.duration,
-      frequency_per_week: ex.frequency_per_week,
-      searchUrl: getVideoSearchUrl(ex.name || ex.exercise_name || ''),
-    }))
+    // Exercises — with B站 video link and iOS-style metadata
+    // Map exercise names to relevant icons and link to detected issues
+    const exerciseIcons = {
+      squat: '🏋️', lunge: '🦵', plank: '🧘', bridge: '🌉', deadlift: '💪',
+      calf: '🦶', hip: '🦿', core: '🎯', balance: '⚖️', stretch: '🤸',
+      mobility: '🔄', strength: '💪', default: '🏋️',
+    }
+    const getExerciseIcon = (name) => {
+      const n = (name || '').toLowerCase()
+      for (const [k, v] of Object.entries(exerciseIcons)) {
+        if (n.includes(k)) return v
+      }
+      return exerciseIcons.default
+    }
+
+    // Build target issue map from insights for cross-referencing
+    const issueMap = {}
+    issues.forEach((iss) => {
+      const sev = (iss.severity || 'low').toLowerCase()
+      const exName = iss.recommended_exercise || iss.exercise || ''
+      const targetKey = (iss.target_area || iss.area || '').toLowerCase()
+      if (exName) {
+        issueMap[exName.toLowerCase()] = {
+          title: iss.title || iss.name || '',
+          severity: sev,
+          area: targetKey,
+        }
+      }
+    })
+
+    const exercises = (r.strength_focus || r.exercises || []).map((ex) => {
+      const rawName = ex.name || ex.exercise_name || ''
+      const exerciseQuery = encodeURIComponent(`${rawName} 跑步训练`)
+      const bilibiliUrl = `https://search.bilibili.com/all?keyword=${exerciseQuery}`
+      // Try to find a related issue
+      const relatedIssue = issueMap[rawName.toLowerCase()] || null
+      return {
+        name: rawName,
+        icon: getExerciseIcon(rawName),
+        description: ex.description || ex.detail || '',
+        sets: ex.sets,
+        reps: ex.reps,
+        duration: ex.duration,
+        frequency_per_week: ex.frequency_per_week,
+        searchUrl: getVideoSearchUrl(rawName),
+        bilibiliUrl,
+        targetIssue: relatedIssue ? relatedIssue.title : (ex.target_issue || ''),
+      }
+    })
 
     // Check if feedback was already submitted for this analysis
     const submittedKey = `rf_feedback_done_${analysisId}`
@@ -307,7 +352,8 @@ Page({
     const idx = e.currentTarget.dataset.index
     const ex = this.data.exercises[idx]
     if (!ex) return
-    const url = ex.searchUrl
+    // Use B站 URL for China users, searchUrl (may be YouTube) otherwise
+    const url = isZh ? (ex.bilibiliUrl || ex.searchUrl) : ex.searchUrl
     wx.setClipboardData({
       data: url,
       success: () => {

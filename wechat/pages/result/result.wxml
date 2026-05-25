@@ -47,19 +47,54 @@
     </view>
   </view>
 
-  <!-- Strength / Exercise recommendations -->
-  <view class="card" wx:if="{{exercises.length > 0}}">
-    <text class="section-title">💪 {{i.strengthFocus}}</text>
-    <view wx:for="{{exercises}}" wx:key="index" class="exercise-item" bindtap="openExercise" data-index="{{index}}">
-      <view class="exercise-header">
-        <text class="exercise-name">{{item.name}}</text>
-        <text class="exercise-link-icon text-mint">▶</text>
+  <!-- Strength Focus / Exercise recommendations -->
+  <view class="card card-dark strength-focus-card" wx:if="{{exercises.length > 0}}">
+    <view class="sf-header">
+      <text class="sf-header-icon">🏋️</text>
+      <text class="section-title sf-header-title">{{i.strengthFocus}}</text>
+    </view>
+    <text class="sf-subtitle">{{i.strengthFocusDesc}}</text>
+
+    <view wx:for="{{exercises}}" wx:key="index" class="exercise-card" bindtap="openExercise" data-index="{{index}}">
+      <!-- Exercise header: icon + name + target issue badge -->
+      <view class="ex-card-header">
+        <view class="ex-icon-wrap">
+          <text class="ex-icon">{{item.icon}}</text>
+        </view>
+        <view class="ex-title-wrap">
+          <text class="ex-name">{{item.name}}</text>
+          <text class="ex-target" wx:if="{{item.targetIssue}}">🎯 {{i.targetsIssue}}: {{item.targetIssue}}</text>
+        </view>
+        <text class="ex-arrow">→</text>
       </view>
-      <text class="exercise-desc">{{item.description}}</text>
-      <view wx:if="{{item.sets || item.duration}}" class="exercise-meta">
-        <text wx:if="{{item.sets}}" class="meta-chip">{{item.sets}} 组 × {{item.reps}} 次</text>
-        <text wx:if="{{item.duration}}" class="meta-chip">{{item.duration}}</text>
-        <text wx:if="{{item.frequency_per_week}}" class="meta-chip">{{item.frequency_per_week}}x/周</text>
+
+      <!-- Description -->
+      <text class="ex-desc">{{item.description}}</text>
+
+      <!-- Sets / Reps / Frequency -->
+      <view wx:if="{{item.sets || item.duration}}" class="ex-meta-row">
+        <view wx:if="{{item.sets}}" class="ex-meta-chip">
+          <text class="ex-meta-num">{{item.sets}}</text>
+          <text class="ex-meta-label">{{i.setLabel}}</text>
+          <text class="ex-meta-sep">×</text>
+          <text class="ex-meta-num">{{item.reps}}</text>
+          <text class="ex-meta-label">{{i.repLabel}}</text>
+        </view>
+        <view wx:if="{{item.duration}}" class="ex-meta-chip ex-meta-chip-alt">
+          <text>⏱ {{item.duration}}</text>
+        </view>
+        <view wx:if="{{item.frequency_per_week}}" class="ex-meta-chip ex-meta-chip-alt">
+          <text>📅 {{item.frequency_per_week}}{{i.perWeek}}</text>
+        </view>
+      </view>
+
+      <!-- Video search link -->
+      <view class="ex-video-link">
+        <view class="ex-video-link-inner">
+          <text class="ex-video-icon">🎬</text>
+          <text class="ex-video-text">{{i.watchTutorial}}</text>
+          <text class="ex-video-arrow">›</text>
+        </view>
       </view>
     </view>
   </view>
