@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from urllib.parse import urlencode
 
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from slowapi import Limiter
@@ -214,7 +214,7 @@ def save_profile(payload: ProfileSaveRequest, _api_key: str = Depends(verify_api
 
 @app.post("/training-plan", response_model=TrainingPlanResponse)
 @limiter.limit("10/minute")
-async def training_plan(plan_input: TrainingPlanInput, _api_key: str = Depends(verify_api_key)) -> TrainingPlanResponse:
+async def training_plan(request: Request, plan_input: TrainingPlanInput, _api_key: str = Depends(verify_api_key)) -> TrainingPlanResponse:
     """Generate a personalised one-week training plan. planned_weekly_km mirrors current_weekly_km."""
     try:
         return generate_plan(plan_input)
@@ -226,7 +226,7 @@ async def training_plan(plan_input: TrainingPlanInput, _api_key: str = Depends(v
 
 @app.post("/analyze-metrics", response_model=AnalysisResponse)
 @limiter.limit("10/minute")
-async def analyze_metrics(pose_input: PoseMetricsInput, _api_key: str = Depends(verify_api_key)) -> AnalysisResponse:
+async def analyze_metrics(request: Request, pose_input: PoseMetricsInput, _api_key: str = Depends(verify_api_key)) -> AnalysisResponse:
     """Preferred path: iOS extracts pose metrics on-device; backend generates coaching advice."""
     try:
         return analyze_from_metrics(pose_input)
@@ -239,6 +239,7 @@ async def analyze_metrics(pose_input: PoseMetricsInput, _api_key: str = Depends(
 @app.post("/analyze", response_model=AnalysisResponse)
 @limiter.limit("10/minute")
 async def analyze(
+    request: Request,
     video: UploadFile = File(...),
     language: str = Form("en"),
     profile_context: str = Form(""),
@@ -272,10 +273,10 @@ def list_athletes() -> list[AthleteListItem]:
 
 @app.post("/compare", response_model=CompareResponse)
 @limiter.limit("10/minute")
-async def compare(request: CompareRequest, _api_key: str = Depends(verify_api_key)) -> CompareResponse:
+async def compare(request: Request, compare_request: CompareRequest, _api_key: str = Depends(verify_api_key)) -> CompareResponse:
     """Compare user running metrics against an elite athlete benchmark."""
     try:
-        return compare_with_athlete(request)
+        return compare_with_athlete(compare_request)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except RuntimeError as exc:
