@@ -126,7 +126,7 @@ Page({
     const raw = r
 
     // Confidence / overall score
-    const conf = r.confidence_score ?? r.overall_score ?? 0
+    const conf = r.confidence ?? r.confidence_score ?? r.overall_score ?? 0
     const confPct = Math.round(conf * 100)
     let scoreColor = '#00f5a0'
     if (confPct < 40) scoreColor = '#ff4757'
