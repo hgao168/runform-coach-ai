@@ -136,7 +136,7 @@ function health() {
  * @param {object} feedback - { analysis_id, rating, comment }
  */
 function submitFeedback(feedback) {
-  return request('POST', '/feedback', feedback)
+  return request('POST', '/api/v1/feedback', feedback)
 }
 
 /**

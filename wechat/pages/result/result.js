@@ -130,20 +130,35 @@ Page({
     const analysisId = r.id || r.analysis_id || ''
 
     // Form metrics — normalise various backend field shapes
-    const metricNames = r.form_metrics || r.metrics || {}
-    const metrics = Object.entries(metricNames).map(([key, val]) => {
-      const numVal = typeof val === 'number' ? val : (val?.score ?? 0)
-      const pct = Math.round(Math.min(Math.max(numVal, 0), 1) * 100)
-      let color = '#00f5a0'
-      if (pct < 40) color = '#ff4757'
-      else if (pct < 65) color = '#ff9f30'
-      return {
-        label: key.replace(/_/g, ' '),
-        pct,
-        valueText: `${pct}%`,
-        color,
-      }
-    })
+    const rawMetrics = r.form_metrics || r.metrics || {}
+    const isMetricArray = Array.isArray(rawMetrics)
+    const metrics = isMetricArray
+      ? rawMetrics.map((item, i) => {
+          const numVal = typeof item.score === 'number' ? item.score : 0
+          const pct = Math.round(Math.min(Math.max(numVal, 0), 1) * 100)
+          let color = '#00f5a0'
+          if (pct < 40) color = '#ff4757'
+          else if (pct < 65) color = '#ff9f30'
+          return {
+            label: item.name || `#${i + 1}`,
+            pct,
+            valueText: `${pct}%`,
+            color,
+          }
+        })
+      : Object.entries(rawMetrics).map(([key, val]) => {
+          const numVal = typeof val === 'number' ? val : (val?.score ?? 0)
+          const pct = Math.round(Math.min(Math.max(numVal, 0), 1) * 100)
+          let color = '#00f5a0'
+          if (pct < 40) color = '#ff4757'
+          else if (pct < 65) color = '#ff9f30'
+          return {
+            label: key.replace(/_/g, ' '),
+            pct,
+            valueText: `${pct}%`,
+            color,
+          }
+        })
 
     // Issues / insights
     const issues = r.issues || r.insights || []
