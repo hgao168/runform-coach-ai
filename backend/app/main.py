@@ -179,7 +179,7 @@ app = FastAPI(title="RunForm Coach AI API", version="0.5.0")
 # so cookie-based auth works for allowed origins, but NEVER with wildcard.
 _ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "https://movenova.ai,https://runformcoach.com",
+    "https://movenova.ai,https://dev.movenova.ai,https://runformcoach.com",
 ).split(",")
 # In development, also allow localhost origins
 if ENVIRONMENT == "development":
