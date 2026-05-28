@@ -284,12 +284,19 @@ async def analyze(
             raise HTTPException(status_code=400, detail=f"Invalid profile_context JSON: {exc}") from exc
 
     video_bytes = await video.read()
-    return analyze_running_video(
-        video_bytes,
-        video.filename or "running-video.mp4",
-        language=language,
-        profile_context=parsed_profile,
-    )
+    try:
+        return analyze_running_video(
+            video_bytes,
+            video.filename or "running-video.mp4",
+            language=language,
+            profile_context=parsed_profile,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Video analysis failed: {exc}") from exc
 
 
 @app.get("/athletes", response_model=list[AthleteListItem])
