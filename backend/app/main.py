@@ -273,8 +273,18 @@ async def analyze(
     _api_key: str = Depends(verify_api_key),
 ) -> AnalysisResponse:
     """Legacy fallback: upload raw video for frame-based GPT-4o Vision analysis."""
-    if not video.content_type or not video.content_type.startswith("video/"):
-        raise HTTPException(status_code=400, detail="Please upload a valid video file.")
+    # Validate: check MIME type first, then fall back to file extension
+    _allowed_exts = {".mp4", ".mov", ".avi", ".webm"}
+    _valid = video.content_type and video.content_type.startswith("video/")
+    if not _valid and video.filename:
+        import os
+        _valid = os.path.splitext(video.filename)[1].lower() in _allowed_exts
+    if not _valid:
+        _ct = video.content_type or "missing"
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid video format (MIME: {_ct}, file: {video.filename}). Allowed: .mp4, .mov, .avi, .webm"
+        )
 
     parsed_profile: AnalyzeProfileContext | None = None
     if profile_context:
