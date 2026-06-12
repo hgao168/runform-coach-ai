@@ -13,6 +13,7 @@ const {
 const W = 220
 const H = 220
 const DPR = 2
+const FONT = '-apple-system, "PingFang SC", sans-serif'
 
 Page({
   data: {
@@ -67,6 +68,7 @@ Page({
   // C2: 接通真实挑战赛 API — 获取挑战列表、排行榜
   async _loadChallengeData() {
     const app = getApp()
+    const iosUserId = getUserId()
     let challengeId = ''
     let joined = false
     let completedDays = 0
@@ -74,13 +76,14 @@ Page({
     let challengeDays = this.data.challengeDays
     let leaderboardData = []
 
-    // C2: Step 1 — fetch challenges list from backend
+    // C2: Step 1 — fetch challenges list from backend (with ios_user_id for personal state)
     try {
-      const challenges = await getChallenges()
+      const challenges = await getChallenges(iosUserId)
       if (challenges && Array.isArray(challenges) && challenges.length > 0) {
         const first = challenges[0]
         challengeId = first.id || first.challenge_id || ''
         challengeDays = first.days || first.total_days || 14
+        // Backend returns: joined, completed_days, today_completed (when ios_user_id provided)
         joined = first.joined || false
         completedDays = first.completed_days || first.completedDays || 0
         todayCompleted = first.today_completed || first.todayCompleted || false
@@ -106,13 +109,14 @@ Page({
     // C2: Step 2 — fetch leaderboard if challenge ID is available
     if (challengeId) {
       try {
-        const lb = await apiGetLeaderboard(challengeId)
+        const lb = await apiGetLeaderboard(challengeId, iosUserId)
         if (lb && Array.isArray(lb)) {
           leaderboardData = lb.map((item, idx) => ({
             ...item,
-            name: item.name || item.nickname || `User ${idx + 1}`,
-            days: item.days || item.completed_days || 0,
-            avatarText: (item.name || item.nickname || '?')[0].toUpperCase(),
+            // Backend ChallengeLeaderboardEntry fields: display_name, completed_days, is_me, rank
+            name: item.display_name || item.name || item.nickname || `User ${idx + 1}`,
+            days: item.completed_days || item.days || 0,
+            avatarText: (item.display_name || item.name || item.nickname || '?')[0].toUpperCase(),
             isMe: item.is_me || item.isMe || false,
           }))
           // Persist to globalData
@@ -120,9 +124,9 @@ Page({
         } else if (lb && lb.entries) {
           leaderboardData = lb.entries.map((item, idx) => ({
             ...item,
-            name: item.name || item.nickname || `User ${idx + 1}`,
-            days: item.days || item.completed_days || 0,
-            avatarText: (item.name || item.nickname || '?')[0].toUpperCase(),
+            name: item.display_name || item.name || item.nickname || `User ${idx + 1}`,
+            days: item.completed_days || item.days || 0,
+            avatarText: (item.display_name || item.name || item.nickname || '?')[0].toUpperCase(),
             isMe: item.is_me || item.isMe || false,
           }))
           app.globalData.challengeLeaderboard = leaderboardData
@@ -184,7 +188,7 @@ Page({
     let apiJoined = false
     if (challengeId) {
       try {
-        await apiJoinChallenge(challengeId, { user_id: userId })
+        await apiJoinChallenge(challengeId, { ios_user_id: userId })
         apiJoined = true
         console.log('[Challenge] Joined via API:', challengeId)
       } catch (err) {
@@ -390,4 +394,4 @@ Page({
   },
 })
 
-const FONT = '-apple-system, "PingFang SC", sans-serif'
+// (FONT moved to top of file)

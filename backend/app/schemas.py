@@ -666,7 +666,7 @@ class ShareImageRequest(BaseModel):
 # ── Auth schemas ──────────────────────────────────────────────────────────
 
 class GoogleAuthRequest(BaseModel):
-    id_token: str
+    access_token: str
 
 class GoogleCallbackRequest(BaseModel):
     code: str

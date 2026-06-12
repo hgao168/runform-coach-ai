@@ -164,7 +164,7 @@ Page({
   async _generateInviteData() {
     const userId = getUserId()
     try {
-      const result = await apiGenerateInviteCode({ user_id: userId })
+      const result = await apiGenerateInviteCode({ ios_user_id: userId })
       if (result && result.code) {
         // Persist code to local storage
         try {
@@ -198,7 +198,7 @@ Page({
     if (!inviteCode) return
     const userId = getUserId()
     try {
-      await apiRedeemInviteCode({ code: inviteCode, user_id: userId })
+      await apiRedeemInviteCode({ code: inviteCode, ios_user_id: userId })
       console.log('[Invite] Code redeemed successfully:', inviteCode)
       wx.showToast({ title: t('isZh') ? '邀请码已使用！' : 'Invite code redeemed!', icon: 'success' })
     } catch (err) {

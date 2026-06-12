@@ -50,6 +50,7 @@ def _add_run_session(user_ios_id: str, days_ago: int = 0, cadence: float = 170.0
 async def test_checkin_without_joining_returns_400(client: AsyncClient, test_user: str):
     """Check-in fails if user hasn't joined the challenge."""
     resp = await client.post(CHECK_IN_URL, json={"user_id": test_user})
+    print(f"DEBUG status={resp.status_code} body={resp.text}")
     assert resp.status_code == 400
     assert "must join" in resp.json()["detail"].lower()
 

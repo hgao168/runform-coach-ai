@@ -152,10 +152,10 @@ function getWeeklyInsight() {
 
 /**
  * Get user's invite status: existing codes and invited users list.
- * GET /api/v1/invite/status?user_id=X
+ * GET /api/v1/invite/status?ios_user_id=X
  */
 function getInviteStatus(userId) {
-  return request('GET', `/api/v1/invite/status?user_id=${encodeURIComponent(userId)}`)
+  return request('GET', `/api/v1/invite/status?ios_user_id=${encodeURIComponent(userId)}`)
 }
 
 /**
@@ -186,10 +186,12 @@ function redeemInviteCode(data) {
 
 /**
  * Fetch available challenges list.
- * GET /api/v1/challenges
+ * GET /api/v1/challenges?ios_user_id=X
+ * @param {string} [iosUserId] - optional iOS user ID for personalized participation state
  */
-function getChallenges() {
-  return request('GET', '/api/v1/challenges')
+function getChallenges(iosUserId) {
+  const qs = iosUserId ? `?ios_user_id=${encodeURIComponent(iosUserId)}` : ''
+  return request('GET', `/api/v1/challenges${qs}`)
 }
 
 /**
@@ -202,10 +204,13 @@ function joinChallenge(challengeId, data) {
 
 /**
  * Get a challenge's leaderboard.
- * GET /api/v1/challenges/{challenge_id}/leaderboard
+ * GET /api/v1/challenges/{challenge_id}/leaderboard?ios_user_id=X
+ * @param {string} challengeId
+ * @param {string} [iosUserId] - optional iOS user ID to mark is_me in results
  */
-function getLeaderboard(challengeId) {
-  return request('GET', `/api/v1/challenges/${encodeURIComponent(challengeId)}/leaderboard`)
+function getLeaderboard(challengeId, iosUserId) {
+  const qs = iosUserId ? `?ios_user_id=${encodeURIComponent(iosUserId)}` : ''
+  return request('GET', `/api/v1/challenges/${encodeURIComponent(challengeId)}/leaderboard${qs}`)
 }
 
 /**

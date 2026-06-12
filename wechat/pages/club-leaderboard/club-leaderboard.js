@@ -48,11 +48,13 @@ Page({
     // Try backend API first; fall back to mock data with coming-soon banner
     this._tryFetchFromAPI(clubCode)
       .then((data) => {
-        if (data && data.members && data.members.length > 0) {
+        // Backend returns data.members (ClubLeaderboardResponse); fallback to data.entries
+        const entries = data && (data.members || data.entries)
+        if (entries && entries.length > 0) {
           this.setData({
             clubName: data.clubName || clubCode,
-            leaderboard: this._formatMembers(data.members),
-            isMock: false,
+            leaderboard: this._formatMembers(entries),
+            isMock: data.coming_soon || false,
             loading: false,
           })
         } else {
@@ -94,16 +96,30 @@ Page({
   },
 
   _formatMembers(members) {
-    return members.map((m, idx) => ({
-      rank: idx + 1,
-      avatar: m.avatar || '',
-      avatarText: (m.nickname || m.name || '?')[0].toUpperCase(),
-      nickname: m.nickname || m.name || `Runner ${idx + 1}`,
-      cadence: m.cadence || 0,
-      formScore: m.formScore || m.form_score || 0,
-      rankChange: m.rankChange || m.rank_change || 0,
-      isMe: m.isMe || m.is_me || false,
-    }))
+    return members.map((m, idx) => {
+      // Backend returns score_change as string: "+", "-", or "→"
+      let rankChange = 0
+      if (typeof m.score_change === 'string') {
+        if (m.score_change === '+') rankChange = 1
+        else if (m.score_change === '-') rankChange = -1
+        else rankChange = 0
+      } else if (typeof m.rankChange === 'number') {
+        rankChange = m.rankChange
+      } else if (typeof m.rank_change === 'number') {
+        rankChange = m.rank_change
+      }
+      return {
+        // Use backend rank if available, otherwise index-based
+        rank: m.rank || (idx + 1),
+        avatar: m.avatar || m.avatar_url || '',
+        avatarText: (m.nickname || m.name || '?')[0].toUpperCase(),
+        nickname: m.nickname || m.name || `Runner ${idx + 1}`,
+        cadence: m.cadence || 0,
+        formScore: m.formScore || m.form_score || 0,
+        rankChange: rankChange,
+        isMe: m.isMe || m.is_me || false,
+      }
+    })
   },
 
   _getMockLeaderboard(clubCode) {

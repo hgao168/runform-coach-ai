@@ -283,27 +283,31 @@ def _user_to_response(user: User) -> UserResponse:
 
 @app.post("/api/v1/auth/google", response_model=AuthResponse)
 async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
-    """Verify a Google ID token, create or find user, return session token."""
+    """Verify a Google access_token via userinfo, create or find user, return session token."""
+    GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
     try:
-        # 1. Verify token with Google
+        # 1. Call Google userinfo to get user details
         async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{GOOGLE_TOKENINFO_URL}?id_token={payload.id_token}")
+            resp = await client.get(
+                GOOGLE_USERINFO_URL,
+                headers={"Authorization": f"Bearer {payload.access_token}"}
+            )
             resp.raise_for_status()
-            token_info = resp.json()
+            user_info = resp.json()
     except httpx.HTTPStatusError as exc:
-        raise HTTPException(status_code=401, detail=f"Invalid Google ID token: {exc.response.status_code}")
+        raise HTTPException(status_code=401, detail=f"Invalid Google access token: {exc.response.status_code}")
     except httpx.RequestError as exc:
-        raise HTTPException(status_code=503, detail=f"Google token verification unavailable: {exc}")
+        raise HTTPException(status_code=503, detail=f"Google userinfo unavailable: {exc}")
 
-    email = token_info.get("email")
+    email = user_info.get("email")
     if not email:
         raise HTTPException(status_code=401, detail="Google token missing email field. Email scope may not be granted.")
 
-    google_sub = token_info.get("sub")
+    google_sub = user_info.get("sub")
     if not google_sub:
         raise HTTPException(status_code=401, detail="Google token missing sub field.")
 
-    name = token_info.get("name", "") or email.split("@")[0]
+    name = user_info.get("name", "") or email.split("@")[0]
 
     with get_db_session() as session:
         # 2. Look up user by email
@@ -379,21 +383,21 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
         async with httpx.AsyncClient() as client:
             verify_resp = await client.get(f"{GOOGLE_TOKENINFO_URL}?id_token={id_token}")
             verify_resp.raise_for_status()
-            token_info = verify_resp.json()
+            user_info = verify_resp.json()
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=401, detail=f"Invalid Google ID token: {exc.response.status_code}")
     except httpx.RequestError as exc:
         raise HTTPException(status_code=503, detail=f"Google token verification unavailable: {exc}")
 
-    email = token_info.get("email")
+    email = user_info.get("email")
     if not email:
         raise HTTPException(status_code=401, detail="Google token missing email field. Email scope may not be granted.")
 
-    google_sub = token_info.get("sub")
+    google_sub = user_info.get("sub")
     if not google_sub:
         raise HTTPException(status_code=401, detail="Google token missing sub field.")
 
-    name = token_info.get("name", "") or email.split("@")[0]
+    name = user_info.get("name", "") or email.split("@")[0]
 
     with get_db_session() as session:
         # 3. Look up user by email
