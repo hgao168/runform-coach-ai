@@ -668,6 +668,10 @@ class ShareImageRequest(BaseModel):
 class GoogleAuthRequest(BaseModel):
     id_token: str
 
+class GoogleCallbackRequest(BaseModel):
+    code: str
+    redirect_uri: str
+
 class RegisterRequest(BaseModel):
     email: str = Field(..., max_length=255)
     password: str = Field(..., min_length=6, max_length=128)

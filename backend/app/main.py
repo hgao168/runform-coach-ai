@@ -48,6 +48,7 @@ from .schemas import (
     FeedbackSubmitRequest,
     FeedbackSubmitResponse,
     GoogleAuthRequest,
+    GoogleCallbackRequest,
     AuthResponse,
     RegisterRequest,
     LoginRequest,
@@ -249,6 +250,9 @@ def save_profile(payload: ProfileSaveRequest, _api_key: str = Depends(verify_api
 # ── Auth endpoints ────────────────────────────────────────────────────────
 
 GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 
 def _hash_password(password: str) -> str:
     """Hash a password using PBKDF2-SHA256 with a random salt."""
@@ -313,6 +317,96 @@ async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
                 session.refresh(user)
         else:
             # 4. Create new user
+            ios_user_id = f"google_{google_sub}"
+
+            # Check for collision on ios_user_id (edge case)
+            existing = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
+            if existing is not None:
+                # Link existing user (by ios_user_id) to this Google account
+                existing.email = email
+                existing.google_sub = google_sub
+                existing.nickname = name
+                session.commit()
+                session.refresh(existing)
+                user = existing
+            else:
+                user = User(
+                    ios_user_id=ios_user_id,
+                    email=email,
+                    google_sub=google_sub,
+                    nickname=name,
+                )
+                session.add(user)
+                session.commit()
+                session.refresh(user)
+
+    access_token = _make_access_token(user.ios_user_id)
+    return AuthResponse(access_token=access_token, user=_user_to_response(user))
+
+
+@app.post("/api/v1/auth/google/callback", response_model=AuthResponse)
+async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
+    """Exchange OAuth 2.0 authorization code for tokens, create/find user, return session."""
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=503, detail="Google OAuth is not configured on the server.")
+
+    # 1. Exchange authorization code for tokens
+    try:
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(
+                GOOGLE_TOKEN_URL,
+                data={
+                    "code": payload.code,
+                    "client_id": GOOGLE_CLIENT_ID,
+                    "client_secret": GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": payload.redirect_uri,
+                    "grant_type": "authorization_code",
+                },
+            )
+            token_resp.raise_for_status()
+            token_data = token_resp.json()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=401, detail=f"Failed to exchange authorization code: {exc.response.status_code}")
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail=f"Google token endpoint unavailable: {exc}")
+
+    id_token = token_data.get("id_token")
+    if not id_token:
+        raise HTTPException(status_code=401, detail="No id_token in token response. Ensure 'openid' scope is requested.")
+
+    # 2. Verify id_token with Google
+    try:
+        async with httpx.AsyncClient() as client:
+            verify_resp = await client.get(f"{GOOGLE_TOKENINFO_URL}?id_token={id_token}")
+            verify_resp.raise_for_status()
+            token_info = verify_resp.json()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid Google ID token: {exc.response.status_code}")
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail=f"Google token verification unavailable: {exc}")
+
+    email = token_info.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Google token missing email field. Email scope may not be granted.")
+
+    google_sub = token_info.get("sub")
+    if not google_sub:
+        raise HTTPException(status_code=401, detail="Google token missing sub field.")
+
+    name = token_info.get("name", "") or email.split("@")[0]
+
+    with get_db_session() as session:
+        # 3. Look up user by email
+        user = session.scalar(select(User).where(User.email == email))
+
+        if user is not None:
+            # Update google_sub if not set
+            if not user.google_sub:
+                user.google_sub = google_sub
+                session.commit()
+                session.refresh(user)
+        else:
+            # Create new user
             ios_user_id = f"google_{google_sub}"
 
             # Check for collision on ios_user_id (edge case)
