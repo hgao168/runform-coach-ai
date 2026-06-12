@@ -460,8 +460,11 @@ class WeeklyInsightResponse(BaseModel):
 # ── RF-600: Invite code schemas ───────────────────────────────────────────
 
 class InviteCodeGenerateRequest(BaseModel):
-    user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    user_id: Optional[str] = Field(
+        None, min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\\-]+$'
+    )
+    ios_user_id: Optional[str] = Field(
+        None, min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\\-]+$'
     )
 
 
@@ -535,8 +538,11 @@ class ChallengeLeaderboardEntry(BaseModel):
     oscillation_improvement_pct: Optional[float] = None
     overall_score_change: Optional[float] = None
     rank: int
-    # N4: Rendering fields for frontend display
+    # N4: Rendering fields for WeChat/Web frontend display
     display_name: Optional[str] = None
+    name: Optional[str] = None           # WeChat expects item.name
+    nickname: Optional[str] = None       # WeChat expects item.nickname
+    days: Optional[int] = None           # challenge duration in days (WeChat expects item.days)
     completed_days: Optional[int] = None
     is_me: bool = False
 
@@ -570,6 +576,8 @@ class ClubLeaderboardEntry(BaseModel):
 
 class ClubLeaderboardResponse(BaseModel):
     members: list[ClubLeaderboardEntry] = []
+    # entries is a deprecated alias for backwards compatibility with older WeChat/WASM frontends
+    entries: list[ClubLeaderboardEntry] = []
     coming_soon: bool = False
 
 
@@ -654,3 +662,27 @@ class ShareImageRequest(BaseModel):
     type: str = Field(..., description="challenge_progress | invite | milestone")
     user_id: str = Field(..., min_length=3, max_length=128)
     challenge_id: str | None = None
+
+# ── Auth schemas ──────────────────────────────────────────────────────────
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str
+
+class RegisterRequest(BaseModel):
+    email: str = Field(..., max_length=255)
+    password: str = Field(..., min_length=6, max_length=128)
+    name: str | None = None
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., max_length=255)
+    password: str
+
+class UserResponse(BaseModel):
+    id: str
+    email: str | None = None
+    name: str | None = None
+    google_sub: str | None = None
+
+class AuthResponse(BaseModel):
+    access_token: str
+    user: UserResponse

@@ -43,6 +43,11 @@ class User(Base):
     date_of_birth: Mapped[str | None] = mapped_column(String(32), nullable=True)
     weekly_exercise_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Auth fields (email/password + Google OAuth)
+    email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    google_sub: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+
     oauth_connections: Mapped[list["OAuthConnection"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     strava_runs: Mapped[list["StravaRun"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     strava_weekly_stats: Mapped[list["StravaWeeklyStat"]] = relationship(back_populates="user", cascade="all, delete-orphan")

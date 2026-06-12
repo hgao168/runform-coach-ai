@@ -3,10 +3,13 @@ import os
 import json
 import random
 import string
+import hashlib
+import secrets
 from datetime import datetime, timezone
 from functools import wraps
 from urllib.parse import urlencode
 
+import httpx
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -44,6 +47,11 @@ from .schemas import (
     CompareResponse,
     FeedbackSubmitRequest,
     FeedbackSubmitResponse,
+    GoogleAuthRequest,
+    AuthResponse,
+    RegisterRequest,
+    LoginRequest,
+    UserResponse,
     InviteCodeGenerateRequest,
     InviteCodeGenerateResponse,
     InviteRedeemRequest,
@@ -237,6 +245,175 @@ def save_profile(payload: ProfileSaveRequest, _api_key: str = Depends(verify_api
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to save profile: {exc}") from exc
 
+
+# ── Auth endpoints ────────────────────────────────────────────────────────
+
+GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo"
+
+def _hash_password(password: str) -> str:
+    """Hash a password using PBKDF2-SHA256 with a random salt."""
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 600_000)
+    return f"{salt}${dk.hex()}"
+
+def _verify_password(password: str, stored_hash: str) -> bool:
+    """Verify a password against a stored PBKDF2-SHA256 hash."""
+    try:
+        salt, hash_hex = stored_hash.split("$", 1)
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 600_000)
+        return dk.hex() == hash_hex
+    except (ValueError, AttributeError):
+        return False
+
+def _make_access_token(ios_user_id: str) -> str:
+    return f"movenova_{ios_user_id}"
+
+def _user_to_response(user: User) -> UserResponse:
+    return UserResponse(
+        id=user.ios_user_id,
+        email=user.email,
+        name=user.nickname or user.first_name,
+        google_sub=user.google_sub,
+    )
+
+
+@app.post("/api/v1/auth/google", response_model=AuthResponse)
+async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
+    """Verify a Google ID token, create or find user, return session token."""
+    try:
+        # 1. Verify token with Google
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"{GOOGLE_TOKENINFO_URL}?id_token={payload.id_token}")
+            resp.raise_for_status()
+            token_info = resp.json()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid Google ID token: {exc.response.status_code}")
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail=f"Google token verification unavailable: {exc}")
+
+    email = token_info.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Google token missing email field. Email scope may not be granted.")
+
+    google_sub = token_info.get("sub")
+    if not google_sub:
+        raise HTTPException(status_code=401, detail="Google token missing sub field.")
+
+    name = token_info.get("name", "") or email.split("@")[0]
+
+    with get_db_session() as session:
+        # 2. Look up user by email
+        user = session.scalar(select(User).where(User.email == email))
+
+        if user is not None:
+            # 3. Update google_sub if not set
+            if not user.google_sub:
+                user.google_sub = google_sub
+                session.commit()
+                session.refresh(user)
+        else:
+            # 4. Create new user
+            ios_user_id = f"google_{google_sub}"
+
+            # Check for collision on ios_user_id (edge case)
+            existing = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
+            if existing is not None:
+                # Link existing user (by ios_user_id) to this Google account
+                existing.email = email
+                existing.google_sub = google_sub
+                existing.nickname = name
+                session.commit()
+                session.refresh(existing)
+                user = existing
+            else:
+                user = User(
+                    ios_user_id=ios_user_id,
+                    email=email,
+                    google_sub=google_sub,
+                    nickname=name,
+                )
+                session.add(user)
+                session.commit()
+                session.refresh(user)
+
+    access_token = _make_access_token(user.ios_user_id)
+    return AuthResponse(access_token=access_token, user=_user_to_response(user))
+
+
+@app.post("/api/v1/auth/register", response_model=AuthResponse, status_code=201)
+def register(payload: RegisterRequest) -> AuthResponse:
+    """Register a new user with email and password."""
+    try:
+        with get_db_session() as session:
+            # Check if email already exists
+            existing = session.scalar(select(User).where(User.email == payload.email))
+            if existing is not None:
+                raise HTTPException(status_code=409, detail="Email already registered.")
+
+            # Create ios_user_id from email
+            ios_user_id = f"email_{payload.email}"
+
+            user = User(
+                ios_user_id=ios_user_id,
+                email=payload.email,
+                password_hash=_hash_password(payload.password),
+                nickname=payload.name,
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+
+        access_token = _make_access_token(user.ios_user_id)
+        return AuthResponse(access_token=access_token, user=_user_to_response(user))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Registration failed: {exc}") from exc
+
+
+@app.post("/api/v1/auth/login", response_model=AuthResponse)
+def login(payload: LoginRequest) -> AuthResponse:
+    """Login with email and password."""
+    try:
+        with get_db_session() as session:
+            user = session.scalar(select(User).where(User.email == payload.email))
+            if user is None:
+                raise HTTPException(status_code=401, detail="Invalid email or password.")
+            if not user.password_hash or not _verify_password(payload.password, user.password_hash):
+                raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+        access_token = _make_access_token(user.ios_user_id)
+        return AuthResponse(access_token=access_token, user=_user_to_response(user))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Login failed: {exc}") from exc
+
+
+@app.get("/api/v1/auth/me", response_model=UserResponse)
+def auth_me(access_token: str = Header(..., alias="Authorization")) -> UserResponse:
+    """Return the current user profile from Bearer token (movenova_<ios_user_id>)."""
+    prefix = "Bearer "
+    token = access_token
+    if token.startswith(prefix):
+        token = token[len(prefix):]
+    if not token.startswith("movenova_"):
+        raise HTTPException(status_code=401, detail="Invalid access token format.")
+
+    ios_user_id = token[len("movenova_"):]
+    if not ios_user_id:
+        raise HTTPException(status_code=401, detail="Empty user ID in token.")
+
+    try:
+        with get_db_session() as session:
+            user = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
+            if user is None:
+                raise HTTPException(status_code=404, detail="User not found.")
+        return _user_to_response(user)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to get user: {exc}") from exc
 
 
 @app.post("/training-plan", response_model=TrainingPlanResponse)
@@ -942,9 +1119,13 @@ def _generate_invite_code() -> str:
 @app.post("/api/v1/invite/generate", response_model=InviteCodeGenerateResponse)
 def generate_invite(payload: InviteCodeGenerateRequest, _api_key: str = Depends(verify_api_key)) -> InviteCodeGenerateResponse:
     """Generate a unique 8-character invite code. Each user can create up to 5 codes."""
+    # Accept either user_id (WeChat) or ios_user_id (iOS) — resolve to a single id
+    resolved_id = payload.user_id or payload.ios_user_id
+    if not resolved_id:
+        raise HTTPException(status_code=400, detail="Either user_id or ios_user_id is required.")
     try:
         with get_db_session() as session:
-            user = _resolve_user(session, payload.user_id)
+            user = _resolve_user(session, resolved_id)
 
             active_codes = session.execute(
                 select(InviteCode).where(
@@ -1317,12 +1498,19 @@ def challenge_leaderboard(
                 # Look up ios_user_id
                 user = session.scalar(select(User).where(User.id == p.user_id))
 
-                # N4: Compute display_name and is_me
+                # N4: Compute display_name, name, nickname, and is_me
                 ios_uid = user.ios_user_id if user else f"user_{p.user_id}"
                 display_name = (
                     user.nickname or user.first_name or ios_uid
                 ) if user else ios_uid
+                name_val = user.first_name if user else None
+                nickname_val = user.nickname if user else None
                 is_me = (ios_user_id is not None and ios_user_id == ios_uid)
+
+                # N4: Calculate days in the challenge
+                start_dt = datetime.fromisoformat(_CHALLENGES[challenge_id]["start_date"]).replace(tzinfo=timezone.utc)
+                end_dt = datetime.fromisoformat(_CHALLENGES[challenge_id]["end_date"]).replace(tzinfo=timezone.utc)
+                challenge_days = (end_dt.date() - start_dt.date()).days
 
                 entries.append(ChallengeLeaderboardEntry(
                     ios_user_id=ios_uid,
@@ -1331,6 +1519,9 @@ def challenge_leaderboard(
                     overall_score_change=overall_change,
                     rank=0,  # placeholder, filled below
                     display_name=display_name,
+                    name=name_val,
+                    nickname=nickname_val,
+                    days=challenge_days,
                     completed_days=p.check_in_count or 0,
                     is_me=is_me,
                 ))
@@ -1727,7 +1918,7 @@ def club_leaderboard(
                     select(User).where(User.ios_user_id == club_code)
                 )
                 if coach_user is None:
-                    return ClubLeaderboardResponse(members=[], coming_soon=True)
+                    return ClubLeaderboardResponse(members=[], entries=[], coming_soon=True)
                 coach_id = coach_user.id
             else:
                 coach_id = coach_code.coach_id
@@ -1742,7 +1933,7 @@ def club_leaderboard(
             ).all()
 
             if not rows:
-                return ClubLeaderboardResponse(members=[], coming_soon=True)
+                return ClubLeaderboardResponse(members=[], entries=[], coming_soon=True)
 
             # Build leaderboard entries with latest run session metrics
             entries: list[ClubLeaderboardEntry] = []
@@ -1818,7 +2009,7 @@ def club_leaderboard(
             for i, entry in enumerate(entries):
                 entry.rank = i + 1
 
-            return ClubLeaderboardResponse(members=entries, coming_soon=False)
+            return ClubLeaderboardResponse(members=entries, entries=entries, coming_soon=False)
     except HTTPException:
         raise
     except Exception as exc:
