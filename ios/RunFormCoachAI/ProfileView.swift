@@ -5,6 +5,7 @@ struct ProfileView: View {
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var nickname = ""
+    @State private var email = ""
     @State private var level: RunnerLevel = .beginner
     @State private var weeklyMileageKm: Double = 15
     @State private var runningDaysPerWeek: Int = 3
@@ -104,6 +105,15 @@ struct ProfileView: View {
                     label: "Nickname",
                     placeholder: "Nickname",
                     text: $nickname,
+                    focus: $fieldFocused
+                )
+
+                ProfileLabeledTextField(
+                    label: "Email",
+                    placeholder: "you@example.com",
+                    text: $email,
+                    autocapitalization: .never,
+                    keyboardType: .emailAddress,
                     focus: $fieldFocused
                 )
 
@@ -254,6 +264,7 @@ struct ProfileView: View {
         firstName = profile.firstName
         lastName = profile.lastName
         nickname = profile.nickname
+        email = profile.email
         level = profile.level
         weeklyMileageKm = profile.weeklyMileageKm
         runningDaysPerWeek = profile.runningDaysPerWeek
@@ -284,6 +295,7 @@ struct ProfileView: View {
             firstName: firstName,
             lastName: lastName,
             nickname: nickname,
+            email: email,
             level: level,
             weeklyMileageKm: weeklyMileageKm,
             runningDaysPerWeek: runningDaysPerWeek,

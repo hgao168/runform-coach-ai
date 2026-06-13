@@ -22,6 +22,7 @@ struct TesterProfile: Codable, Equatable {
     var firstName: String = ""
     var lastName: String = ""
     var nickname: String = ""
+    var email: String = ""
     var level: RunnerLevel = .beginner
     var weeklyMileageKm: Double = 15
     var runningDaysPerWeek: Int = 3
@@ -40,6 +41,7 @@ struct TesterProfile: Codable, Equatable {
         case firstName
         case lastName
         case nickname
+        case email
         case level
         case weeklyMileageKm
         case runningDaysPerWeek
@@ -59,6 +61,7 @@ struct TesterProfile: Codable, Equatable {
         firstName: String = "",
         lastName: String = "",
         nickname: String = "",
+        email: String = "",
         level: RunnerLevel = .beginner,
         weeklyMileageKm: Double = 15,
         runningDaysPerWeek: Int = 3,
@@ -76,6 +79,7 @@ struct TesterProfile: Codable, Equatable {
         self.firstName = firstName
         self.lastName = lastName
         self.nickname = nickname
+        self.email = email
         self.level = level
         self.weeklyMileageKm = weeklyMileageKm
         self.runningDaysPerWeek = runningDaysPerWeek
@@ -96,6 +100,7 @@ struct TesterProfile: Codable, Equatable {
         firstName = try c.decodeIfPresent(String.self, forKey: .firstName) ?? ""
         lastName = try c.decodeIfPresent(String.self, forKey: .lastName) ?? ""
         nickname = try c.decodeIfPresent(String.self, forKey: .nickname) ?? ""
+        email = try c.decodeIfPresent(String.self, forKey: .email) ?? ""
         level = try c.decodeIfPresent(RunnerLevel.self, forKey: .level) ?? .beginner
         weeklyMileageKm = try c.decodeIfPresent(Double.self, forKey: .weeklyMileageKm) ?? 15
         runningDaysPerWeek = try c.decodeIfPresent(Int.self, forKey: .runningDaysPerWeek) ?? 3
@@ -130,6 +135,7 @@ struct ProfileSaveRequest: Encodable {
     let legLengthCm: Double?
     let dateOfBirth: String?
     let weeklyExerciseHours: Double?
+    let email: String?
 
     enum CodingKeys: String, CodingKey {
         case iosUserId = "ios_user_id"
@@ -149,6 +155,7 @@ struct ProfileSaveRequest: Encodable {
         case legLengthCm = "leg_length_cm"
         case dateOfBirth = "date_of_birth"
         case weeklyExerciseHours = "weekly_exercise_hours"
+        case email
     }
 }
 

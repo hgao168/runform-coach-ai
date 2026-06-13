@@ -286,7 +286,8 @@ final class APIClient {
                 shoeBrandModel: profile.shoeBrandModel.isEmpty ? nil : profile.shoeBrandModel,
                 legLengthCm: profile.legLengthCm,
                 dateOfBirth: profile.dateOfBirth.map { dateFormatter.string(from: $0) },
-                weeklyExerciseHours: profile.weeklyExerciseHours
+                weeklyExerciseHours: profile.weeklyExerciseHours,
+                email: profile.email.isEmpty ? nil : profile.email
             )
             request.httpBody = try JSONEncoder().encode(payload)
 

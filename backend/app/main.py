@@ -106,7 +106,7 @@ _PROFILE_FIELDS = [
     "first_name", "last_name", "nickname", "level", "weekly_mileage_km",
     "running_days_per_week", "height_cm", "weight_kg", "target", "injury_note",
     "gender", "shoe_size", "shoe_brand_model", "leg_length_cm", "date_of_birth",
-    "weekly_exercise_hours",
+    "weekly_exercise_hours", "email",
 ]
 
 # ── Rate limiter ──────────────────────────────────────────────────────────
