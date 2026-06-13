@@ -13,7 +13,7 @@ const app = getApp()
 
 // Canvas 2D poster layout constants
 const PW = 375   // poster width (logical px)
-const PH = 600   // poster height
+const PH = 667   // poster height (→ 1334 physical px at 2x DPR, 9:16 ratio)
 const DPR = 2    // device pixel ratio for sharp rendering
 const PAD = 24   // horizontal padding
 const FONT = '-apple-system, "PingFang SC", sans-serif'
@@ -56,6 +56,8 @@ Page({
         posterSaved: t('posterSaved'),
         posterGenerating: t('posterGenerating'),
         posterGenFailed: t('posterGenFailed'),
+        posterSlogan: t('posterSlogan'),
+        posterSloganSub: t('posterSloganSub'),
         posterJoinCTA: t('posterJoinCTA'),
         posterPoweredBy: t('posterPoweredBy'),
       },
@@ -269,12 +271,14 @@ Page({
     ctx.scale(DPR, DPR)
 
     const { inviteCode, userCadence, userFormScore } = this.data
+    const isZh = t('isZh')
 
     // ── 1. Background gradient ──
     const bgGrad = ctx.createLinearGradient(0, 0, 0, PH)
     bgGrad.addColorStop(0, '#0a0a0f')
-    bgGrad.addColorStop(0.4, '#12121a')
-    bgGrad.addColorStop(0.7, '#151520')
+    bgGrad.addColorStop(0.3, '#0f0f18')
+    bgGrad.addColorStop(0.55, '#12121f')
+    bgGrad.addColorStop(0.75, '#151520')
     bgGrad.addColorStop(1, '#0a0a0f')
     ctx.fillStyle = bgGrad
     ctx.fillRect(0, 0, PW, PH)
@@ -283,43 +287,102 @@ Page({
     ctx.fillStyle = '#00f5a0'
     ctx.fillRect(0, 0, PW, 4)
 
-    // Subtle decorative dots pattern (bottom-right)
-    ctx.fillStyle = 'rgba(0,245,160,0.03)'
-    for (let i = 0; i < 30; i++) {
-      const dx = 200 + Math.random() * 175
-      const dy = 400 + Math.random() * 200
+    // ── Decorative: running speed lines (top-right) ──
+    ctx.strokeStyle = 'rgba(0,245,160,0.06)'
+    ctx.lineWidth = 1
+    for (let i = 0; i < 8; i++) {
+      const lx = 280 + Math.random() * 80
       ctx.beginPath()
-      ctx.arc(dx, dy, 2 + Math.random() * 4, 0, Math.PI * 2)
+      ctx.moveTo(lx, 20 + i * 10)
+      ctx.lineTo(lx - 40 - Math.random() * 60, 20 + i * 10)
+      ctx.stroke()
+    }
+
+    // ── Decorative: running shoe silhouette (bottom-left) ──
+    this._drawRunningShoe(ctx, 30, PH - 90, 60, 'rgba(0,245,160,0.04)')
+    this._drawRunningShoe(ctx, PW - 70, 180, 50, 'rgba(0,245,160,0.03)')
+
+    // ── Decorative: subtle dot matrix (scattered) ──
+    ctx.fillStyle = 'rgba(0,245,160,0.025)'
+    for (let i = 0; i < 45; i++) {
+      const dx = 15 + Math.random() * (PW - 30)
+      const dy = 100 + Math.random() * (PH - 130)
+      ctx.beginPath()
+      ctx.arc(dx, dy, 1.5 + Math.random() * 3, 0, Math.PI * 2)
       ctx.fill()
     }
 
     // ── 2. Header: RunForm branding ──
-    // Logo circle
+    // Logo circle with glow
+    ctx.shadowColor = 'rgba(0,245,160,0.3)'
+    ctx.shadowBlur = 12
     ctx.fillStyle = '#00f5a0'
     ctx.beginPath()
-    ctx.arc(PAD + 16, 36, 18, 0, Math.PI * 2)
+    ctx.arc(PAD + 18, 38, 20, 0, Math.PI * 2)
     ctx.fill()
+    ctx.shadowColor = 'transparent'
+    ctx.shadowBlur = 0
 
+    // Runner emoji inside logo
     ctx.fillStyle = '#0a0a0f'
-    ctx.font = 'bold 11px ' + FONT
+    ctx.font = 'bold 13px ' + FONT
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('🏃', PAD + 16, 36)
+    ctx.fillText('🏃', PAD + 18, 38)
 
     // App name
     ctx.textAlign = 'left'
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 18px ' + FONT
-    ctx.fillText(t('isZh') ? 'RunForm 跑步教练' : 'RunForm Coach AI', PAD + 44, 28)
+    ctx.font = 'bold 19px ' + FONT
+    ctx.fillText(isZh ? 'RunForm 跑步教练' : 'RunForm Coach AI', PAD + 48, 28)
 
     ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    ctx.font = '11px ' + FONT
-    ctx.fillText(t('isZh') ? '邀请你加入' : 'Invites you to join', PAD + 44, 48)
+    ctx.font = '12px ' + FONT
+    ctx.fillText(isZh ? 'AI 跑步姿态分析 · 邀请你加入' : 'AI Running Form Analysis · Invites you', PAD + 48, 48)
 
-    // ── 3. Invite code (large, prominent) ──
+    // ── 3. Anti-injury slogan (prominent) ──
     let y = 90
+
+    // Decorative line above slogan
+    ctx.strokeStyle = 'rgba(0,245,160,0.12)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(PAD + 10, y)
+    ctx.lineTo(PW - PAD - 10, y)
+    ctx.stroke()
+
+    y += 22
+
+    // Main slogan — large, white
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 24px ' + FONT
+    ctx.textAlign = 'center'
+    const sloganText = this.data.i.posterSlogan || t('posterSlogan')
+    ctx.fillText(sloganText, PW / 2, y)
+
+    y += 34
+
+    // Sub-slogan — green accent
+    ctx.fillStyle = '#00f5a0'
+    ctx.font = '14px ' + FONT
+    const sloganSubText = this.data.i.posterSloganSub || t('posterSloganSub')
+    ctx.fillText(sloganSubText, PW / 2, y)
+
+    y += 12
+
+    // Decorative line below slogan
+    ctx.strokeStyle = 'rgba(0,245,160,0.12)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(PAD + 10, y)
+    ctx.lineTo(PW - PAD - 10, y)
+    ctx.stroke()
+
+    y += 24
+
+    // ── 4. Invite code (large, prominent) ──
     const codeCardY = y
-    const codeCardH = 110
+    const codeCardH = 116
 
     // Code background card with border glow
     ctx.fillStyle = 'rgba(0,245,160,0.06)'
@@ -330,11 +393,11 @@ Page({
     ctx.stroke()
 
     // Glow effect around card
-    ctx.shadowColor = 'rgba(0,245,160,0.15)'
-    ctx.shadowBlur = 20
+    ctx.shadowColor = 'rgba(0,245,160,0.12)'
+    ctx.shadowBlur = 24
     ctx.shadowOffsetX = 0
     ctx.shadowOffsetY = 0
-    ctx.strokeStyle = 'rgba(0,245,160,0.08)'
+    ctx.strokeStyle = 'rgba(0,245,160,0.06)'
     ctx.lineWidth = 3
     this._roundRect(ctx, PAD, codeCardY, PW - PAD * 2, codeCardH, 16)
     ctx.stroke()
@@ -345,16 +408,16 @@ Page({
     ctx.fillStyle = 'rgba(0,245,160,0.6)'
     ctx.font = 'bold 10px ' + FONT
     ctx.textAlign = 'center'
-    ctx.fillText(t('isZh') ? '邀请码' : 'INVITE CODE', PW / 2, codeCardY + 24)
+    ctx.fillText(isZh ? '邀请码' : 'INVITE CODE', PW / 2, codeCardY + 22)
 
-    // The code itself — large monospace
+    // The code itself — large monospace style
     ctx.fillStyle = '#00f5a0'
-    ctx.font = 'bold 52px ' + FONT
-    ctx.fillText(inviteCode, PW / 2, codeCardY + 74)
+    ctx.font = 'bold 54px ' + FONT
+    ctx.fillText(inviteCode, PW / 2, codeCardY + 78)
 
-    y += codeCardH + 16
+    y += codeCardH + 14
 
-    // ── 4. User stats row (if available) ──
+    // ── 5. User stats row (if available) ──
     if (userCadence > 0 || userFormScore > 0) {
       const statsY = y
       const statsCardH = 64
@@ -372,11 +435,11 @@ Page({
       ctx.fillStyle = 'rgba(255,255,255,0.4)'
       ctx.font = '10px ' + FONT
       ctx.textAlign = 'center'
-      ctx.fillText(t('isZh') ? '步频' : 'Cadence', PAD + colW / 2, statsY + 16)
+      ctx.fillText(isZh ? '步频' : 'Cadence', PAD + colW / 2, statsY + 16)
 
       ctx.fillStyle = '#ffffff'
       ctx.font = 'bold 22px ' + FONT
-      ctx.fillText(userCadence > 0 ? `${Math.round(userCadence)} spm` : '--', PAD + colW / 2, statsY + 42)
+      ctx.fillText(userCadence > 0 ? `${Math.round(userCadence)} spm` : '--', PAD + colW / 2, statsY + 44)
 
       // Divider line
       ctx.strokeStyle = 'rgba(255,255,255,0.1)'
@@ -389,52 +452,57 @@ Page({
       // Form score
       ctx.fillStyle = 'rgba(255,255,255,0.4)'
       ctx.font = '10px ' + FONT
-      ctx.fillText(t('isZh') ? '跑姿评分' : 'Form Score', PAD + colW + colW / 2, statsY + 16)
+      ctx.fillText(isZh ? '跑姿评分' : 'Form Score', PAD + colW + colW / 2, statsY + 16)
 
       ctx.fillStyle = '#00f5a0'
       ctx.font = 'bold 22px ' + FONT
-      ctx.fillText(userFormScore > 0 ? `${Math.round(userFormScore)}` : '--', PAD + colW + colW / 2, statsY + 42)
+      ctx.fillText(userFormScore > 0 ? `${Math.round(userFormScore)}` : '--', PAD + colW + colW / 2, statsY + 44)
 
-      y += statsCardH + 16
+      y += statsCardH + 14
     }
 
-    // ── 5. Mini-program QR code (placeholder) ──
-    const qrY = y
-    const qrSize = 100
+    // ── 6. Mini-program QR code area ──
+    const qrY = y + 4
+    const qrSize = 108
     const qrX = PW / 2 - qrSize / 2
 
+    // QR background (white border)
     ctx.fillStyle = '#ffffff'
-    ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
+    this._roundRect(ctx, qrX - 14, qrY - 14, qrSize + 28, qrSize + 28, 12)
+    ctx.fill()
+
     ctx.fillStyle = '#0a0a0f'
     ctx.fillRect(qrX, qrY, qrSize, qrSize)
 
     // Draw QR placeholder pattern
     this._drawQRPattern(ctx, qrX, qrY, qrSize)
 
-    y += qrSize + 36
+    // QR label below
+    y = qrY + qrSize + 36
 
-    // ── 6. CTA text ──
+    // ── 7. CTA text ──
     ctx.fillStyle = '#ffffff'
     ctx.font = 'bold 16px ' + FONT
     ctx.textAlign = 'center'
-    const ctaText = t('posterJoinCTA')
+    const ctaText = this.data.i.posterJoinCTA || t('posterJoinCTA')
     ctx.fillText(ctaText, PW / 2, y)
-    y += 28
+    y += 26
 
     // Secondary CTA
     ctx.fillStyle = 'rgba(255,255,255,0.4)'
     ctx.font = '12px ' + FONT
     ctx.fillText(
-      t('isZh') ? `邀请码: ${inviteCode}  · 微信搜索 RunForm` : `Code: ${inviteCode}  ·  Search RunForm on WeChat`,
+      isZh ? `邀请码: ${inviteCode}  ·  微信搜索 RunForm` : `Code: ${inviteCode}  ·  Search RunForm on WeChat`,
       PW / 2, y
     )
 
-    // ── 7. Footer branding ──
-    ctx.fillStyle = 'rgba(255,255,255,0.2)'
+    // ── 8. Footer branding ──
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'
     ctx.font = '10px ' + FONT
-    ctx.fillText(t('posterPoweredBy'), PW / 2, PH - 24)
+    const poweredText = this.data.i.posterPoweredBy || t('posterPoweredBy')
+    ctx.fillText(poweredText, PW / 2, PH - 26)
 
-    // ── 8. Export to temp file ──
+    // ── 9. Export to temp file ──
     const that = this
     wx.canvasToTempFilePath({
       canvas,
@@ -458,6 +526,50 @@ Page({
         wx.showToast({ title: t('posterGenFailed'), icon: 'none' })
       },
     })
+  },
+
+  // ── Draw running shoe icon (simple silhouette) ──
+  _drawRunningShoe(ctx, x, y, size, color) {
+    ctx.save()
+    ctx.fillStyle = color
+    ctx.translate(x, y)
+    const s = size / 80  // scale factor
+
+    ctx.beginPath()
+    // Sole
+    ctx.moveTo(0, 35 * s)
+    ctx.lineTo(5 * s, 40 * s)
+    ctx.lineTo(60 * s, 40 * s)
+    ctx.lineTo(75 * s, 38 * s)
+    ctx.lineTo(80 * s, 32 * s)
+    // Toe box
+    ctx.lineTo(78 * s, 18 * s)
+    ctx.lineTo(68 * s, 10 * s)
+    ctx.lineTo(50 * s, 8 * s)
+    // Heel collar
+    ctx.lineTo(35 * s, 8 * s)
+    ctx.lineTo(25 * s, 5 * s)
+    ctx.lineTo(15 * s, 6 * s)
+    ctx.lineTo(8 * s, 12 * s)
+    // Ankle opening
+    ctx.lineTo(2 * s, 22 * s)
+    ctx.lineTo(0, 30 * s)
+    ctx.closePath()
+    ctx.fill()
+
+    // Swoosh / dynamic stripe
+    ctx.fillStyle = color.replace('0.04', '0.08').replace('0.03', '0.06')
+    ctx.beginPath()
+    ctx.moveTo(12 * s, 25 * s)
+    ctx.lineTo(30 * s, 18 * s)
+    ctx.lineTo(45 * s, 22 * s)
+    ctx.lineTo(40 * s, 28 * s)
+    ctx.lineTo(25 * s, 24 * s)
+    ctx.lineTo(12 * s, 30 * s)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.restore()
   },
 
   // ── QR placeholder pattern ──

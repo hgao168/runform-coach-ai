@@ -70,7 +70,7 @@
     type="2d"
     id="posterCanvas"
     class="poster-canvas"
-    style="width: 750rpx; height: 1200rpx;"
+    style="width: 750rpx; height: 1334rpx;"
   ></canvas>
 
   <!-- Poster Preview Modal -->
