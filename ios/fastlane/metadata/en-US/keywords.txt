@@ -1,0 +1,1 @@
+cadence,marathon,training,pose,compare,run,tracker,strava,real-time,voice,live,feedback

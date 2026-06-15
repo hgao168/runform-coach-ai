@@ -1,0 +1,64 @@
+{
+  "app_privacy_details": {
+    "data_collection": [
+      {
+        "data_type": "Health & Fitness",
+        "data_use": [
+          {
+            "purpose": "App Functionality",
+            "description": "RunForm collects real-time motion sensor data (accelerometer, gyroscope) from CoreMotion to measure running cadence, ground contact time, vertical oscillation, and trunk posture during live coaching sessions. This data is processed entirely on-device and is not uploaded to servers."
+          },
+          {
+            "purpose": "Analytics",
+            "description": "Aggregated, anonymized session metrics (average cadence, session duration, gait summary) may be collected for product improvement and feature development. No raw sensor data is transmitted."
+          }
+        ],
+        "linked_to_user": false,
+        "tracking": false
+      },
+      {
+        "data_type": "Identifiers",
+        "data_use": [
+          {
+            "purpose": "App Functionality",
+            "description": "Device identifier and user account ID are used for authentication, session management, and syncing run history across devices."
+          }
+        ],
+        "linked_to_user": true,
+        "tracking": false
+      },
+      {
+        "data_type": "Usage Data",
+        "data_use": [
+          {
+            "purpose": "Analytics",
+            "description": "App interaction data (screens visited, features used, session duration) is collected to improve user experience and identify popular features."
+          },
+          {
+            "purpose": "Product Personalization",
+            "description": "Training plan preferences and feedback history are used to personalize coaching recommendations and plan generation."
+          }
+        ],
+        "linked_to_user": true,
+        "tracking": false
+      },
+      {
+        "data_type": "User Content",
+        "data_use": [
+          {
+            "purpose": "App Functionality",
+            "description": "Running videos uploaded for form analysis are transmitted to our servers for pose estimation processing. Videos are processed and stored securely for history access. Users can delete their videos at any time."
+          }
+        ],
+        "linked_to_user": true,
+        "tracking": false
+      }
+    ],
+    "privacy_policy_url": "https://runformcoach.com/privacy",
+    "data_protection": {
+      "encryption_in_transit": true,
+      "encryption_at_rest": true,
+      "data_deletion": "Users may request account and data deletion by contacting support@runformcoach.com or through the in-app profile settings."
+    }
+  }
+}

@@ -210,6 +210,28 @@
 "Close" = "关闭";
 "Couldn't Load Athletes" = "无法加载运动员数据";
 "Comparison Failed" = "对比失败";
+
+/* RunSessionReplayView — Sprint 3 RF-910 */
+"Run Replay" = "跑步回放";
+"Sessions" = "会话";
+"No Sessions Yet" = "暂无会话";
+"Your live run sessions will appear here once you complete a tracked run." = "完成跟踪跑步后，您的实时跑步会话将显示在这里。";
+"Session Overview" = "会话概览";
+"Avg Cadence" = "平均步频";
+"Avg Oscillation" = "平均振幅";
+"Avg GCT" = "平均触地时间";
+"Duration" = "时长";
+"Distance" = "距离";
+"Coach Prompts" = "教练提示";
+"Coach prompt at %@" = "教练提示于 %@";
+"Time Series" = "时间序列";
+"Tap & drag to seek" = "点击并拖动以跳转";
+"Tap for details" = "点击查看详情";
+"No coach prompts during this session." = "此会话期间无教练提示。";
+"Priority %lld" = "优先级 %lld";
+"Coach" = "教练";
+"GCT" = "触地时间";
+"Oscillation" = "振幅";
 "Partly accurate" = "部分准确";
 "Not accurate" = "不准确";
 "Confusing" = "令人困惑";

@@ -13,6 +13,13 @@ struct AnalysisResultView: View {
             if let score = result.videoQualityScore { qualityCard(score: score) }
             metricsSection
             issuesSection
+
+#if DEBUG
+            AdBannerView(adUnitID: AdBannerView.testAdUnitID)
+#else
+            AdBannerView(adUnitID: AdBannerView.productionAdUnitID)
+#endif
+                .frame(height: 50)
         }
         .sheet(isPresented: $showCompare) {
             if let metrics = poseMetrics {

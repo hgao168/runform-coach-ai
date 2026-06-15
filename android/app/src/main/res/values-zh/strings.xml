@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── App name ──────────────────────────────────────────────────────── -->
+    <string name="app_name">RunForm</string>
+
+    <!-- ── Tab bar ───────────────────────────────────────────────────────── -->
+    <string name="tab_analyze">分析</string>
+    <string name="tab_history">历史</string>
+    <string name="tab_plan">计划</string>
+    <string name="tab_profile">我的</string>
+
+    <!-- ── Analyze tab - hero ─────────────────────────────────────────────── -->
+    <string name="analyze_title">RunForm Coach AI</string>
+    <string name="analyze_subtitle">上传或录制视频，获取AI跑步指导反馈</string>
+
+    <!-- ── Analyze tab - camera angle ─────────────────────────────────────── -->
+    <string name="camera_angle">拍摄角度</string>
+    <string name="mode_side">侧面</string>
+    <string name="mode_rear">后面</string>
+    <string name="mode_front">正面</string>
+    <string name="mode_side_desc">步频、跨步、躯干倾斜</string>
+    <string name="mode_rear_desc">髋部稳定性、膝关节追踪</string>
+    <string name="mode_front_desc">膝关节外翻、髋部对称性</string>
+
+    <!-- ── Analyze tab - video card ──────────────────────────────────────── -->
+    <string name="video_selected">已选择视频</string>
+    <string name="tap_to_change">点击更换</string>
+    <string name="tap_to_pick_video">点击选择视频</string>
+
+    <!-- ── Analyze tab - actions ─────────────────────────────────────────── -->
+    <string name="pick_video">选择视频</string>
+    <string name="record">录制</string>
+    <string name="analyze_running_form">分析跑步姿态</string>
+    <string name="analyzing">分析中…</string>
+
+    <!-- ── Analyze tab - tips ────────────────────────────────────────────── -->
+    <string name="recording_tips">拍摄技巧</string>
+    <string name="tip_treadmill">在跑步机或平坦、一致的地面上拍摄</string>
+    <string name="tip_lighting">使用良好的光线——避免逆光</string>
+    <string name="tip_framing">保持全身在画面内，至少3–5秒</string>
+    <string name="tip_side_view">侧面视角可获得最多的分析指标</string>
+
+    <!-- ── Analyze tab - ready card ──────────────────────────────────────── -->
+    <string name="what_youll_get">你将获得</string>
+    <string name="clear_coaching">清晰易懂的跑者指导</string>
+    <string name="movement_metrics">运动指标</string>
+    <string name="cadence_metrics_list">步频、跨步、躯干倾斜、手臂运动、摆臂</string>
+    <string name="strength_focus">力量训练</string>
+    <string name="issue_exercises">针对问题的练习及其原因</string>
+    <string name="quality_check">质量检查</string>
+    <string name="quality_check_desc">如果指标不可靠，RunForm会要求更好的视频</string>
+
+    <!-- ── Analysis result ───────────────────────────────────────────────── -->
+    <string name="overall_score">综合评分</string>
+    <string name="movement_metrics_title">运动指标</string>
+    <string name="strength_focus_title">力量训练</string>
+    <string name="video_quality">视频质量</string>
+    <string name="exercises">练习</string>
+    <string name="analyze_new_video">分析新视频</string>
+
+    <!-- ── Analysis result - exercise card ───────────────────────────────── -->
+    <string name="sets_reps_freq">%1$d组 × %2$s — %3$d次/周</string>
+
+    <!-- ── History tab ───────────────────────────────────────────────────── -->
+    <string name="history_title">历史</string>
+    <string name="x_analyses">%1$d 次分析</string>
+    <string name="no_analyses_yet">暂无分析</string>
+    <string name="go_to_analyze">前往分析页面开始使用</string>
+    <string name="clear_history">清除历史</string>
+    <string name="clear_history_confirm">删除所有分析记录？</string>
+    <string name="delete_all">全部删除</string>
+    <string name="cancel">取消</string>
+    <string name="x_more">+%1$d 更多</string>
+
+    <!-- ── Plan tab ──────────────────────────────────────────────────────── -->
+    <string name="training_plan">训练计划</string>
+    <string name="plan_subtitle">获取AI生成的周训练计划</string>
+    <string name="plan_settings">计划设置</string>
+    <string name="current_weekly_km">当前每周里程（公里）</string>
+    <string name="training_goal">训练目标</string>
+    <string name="available_days">可用天数</string>
+    <string name="x_selected">已选 %1$d 天</string>
+    <string name="injury_pain_flag">伤病标记</string>
+    <string name="injury_pain_desc">计划将更加保守</string>
+    <string name="generate_plan">生成计划</string>
+    <string name="building_plan">正在生成计划…</string>
+    <string name="select_at_least_one_day">请至少选择一个可用日期</string>
+    <string name="your_training_plan">你的训练计划</string>
+    <string name="x_run_days_y_km_week">%1$d天训练 · %2$d公里/周</string>
+    <string name="ai_personalized">AI个性化</string>
+    <string name="coach_notes">教练备注</string>
+    <string name="new_plan">新计划</string>
+    <string name="km_unit">公里</string>
+    <string name="min_unit">分钟</string>
+    <string name="focus_prefix">重点：%1$s</string>
+
+    <!-- ── Plan: mode tabs ───────────────────────────────────────────────── -->
+    <string name="plan_mode_weekly">周计划</string>
+    <string name="plan_mode_marathon">马拉松</string>
+    <string name="plan_mode_race">比赛计划</string>
+
+    <!-- ── Plan: marathon setup ───────────────────────────────────────────── -->
+    <string name="marathon_race">马拉松赛事</string>
+    <string name="marathon_major">世界大满贯</string>
+    <string name="marathon_target_time">目标时间 (HH:MM)</string>
+    <string name="marathon_plan_weeks">计划周期</string>
+    <string name="marathon_custom">自定义马拉松</string>
+    <string name="marathon_race_name">赛事名称</string>
+    <string name="generate_weekly_plan">周计划</string>
+    <string name="generate_marathon_plan">马拉松计划</string>
+    <string name="generate_race_plan">比赛计划</string>
+
+    <!-- ── Plan: marathon detail ──────────────────────────────────────────── -->
+    <string name="marathon_plan_detail">马拉松计划详情</string>
+    <string name="phase_view">阶段视图</string>
+    <string name="week_view">周视图</string>
+    <string name="week_label">第 %1$d 周</string>
+    <string name="total_weeks">%1$d 周</string>
+    <string name="target_km">目标：%1$.0f 公里</string>
+    <string name="long_run">长跑：%1$.0f 公里</string>
+    <string name="apply_week_km">应用本周公里数</string>
+
+    <!-- ── Plan: saved plans ─────────────────────────────────────────────── -->
+    <string name="saved_plans">已保存计划</string>
+    <string name="no_saved_plans">暂无已保存的计划</string>
+    <string name="go_to_plan_to_save">生成计划并保存后可在此查看</string>
+    <string name="delete_plan">删除计划</string>
+    <string name="delete_plan_confirm">删除此训练计划？</string>
+    <string name="save_plan">保存计划</string>
+    <string name="plan_saved">计划已保存！</string>
+
+    <!-- ── Plan: edit plan ───────────────────────────────────────────────── -->
+    <string name="edit_next_week">编辑下周计划</string>
+    <string name="edit_plan_subtitle">自定义周一至周日的训练日</string>
+    <string name="add_training_day">添加训练日</string>
+    <string name="training_day_label">第 %1$d 天</string>
+    <string name="workout_description">训练描述</string>
+    <string name="delete_day">删除该日</string>
+
+    <!-- ── Plan: training level ───────────────────────────────────────────── -->
+    <string name="training_level">训练水平</string>
+    <string name="plan_duration">计划周期</string>
+    <string name="auto_weeks">自动</string>
+    <string name="x_weeks">%1$d 周</string>
+
+    <!-- ── History: trend chart ───────────────────────────────────────────── -->
+    <string name="trends">趋势</string>
+    <string name="cadence">步频</string>
+    <string name="vertical_oscillation">垂直振幅</string>
+    <string name="ground_contact_time">触地时间</string>
+    <string name="no_trend_data">暂无趋势数据</string>
+    <string name="need_more_analyses">至少完成 2 次分析才能查看趋势</string>
+    <string name="spm">%1$.0f 步/分</string>
+    <string name="cm_unit">%1$.1f 厘米</string>
+    <string name="ms_unit">%1$.0f 毫秒</string>
+    <string name="tap_for_detail">点击图表查看详情</string>
+
+    <!-- ── Plan days ─────────────────────────────────────────────────────── -->
+    <string name="day_mon">周一</string>
+    <string name="day_tue">周二</string>
+    <string name="day_wed">周三</string>
+    <string name="day_thu">周四</string>
+    <string name="day_fri">周五</string>
+    <string name="day_sat">周六</string>
+    <string name="day_sun">周日</string>
+
+    <!-- ── Profile tab ───────────────────────────────────────────────────── -->
+    <string name="profile_title">个人资料</string>
+    <string name="profile_subtitle">你的信息可提高计划质量</string>
+    <string name="identity">身份信息</string>
+    <string name="first_name">名字</string>
+    <string name="last_name">姓氏</string>
+    <string name="nickname_optional">昵称（可选）</string>
+    <string name="runner_profile">跑者资料</string>
+    <string name="experience_level">经验水平</string>
+    <string name="training_target">训练目标</string>
+    <string name="running_stats">跑步数据</string>
+    <string name="weekly_mileage">每周里程</string>
+    <string name="running_days_week">每周跑步天数</string>
+    <string name="weekly_exercise_hours">每周运动小时数</string>
+    <string name="body_stats">身体数据</string>
+    <string name="height">身高</string>
+    <string name="weight">体重</string>
+    <string name="injury_medical_note">伤病 / 医疗备注</string>
+    <string name="injury_placeholder">例如：膝盖疼痛，足底筋膜炎…</string>
+    <string name="save_profile">保存资料</string>
+    <string name="saved">已保存！</string>
+
+    <!-- ── Enums - RunnerLevel ───────────────────────────────────────────── -->
+    <string name="level_beginner">初学者</string>
+    <string name="level_intermediate">中级</string>
+    <string name="level_advanced">高级</string>
+
+    <!-- ── Enums - TrainingTarget ────────────────────────────────────────── -->
+    <string name="target_5k">5公里</string>
+    <string name="target_10k">10公里</string>
+    <string name="target_half_marathon">半程马拉松</string>
+    <string name="target_marathon">马拉松</string>
+    <string name="target_general_fitness">综合健身</string>
+
+    <!-- ── Error ─────────────────────────────────────────────────────────── -->
+    <string name="error_prefix">错误：%1$s</string>
+    <string name="error_invalid_km">请输入有效的每周里程数。</string>
+    <string name="error_plan_failed">计划生成失败，请检查网络连接。</string>
+    <string name="profile_saved">资料已保存</string>
+
+    <!-- ── Compare Screen ────────────────────────────────────────────────── -->
+    <string name="compare_with_elite">与精英运动员比较</string>
+    <string name="compare_subtitle">选择一位运动员，将你的跑步姿态与其精英生物力学基准进行对比。</string>
+    <string name="comparing_your_form">正在对比跑步姿态…</string>
+    <string name="coachs_take">教练点评</string>
+    <string name="biggest_gaps">主要差距</string>
+    <string name="metric_breakdown">指标详情</string>
+    <string name="match_label">匹配度</string>
+    <string name="you">你</string>
+    <string name="elite_benchmark">精英基准</string>
+    <string name="close">关闭</string>
+    <string name="couldnt_load_athletes">无法加载运动员数据</string>
+    <string name="comparison_failed">对比失败</string>
+    <string name="retry">重试</string>
+    <string name="compare_history_desc">选择过去的分析，与顶尖运动员的状态进行对比。</string>
+    <string name="select_analysis_for_compare">选择分析</string>
+    <string name="pick_an_athlete">选择运动员</string>
+
+    <!-- ── Feedback (RF-203) ─────────────────────────────────────────────── -->
+    <string name="tester_feedback">测试者反馈</string>
+    <string name="feedback_subtitle">帮助改进教练质量</string>
+    <string name="feedback_comment_hint">可选备注：哪里不对或有帮助？</string>
+    <string name="feedback_save">保存反馈</string>
+    <string name="feedback_submitted">✓ 已提交</string>
+    <string name="feedback_submitting">提交中…</string>
+    <string name="feedback_thank_you">反馈已收到。谢谢！</string>
+    <string name="feedback_saved_offline">已离线保存——将在有网络时同步</string>
+    <string name="feedback_very_inaccurate">非常不准确</string>
+    <string name="feedback_partly_accurate">部分准确</string>
+    <string name="feedback_mostly_accurate">基本准确</string>
+    <string name="feedback_accurate">准确</string>
+    <string name="feedback_very_accurate">非常准确</string>
+
+    <!-- ── Plan: marathon phases ──────────────────────────────────────────── -->
+    <string name="marathon_plan_title">马拉松训练计划</string>
+    <string name="marathon_plan_subtitle">AI生成的12–16周马拉松训练模块</string>
+    <string name="race_plan_title">比赛训练计划</string>
+    <string name="race_plan_subtitle">8–16周赛事专项训练模块</string>
+    <string name="phase_base">基础期</string>
+    <string name="phase_build">强化期</string>
+    <string name="phase_peak">巅峰期</string>
+    <string name="phase_taper">减量期</string>
+    <string name="select_race">选择赛事</string>
+    <string name="custom_race_hint">输入赛事名称</string>
+    <string name="target_time_hhmm">目标时间 (HH:MM)</string>
+    <string name="target_time_hint">3:45</string>
+    <string name="select_training_level">选择训练水平</string>
+
+    <!-- ── Plan: saved plans list ─────────────────────────────────────────── -->
+    <string name="plan_type_weekly_label">周计划</string>
+    <string name="plan_type_marathon_label">马拉松计划</string>
+    <string name="plan_type_race_label">比赛计划</string>
+    <string name="saved_plan_date">创建于 %1$s</string>
+
+    <!-- ── Plan: edit ─────────────────────────────────────────────────────── -->
+    <string name="done">完成</string>
+    <string name="back">返回</string>
+    <string name="edit_save">保存修改</string>
+    <string name="edit_day_title">编辑训练日</string>
+    <string name="new_day_title">新建训练日</string>
+
+    <!-- ── Plan: edit form ────────────────────────────────────────────────── -->
+    <string name="edit_training_type">训练类型</string>
+    <string name="edit_distance_km">距离 (公里)</string>
+    <string name="edit_duration_min">时长 (分钟)</string>
+
+    <!-- ── Plan: edit empty / selection ────────────────────────────────────── -->
+    <string name="edit_select_week">选择周</string>
+    <string name="edit_no_workouts">本周无训练</string>
+    <string name="edit_add_first">点击 + 添加训练</string>
+
+    <!-- ── Video Compression (RF-206) ────────────────────────────────────── -->
+    <string name="compress_video">压缩视频</string>
+    <string name="compressing_video">正在压缩视频…</string>
+    <string name="compression_complete">压缩完成</string>
+    <string name="compression_size_reduced">从 %1$s 压缩到 %2$s</string>
+    <string name="skip_compression">跳过压缩</string>
+    <string name="original_size">原始：%1$s</string>
+
+    <!-- ── Share (RF-207) ────────────────────────────────────────────────── -->
+    <string name="share">分享</string>
+    <string name="share_analysis_subject">RunForm 跑步分析 — %1$d%% 评分</string>
+    <string name="share_analysis_body">我的 RunForm Coach AI 分析：\n• 评分：%1$d%%\n• 总结：%2$s\n\n获取 RunForm：https://runform.coach</string>
+    <string name="share_compare_subject">RunForm 对比 — %1$s vs %2$s</string>
+    <string name="share_compare_body">我的 RunForm 对比：\n• 与 %1$s 匹配度 %2$d%%\n• 主要差距：%3$s\n\n获取 RunForm：https://runform.coach</string>
+    <string name="share_download_link">https://runform.coach</string>
+
+    <!-- ── Profile Extended Fields (RF-208) ───────────────────────────────── -->
+    <string name="gear_fit">装备与适配</string>
+    <string name="shoe_size">鞋码</string>
+    <string name="shoe_size_eu">欧码</string>
+    <string name="shoe_size_us">美码</string>
+    <string name="shoe_size_uk">英码</string>
+    <string name="leg_length">腿长</string>
+    <string name="shoe_brand">跑鞋品牌</string>
+    <string name="shoe_brand_hint">例如：Nike, Saucony, Brooks</string>
+    <string name="shoe_model">跑鞋型号</string>
+    <string name="shoe_model_hint">例如：Vaporfly, Endorphin Pro</string>
+    <string name="leg_length_cm">%1$.0f 厘米</string>
+
+    <!-- ── Live Running Dashboard (RF-605) ────────────────────────────────── -->
+    <string name="dashboard_cadence">步频</string>
+    <string name="dashboard_vertical_osc">垂直振幅</string>
+    <string name="dashboard_ground_contact">触地时间</string>
+    <string name="dashboard_trunk_lean">躯干倾角</string>
+    <string name="dashboard_prompt_history">教练提示</string>
+    <string name="dashboard_pause">暂停</string>
+    <string name="dashboard_resume">继续</string>
+    <string name="dashboard_stop">停止</string>
+    <string name="dashboard_start">开始</string>
+    <string name="dashboard_permission_body_sensors">需要身体传感器权限才能获取实时跑步指标。</string>
+    <string name="dashboard_permission_foreground">需要前台服务权限。</string>
+    <string name="dashboard_grant_permission">授予权限</string>
+    <string name="dashboard_ready_to_run">准备跑步</string>
+    <string name="dashboard_permission_denied">权限被拒绝</string>
+    <string name="dashboard_no_prompts_yet">暂无教练提示</string>
+    <string name="dashboard_spm">%1$.0f 步/分</string>
+    <string name="dashboard_cm">%1$.1f 厘米</string>
+    <string name="dashboard_ms">%1$.0f 毫秒</string>
+    <string name="dashboard_deg">%1$.1f°</string>
+    <string name="dashboard_elapsed_format">%1$02d:%2$02d</string>
+    <string name="dashboard_running">跑步中</string>
+    <string name="dashboard_paused_label">已暂停</string>
+    <string name="dashboard_stopped_label">已停止</string>
+
+    <!-- ── Weekly Insights (RF-912) ──────────────────────────────────────── -->
+    <string name="weekly_insights_title">每周洞察</string>
+    <string name="weekly_insights_subtitle">你的训练趋势一览</string>
+    <string name="weekly_insights_loading">正在加载你的每周洞察…</string>
+    <string name="weekly_insights_error_title">⚠️ 无法加载趋势</string>
+    <string name="weekly_insights_retry">点击重试 →</string>
+    <string name="weekly_insights_week_over_week">周环比对比</string>
+    <string name="weekly_insights_cadence">步频</string>
+    <string name="weekly_insights_spm_unit">步/分</string>
+    <string name="weekly_insights_cadence_desc">更高的步频可降低跨步风险</string>
+    <string name="weekly_insights_vertical_oscillation">垂直振幅</string>
+    <string name="weekly_insights_cm_unit">厘米</string>
+    <string name="weekly_insights_oscillation_desc">更低的振幅 = 更高效的步幅</string>
+    <string name="weekly_insights_ground_contact_time">触地时间</string>
+    <string name="weekly_insights_ms_unit">毫秒</string>
+    <string name="weekly_insights_gct_desc">更短的触地时间 = 更快的转换</string>
+    <string name="weekly_insights_stats">每周统计</string>
+    <string name="weekly_insights_distance">距离</string>
+    <string name="weekly_insights_sessions">次数</string>
+    <string name="weekly_insights_duration">时长</string>
+    <string name="weekly_insights_badges">本周获得的徽章</string>
+    <string name="weekly_insights_ai_coach">AI 教练说</string>
+    <string name="weekly_insights_4week_trends">4 周趋势</string>
+    <string name="weekly_insights_improving">改善中</string>
+    <string name="weekly_insights_declining">下降中</string>
+    <string name="weekly_insights_stable">稳定</string>
+    <string name="weekly_insights_last_week">上周：%1$.1f %2$s</string>
+    <string name="weekly_insights_trend_cadence">步频 (步/分)</string>
+    <string name="weekly_insights_trend_amplitude">垂直振幅 (厘米)</string>
+    <string name="weekly_insights_trend_gct">触地时间 (毫秒)</string>
+    <string name="weekly_insights_trend_distance">距离 (公里)</string>
+    <string name="refresh">刷新</string>
+
+    <!-- ── Compare Screen (additional) ────────────────────────────────── -->
+    <string name="compare_go_back">返回</string>
+    <string name="status_ahead">领先</string>
+    <string name="status_on_par">持平</string>
+    <string name="status_gap">差距</string>
+    <string name="vs_label">对比</string>
+    <string name="about_label">关于</string>
+    <string name="elite_athletes_tab">精英运动员</string>
+    <string name="custom_compare_tab">自定义对比</string>
+    <string name="select_two_analyses_desc">选择两次过去的分析，查看你的跑步姿态随时间的变化。</string>
+    <string name="compare_selected">对比所选</string>
+    <string name="your_analyses">你的分析</string>
+    <string name="select_analysis">选择分析</string>
+</resources>

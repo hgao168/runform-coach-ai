@@ -1,6 +1,7 @@
 // pages/compare/compare.js
 const api = require('../../utils/api')
-const { t, isZh } = require('../../utils/i18n')
+const { t, isZh, backendLang } = require('../../utils/i18n')
+const ShareCard = require('../../utils/share-card')
 
 function parseAthletes(raw) {
   if (!Array.isArray(raw)) return []
@@ -8,10 +9,10 @@ function parseAthletes(raw) {
     const name = a.name || a.athlete_name || ''
     const initial = name ? name[0].toUpperCase() : '?'
     const stats = []
-    if (a.cadence) stats.push({ label: isZh ? '步频 (步/分)' : 'Cadence', value: a.cadence })
-    if (a.vertical_oscillation) stats.push({ label: isZh ? '垂直振幅' : 'Vert. Oscillation', value: a.vertical_oscillation })
-    if (a.ground_contact_time) stats.push({ label: isZh ? '接地时间' : 'Ground Contact', value: a.ground_contact_time })
-    if (a.stride_length) stats.push({ label: isZh ? '步幅' : 'Stride Length', value: a.stride_length })
+    if (a.cadence) stats.push({ label: isZh ? '步频 (步/分)' : 'Cadence', value: a.cadence, key: 'cadence' })
+    if (a.vertical_oscillation) stats.push({ label: isZh ? '垂直振幅' : 'Vert. Oscillation', value: a.vertical_oscillation, key: 'vertical_oscillation' })
+    if (a.ground_contact_time) stats.push({ label: isZh ? '接地时间' : 'Ground Contact', value: a.ground_contact_time, key: 'ground_contact_time' })
+    if (a.stride_length) stats.push({ label: isZh ? '步幅' : 'Stride Length', value: a.stride_length, key: 'stride_length' })
     return {
       id: a.id || name,
       name,
@@ -26,6 +27,81 @@ function parseAthletes(raw) {
   })
 }
 
+/**
+ * Extract user metrics from analysis result.
+ * Tries raw values first, falls back to normalized scores.
+ */
+function extractUserMetrics(result) {
+  const fm = result.form_metrics || result.metrics || {}
+  const metrics = {}
+
+  // Cadence
+  if (fm.cadence_spm != null) metrics.cadence = fm.cadence_spm
+  else if (fm.cadence != null) metrics.cadence = typeof fm.cadence === 'number' && fm.cadence <= 1 ? Math.round(fm.cadence * 100 + 120) : fm.cadence
+
+  // Vertical oscillation (cm)
+  if (fm.vertical_oscillation_cm != null) metrics.vertical_oscillation = fm.vertical_oscillation_cm
+  else if (fm.vertical_oscillation != null) metrics.vertical_oscillation = typeof fm.vertical_oscillation === 'number' && fm.vertical_oscillation <= 1 ? +(fm.vertical_oscillation * 8 + 5).toFixed(1) : fm.vertical_oscillation
+
+  // Ground contact time (ms)
+  if (fm.ground_contact_time_ms != null) metrics.ground_contact_time = fm.ground_contact_time_ms
+  else if (fm.ground_contact_time != null) metrics.ground_contact_time = typeof fm.ground_contact_time === 'number' && fm.ground_contact_time <= 1 ? Math.round(fm.ground_contact_time * 150 + 150) : fm.ground_contact_time
+
+  // Stride length (m)
+  if (fm.stride_length_m != null) metrics.stride_length = fm.stride_length_m
+  else if (fm.stride_length != null) metrics.stride_length = typeof fm.stride_length === 'number' && fm.stride_length <= 1 ? +(fm.stride_length * 0.5 + 0.8).toFixed(2) : fm.stride_length
+
+  return metrics
+}
+
+/**
+ * Build comparison rows from user metrics and athlete stats.
+ */
+function buildComparison(userMetrics, athlete) {
+  const metricMeta = [
+    { key: 'cadence', labelZh: '步频', labelEn: 'Cadence', unit: isZh ? '步/分' : 'spm', format: (v) => Math.round(v).toString() },
+    { key: 'vertical_oscillation', labelZh: '垂直振幅', labelEn: 'Vert. Osc.', unit: 'cm', format: (v) => v.toFixed(1) },
+    { key: 'ground_contact_time', labelZh: '触地时间', labelEn: 'GCT', unit: 'ms', format: (v) => Math.round(v).toString() },
+    { key: 'stride_length', labelZh: '步幅', labelEn: 'Stride', unit: 'm', format: (v) => v.toFixed(2) },
+  ]
+
+  const athleteStats = {}
+  for (const s of athlete.stats) {
+    athleteStats[s.key] = s.value
+  }
+
+  return metricMeta
+    .filter((m) => userMetrics[m.key] != null || athleteStats[m.key] != null)
+    .map((m) => {
+      const userVal = userMetrics[m.key]
+      const eliteVal = athleteStats[m.key]
+      const bothHave = userVal != null && eliteVal != null
+      let diff = null
+      let diffColor = ''
+      if (bothHave) {
+        diff = userVal - eliteVal
+        // Cadence: higher is better; oscillation & GCT: lower is better
+        if (m.key === 'cadence') {
+          diffColor = diff >= 0 ? '#00f5a0' : '#ff4757'
+        } else {
+          diffColor = diff <= 0 ? '#00f5a0' : '#ff4757'
+        }
+      }
+      return {
+        label: isZh ? m.labelZh : m.labelEn,
+        unit: m.unit,
+        userDisplay: userVal != null ? m.format(userVal) : '–',
+        eliteDisplay: eliteVal != null ? m.format(eliteVal) : '–',
+        userVal,
+        eliteVal,
+        diff,
+        diffDisplay: bothHave ? (diff >= 0 ? `+${m.format(Math.abs(diff))}` : `-${m.format(Math.abs(diff))}`) : '–',
+        diffColor,
+        bothHave,
+      }
+    })
+}
+
 Page({
   data: {
     i: {
@@ -37,16 +113,50 @@ Page({
       loading: t('loading'),
       retry: t('retry'),
       back: t('back'),
+      compareResult: t('compareResult'),
+      yourMetrics: t('yourMetrics'),
+      eliteMetrics: t('eliteMetrics'),
+      gap: t('gap'),
+      noAnalysisForCompare: t('noAnalysisForCompare'),
+      goAnalyzeNow: t('goAnalyzeNow'),
+      comparing: t('comparing'),
+      compareError: t('compareError'),
+      compareVs: t('compareVs'),
+      noCompareData: t('noCompareData'),
+      trainingParams: t('trainingParams'),
+      shareResult: t('shareResult'),
     },
 
     loading: false,
     loadError: '',
     athletes: [],
     selectedAthlete: null,
+
+    // Comparison state
+    hasAnalysis: false,
+    comparing: false,
+    compareError: '',
+    comparisonRows: [],
   },
 
   onLoad() {
     this.loadAthletes()
+  },
+
+  onShow() {
+    // Refresh analysis availability when page shows
+    this._checkAnalysis()
+  },
+
+  _checkAnalysis() {
+    try {
+      const lastResult = wx.getStorageSync('lastAnalysisResult')
+      this._lastAnalysisResult = lastResult || null
+      this.setData({ hasAnalysis: !!lastResult })
+    } catch {
+      this._lastAnalysisResult = null
+      this.setData({ hasAnalysis: false })
+    }
   },
 
   loadAthletes() {
@@ -64,10 +174,136 @@ Page({
   selectAthlete(e) {
     const id = e.currentTarget.dataset.id
     const athlete = this.data.athletes.find((a) => a.id === id)
-    if (athlete) this.setData({ selectedAthlete: athlete })
+    if (!athlete) return
+
+    this.setData({
+      selectedAthlete: athlete,
+      comparing: false,
+      compareError: '',
+      comparisonRows: [],
+    })
+
+    // If user has analysis data, run comparison
+    if (this._lastAnalysisResult) {
+      this._runComparison(athlete)
+    }
+  },
+
+  _runComparison(athlete) {
+    const userMetrics = extractUserMetrics(this._lastAnalysisResult)
+    if (!userMetrics || Object.keys(userMetrics).length === 0) {
+      this.setData({ compareError: t('compareError') })
+      return
+    }
+
+    this.setData({ comparing: true, compareError: '' })
+
+    api.compareWithAthlete(athlete.id, userMetrics, backendLang)
+      .then((res) => {
+        // Backend may return enriched comparison or we build from raw data
+        const mergedMetrics = res.user_metrics || res.comparison || null
+        const rows = buildComparison(mergedMetrics || userMetrics, athlete)
+        this.setData({ comparing: false, comparisonRows: rows })
+      })
+      .catch((err) => {
+        // Fallback: build comparison from local data even if API fails
+        const rows = buildComparison(userMetrics, athlete)
+        this.setData({
+          comparing: false,
+          comparisonRows: rows,
+          compareError: rows.length === 0 ? (err.message || t('compareError')) : '',
+        })
+      })
   },
 
   clearAthlete() {
-    this.setData({ selectedAthlete: null })
+    this.setData({
+      selectedAthlete: null,
+      comparing: false,
+      compareError: '',
+      comparisonRows: [],
+    })
+  },
+
+  goAnalyze() {
+    wx.switchTab({ url: '/pages/analyze/analyze' })
+  },
+
+  // ──────────── RF-913: Share card ────────────
+
+  generateShareImage() {
+    const { selectedAthlete, comparisonRows } = this.data
+    const userMetrics = this._lastAnalysisResult
+      ? extractUserMetrics(this._lastAnalysisResult)
+      : null
+
+    ShareCard.generate({
+      canvasId: 'shareCanvas',
+      scenario: 'compare',
+      data: {
+        athleteName: selectedAthlete ? selectedAthlete.name : '',
+        athleteStats: selectedAthlete ? selectedAthlete.stats : [],
+        userMetrics,
+        comparisonRows,
+      },
+      pageInstance: this,
+      onSuccess: (tempFilePath) => {
+        this._shareImagePath = tempFilePath
+        wx.showToast({ title: isZh ? '分享图已生成' : 'Share image ready', icon: 'success' })
+      },
+      onFail: (err) => {
+        console.error('[compare] ShareCard generate failed:', err)
+      },
+    })
+  },
+
+  saveShareToAlbum() {
+    if (this._shareImagePath) {
+      ShareCard.saveToAlbum(this._shareImagePath)
+    } else {
+      const { selectedAthlete, comparisonRows } = this.data
+
+      ShareCard.generate({
+        canvasId: 'shareCanvas',
+        scenario: 'compare',
+        data: {
+          athleteName: selectedAthlete ? selectedAthlete.name : '',
+          athleteStats: selectedAthlete ? selectedAthlete.stats : [],
+          userMetrics: this._lastAnalysisResult ? extractUserMetrics(this._lastAnalysisResult) : null,
+          comparisonRows,
+        },
+        pageInstance: this,
+        onSuccess: (tempFilePath) => {
+          this._shareImagePath = tempFilePath
+          ShareCard.saveToAlbum(tempFilePath)
+        },
+        onFail: () => {
+          wx.showToast({ title: isZh ? '生成分享图失败' : 'Share image failed', icon: 'none' })
+        },
+      })
+    }
+  },
+
+  onShareAppMessage() {
+    const { selectedAthlete, comparisonRows } = this.data
+    const lang = isZh
+
+    let title
+    if (selectedAthlete && comparisonRows.length > 0) {
+      title = lang
+        ? `🏃 我与 ${selectedAthlete.name} 的跑步数据对比`
+        : `🏃 My run metrics vs ${selectedAthlete.name}`
+    } else if (selectedAthlete) {
+      title = lang
+        ? `🏅 精英运动员：${selectedAthlete.name}`
+        : `🏅 Elite Athlete: ${selectedAthlete.name}`
+    } else {
+      title = lang ? 'RunForm 精英对比' : 'RunForm Elite Compare'
+    }
+
+    const path = '/pages/compare/compare'
+    const imageUrl = this._shareImagePath || ''
+
+    return { title, path, imageUrl }
   },
 })

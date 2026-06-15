@@ -210,6 +210,28 @@
 "Close" = "Sluiten";
 "Couldn't Load Athletes" = "Atleten laden mislukt";
 "Comparison Failed" = "Vergelijking mislukt";
+
+/* RunSessionReplayView — Sprint 3 RF-910 */
+"Run Replay" = "Run Herhaling";
+"Sessions" = "Sessies";
+"No Sessions Yet" = "Nog geen sessies";
+"Your live run sessions will appear here once you complete a tracked run." = "Je live loopsessies verschijnen hier zodra je een bijgehouden run voltooit.";
+"Session Overview" = "Sessieoverzicht";
+"Avg Cadence" = "Gem. Cadans";
+"Avg Oscillation" = "Gem. Oscillatie";
+"Avg GCT" = "Gem. GCT";
+"Duration" = "Duur";
+"Distance" = "Afstand";
+"Coach Prompts" = "Coachaanwijzingen";
+"Coach prompt at %@" = "Coachaanwijzing op %@";
+"Time Series" = "Tijdreeks";
+"Tap & drag to seek" = "Tik & sleep om te zoeken";
+"Tap for details" = "Tik voor details";
+"No coach prompts during this session." = "Geen coachaanwijzingen tijdens deze sessie.";
+"Priority %lld" = "Prioriteit %lld";
+"Coach" = "Coach";
+"GCT" = "GCT";
+"Oscillation" = "Oscillatie";
 "Partly accurate" = "Deels nauwkeurig";
 "Not accurate" = "Niet nauwkeurig";
 "Confusing" = "Verwarrend";

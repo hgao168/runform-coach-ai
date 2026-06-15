@@ -27,7 +27,7 @@
 
   <!-- Issues / Insights -->
   <view class="card" wx:if="{{insights.length > 0}}">
-    <text class="section-title">⚠️ 姿态分析</text>
+    <text class="section-title">⚠️ {{i.insightsTitle}}</text>
     <view wx:for="{{insights}}" wx:key="index" class="insight-item">
       <view class="insight-badge" style="background: {{item.color}}20; border-color: {{item.color}}40;">
         <text class="insight-severity" style="color: {{item.color}};">{{item.severityText}}</text>
@@ -64,10 +64,151 @@
     </view>
   </view>
 
+  <!-- ──────── RF-302: User Feedback Rating ──────── -->
+  <view class="card feedback-card" wx:if="{{!feedbackSubmitted}}">
+    <view class="feedback-header">
+      <text class="section-title" style="margin-bottom: 6rpx;">{{i.feedbackTitle}}</text>
+      <text class="feedback-subtitle">{{i.feedbackSubtitle}}</text>
+    </view>
+
+    <!-- Star rating -->
+    <view class="star-row">
+      <text
+        wx:for="{{[1,2,3,4,5]}}"
+        wx:key="*this"
+        class="star {{item <= feedbackRating ? 'star-active' : ''}}"
+        data-star="{{item}}"
+        bindtap="onStarTap"
+      >★</text>
+    </view>
+
+    <!-- Text comment -->
+    <textarea
+      class="feedback-textarea"
+      placeholder="{{i.feedbackPlaceholder}}"
+      placeholder-style="color: rgba(255,255,255,0.3);"
+      maxlength="500"
+      auto-height
+      value="{{feedbackComment}}"
+      bindinput="onFeedbackCommentInput"
+    />
+
+    <!-- Submit button -->
+    <button
+      class="btn-primary feedback-submit-btn"
+      bindtap="submitFeedback"
+      disabled="{{feedbackRating === 0 || feedbackSubmitting}}"
+      loading="{{feedbackSubmitting}}"
+    >
+      {{feedbackSubmitting ? i.feedbackSubmitting : i.feedbackSubmit}}
+    </button>
+
+    <!-- Offline saved hint -->
+    <view wx:if="{{feedbackSavedOffline}}" class="offline-hint">
+      <text class="offline-hint-text">📡 {{i.feedbackSavedOffline}}</text>
+    </view>
+  </view>
+
+  <!-- Feedback submitted confirmation -->
+  <view class="card feedback-done-card" wx:if="{{feedbackSubmitted}}">
+    <view class="feedback-done-content">
+      <text style="font-size: 48rpx;">✅</text>
+      <text class="text-mint" style="font-size: 28rpx; font-weight: 600;">{{i.feedbackSubmitted}}</text>
+    </view>
+  </view>
+
+  <!-- ──────── RF-305: Voice Coach ──────── -->
+  <view class="card voice-coach-card">
+    <view class="voice-coach-header">
+      <text class="section-title">🎙️ {{voiceCoachLabels.title}}</text>
+      <view class="voice-coach-status-badge" wx:if="{{voiceState === 'playing'}}">
+        <text class="voice-status-text playing">{{voiceCoachLabels.playing}}</text>
+      </view>
+      <view class="voice-coach-status-badge" wx:elif="{{voiceState === 'paused'}}">
+        <text class="voice-status-text paused">{{voiceCoachLabels.paused}}</text>
+      </view>
+      <view class="voice-coach-status-badge" wx:elif="{{voiceState === 'stopped' && voiceQueueLength === 0}}">
+        <text class="voice-status-text stopped">{{voiceCoachLabels.stopped}}</text>
+      </view>
+    </view>
+
+    <view class="voice-coach-controls" wx:if="{{voiceEnabled}}">
+      <!-- Play/Pause -->
+      <button
+        class="voice-btn voice-btn-play"
+        bindtap="onVoiceCoachToggle"
+        disabled="{{voiceMuted}}"
+      >
+        <text wx:if="{{voiceState === 'playing'}}">⏸️ {{voiceCoachLabels.playing}}</text>
+        <text wx:elif="{{voiceState === 'paused'}}">▶️ {{voiceCoachLabels.paused}}</text>
+        <text wx:else>▶️ {{voiceCoachLabels.play}}</text>
+      </button>
+
+      <!-- Stop -->
+      <button
+        class="voice-btn voice-btn-stop"
+        bindtap="onVoiceCoachStop"
+        disabled="{{voiceState === 'stopped'}}"
+      >
+        ⏹️ {{voiceCoachLabels.stop}}
+      </button>
+
+      <!-- Mute toggle -->
+      <button
+        class="voice-btn voice-btn-mute"
+        bindtap="onVoiceCoachMuteToggle"
+      >
+        <text wx:if="{{voiceMuted}}">🔇 {{voiceCoachLabels.unmute}}</text>
+        <text wx:else>🔊 {{voiceCoachLabels.mute}}</text>
+      </button>
+    </view>
+
+    <!-- Disabled state -->
+    <view class="voice-coach-disabled" wx:if="{{!voiceEnabled}}">
+      <text class="voice-disabled-text">🔕 {{voiceCoachLabels.disabled}}</text>
+      <button class="voice-btn voice-btn-enable" bindtap="onVoiceCoachEnableToggle">
+        {{voiceCoachLabels.enable}}
+      </button>
+    </view>
+
+    <!-- No audio files hint (dev mode) -->
+    <view class="voice-coach-no-audio-hint">
+      <text class="voice-no-audio-text">ℹ️ {{voiceCoachLabels.noAudio}}</text>
+    </view>
+  </view>
+
   <!-- Action buttons -->
   <view class="action-section">
     <button class="btn-secondary full-btn" bindtap="goCompare">{{i.compareWithElite}}</button>
-    <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" bindtap="shareResult">分享结果</button>
+
+    <!-- RF-304: Share button (uses WeChat native share) -->
+    <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" open-type="share">
+      📤 {{i.shareResult}}
+    </button>
+
+    <!-- RF-913: Save share image to album -->
+    <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="saveShareToAlbum">
+      🖼️ {{i.saveToAlbum}}
+    </button>
   </view>
+
+  <!-- RF-963: Rewarded video ad -->
+  <view class="card ad-card" wx:if="{{rewardedAdAvailable}}">
+    <view class="ad-header">
+      <text class="ad-icon">🎬</text>
+      <text class="ad-title">{{i.adWatchTitle}}</text>
+    </view>
+    <text class="ad-desc">{{i.adWatchDesc}}</text>
+    <button class="btn-ad" bindtap="showRewardedAd">
+      ▶️ {{i.adWatchButton}}
+    </button>
+  </view>
+
+  <!-- RF-304: Hidden canvas for share image generation (2D Canvas) -->
+  <canvas
+    type="2d"
+    id="shareCanvas"
+    style="position: fixed; left: -9999rpx; top: -9999rpx; width: 600rpx; height: 800rpx;"
+  />
 
 </view>

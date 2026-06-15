@@ -2,6 +2,7 @@ package com.runformcoach.runformcoachai
 
 import android.content.Intent
 import android.net.Uri
+import android.view.ViewGroup
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,11 +20,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,13 +43,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 import java.util.Locale
 
 @Composable
-fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = null) {
+fun AnalysisResultScreen(
+    result: AnalysisResponse,
+    onDismiss: (() -> Unit)? = null,
+    feedbackViewModel: FeedbackViewModel? = null,
+    analysisId: String? = null
+) {
     val context = LocalContext.current
     val isChinese = Locale.getDefault().language == "zh"
 
@@ -47,6 +67,33 @@ fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = nu
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // ── RF-207: Share button ───────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = {
+                val scorePercent = (result.confidence * 100).toInt()
+                val summary = result.summary
+                val subject = context.getString(R.string.share_analysis_subject, scorePercent)
+                val body = context.getString(R.string.share_analysis_body, scorePercent, summary)
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, subject)
+                    putExtra(Intent.EXTRA_TEXT, body)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = stringResource(R.string.share),
+                    tint = AppColors.Mint,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
         // ── Score card ────────────────────────────────────────────────────────
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -56,7 +103,7 @@ fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = nu
             ) {
                 ConfidenceRing(confidence = result.confidence, modifier = Modifier.size(90.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Overall Score", color = AppColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.overall_score), color = AppColors.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     Text("${(result.confidence * 100).toInt()}%", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     Text(result.summary, color = AppColors.TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
@@ -73,7 +120,7 @@ fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = nu
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Video Quality", color = AppColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.video_quality), color = AppColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                         Text("${(qualityScore * 100).toInt()}%", color = qualityBarColor(qualityScore), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
                     MetricBar(progress = qualityScore.toFloat(), color = qualityBarColor(qualityScore))
@@ -86,7 +133,7 @@ fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = nu
 
         // ── Movement Metrics ──────────────────────────────────────────────────
         if (result.metrics.isNotEmpty()) {
-            SectionTitle("Movement Metrics")
+            SectionTitle(stringResource(R.string.movement_metrics_title))
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     result.metrics.forEach { metric -> MetricRow(metric) }
@@ -96,11 +143,22 @@ fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = nu
 
         // ── Strength Focus ────────────────────────────────────────────────────
         if (result.issues.isNotEmpty()) {
-            SectionTitle("Strength Focus")
+            SectionTitle(stringResource(R.string.strength_focus_title))
             result.issues.forEach { issue ->
                 IssueCard(issue = issue, isChinese = isChinese, context = context)
             }
         }
+
+        // ── Feedback section (RF-203) ─────────────────────────────────────────
+        if (feedbackViewModel != null && analysisId != null) {
+            FeedbackSection(
+                viewModel = feedbackViewModel,
+                analysisId = analysisId
+            )
+        }
+
+        // ── AdMob Banner (RF-962) ───────────────────────────────────────────
+        BannerAdView(modifier = Modifier.fillMaxWidth())
 
         // ── Dismiss ───────────────────────────────────────────────────────────
         onDismiss?.let {
@@ -108,10 +166,173 @@ fun AnalysisResultScreen(result: AnalysisResponse, onDismiss: (() -> Unit)? = nu
                 onClick = it,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AppColors.Card, contentColor = AppColors.TextSecondary)
-            ) { Text("Analyze New Video") }
+            ) { Text(stringResource(R.string.analyze_new_video)) }
         }
     }
 }
+
+// ── Feedback composable (RF-203) ───────────────────────────────────────────────
+
+@Composable
+private fun FeedbackSection(
+    viewModel: FeedbackViewModel,
+    analysisId: String
+) {
+    val rating by viewModel.rating.collectAsState()
+    val comment by viewModel.comment.collectAsState()
+    val submissionState by viewModel.submissionState.collectAsState()
+
+    val isSubmitted = submissionState is FeedbackSubmissionState.Submitted ||
+            submissionState is FeedbackSubmissionState.SavedOffline
+
+    SectionTitle(stringResource(R.string.tester_feedback))
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Title row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.feedback_subtitle),
+                    color = AppColors.TextMuted,
+                    fontSize = 12.sp
+                )
+                if (isSubmitted) {
+                    Text(
+                        "✓ Submitted",
+                        color = AppColors.Mint,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            // 5-star rating row
+            StarRatingRow(
+                rating = rating,
+                enabled = !isSubmitted,
+                onRatingChanged = { viewModel.setRating(it) }
+            )
+
+            // Optional comment field
+            OutlinedTextField(
+                value = comment,
+                onValueChange = { viewModel.setComment(it) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSubmitted,
+                placeholder = {
+                    Text(
+                        stringResource(R.string.feedback_comment_hint),
+                        color = AppColors.TextMuted,
+                        fontSize = 13.sp
+                    )
+                },
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = Color.White,
+                    fontSize = 13.sp
+                ),
+                minLines = 2,
+                maxLines = 4,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppColors.Border,
+                    unfocusedBorderColor = AppColors.Border,
+                    disabledBorderColor = AppColors.Border.copy(alpha = 0.4f),
+                    focusedContainerColor = AppColors.Navy,
+                    unfocusedContainerColor = AppColors.Navy,
+                    disabledContainerColor = AppColors.Navy.copy(alpha = 0.5f),
+                    disabledTextColor = AppColors.TextMuted,
+                    cursorColor = AppColors.Mint
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            // Submission status message
+            when (val state = submissionState) {
+                is FeedbackSubmissionState.Submitting -> {
+                    Text(
+                        "Submitting…",
+                        color = AppColors.Cyan,
+                        fontSize = 12.sp
+                    )
+                }
+                is FeedbackSubmissionState.Submitted -> {
+                    Text(
+                        if (state.offlineSaved) "Saved offline — will sync later" else "Feedback received. Thank you!",
+                        color = AppColors.Mint,
+                        fontSize = 12.sp
+                    )
+                }
+                is FeedbackSubmissionState.SavedOffline -> {
+                    Text(
+                        state.message,
+                        color = AppColors.Orange,
+                        fontSize = 12.sp
+                    )
+                }
+                is FeedbackSubmissionState.Error -> {
+                    Text(
+                        state.message,
+                        color = AppColors.Red,
+                        fontSize = 12.sp
+                    )
+                }
+                else -> {}
+            }
+
+            // Submit button
+            if (!isSubmitted) {
+                Button(
+                    onClick = { viewModel.submitFeedback(analysisId) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = rating > 0 && submissionState !is FeedbackSubmissionState.Submitting,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.Mint,
+                        contentColor = Color.Black,
+                        disabledContainerColor = AppColors.Card,
+                        disabledContentColor = AppColors.TextMuted
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.feedback_save),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StarRatingRow(
+    rating: Int,
+    enabled: Boolean,
+    onRatingChanged: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        for (star in 1..5) {
+            val isFilled = star <= rating
+            Icon(
+                imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = "$star star${if (star > 1) "s" else ""}",
+                modifier = Modifier
+                    .size(36.dp)
+                    .padding(2.dp)
+                    .let { if (enabled) it.clickable { onRatingChanged(star) } else it },
+                tint = if (isFilled) AppColors.Yellow else AppColors.TextMuted
+            )
+        }
+    }
+}
+
+// ── Reusable composables ───────────────────────────────────────────────────────
 
 @Composable
 private fun ConfidenceRing(confidence: Double, modifier: Modifier = Modifier) {
@@ -186,7 +407,7 @@ private fun IssueCard(issue: Issue, isChinese: Boolean, context: android.content
             }
             Text(issue.explanation, color = AppColors.TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
             if (issue.recommendedExercises.isNotEmpty()) {
-                SectionTitle("Exercises")
+                SectionTitle(stringResource(R.string.exercises))
                 issue.recommendedExercises.forEach { ex ->
                     ExerciseCard(exercise = ex, isChinese = isChinese, context = context)
                 }
@@ -225,4 +446,42 @@ private fun qualityBarColor(score: Double): Color = when {
     score >= 0.7 -> AppColors.Mint
     score >= 0.4 -> AppColors.Orange
     else -> AppColors.Red
+}
+
+// ── AdMob Banner Ad (RF-962) ──────────────────────────────────────────────────
+
+/**
+ * Test ad unit ID for debug builds.
+ * TODO: Replace production ad unit ID placeholder before release.
+ * See: https://developers.google.com/admob/android/test-ads
+ */
+private const val BANNER_AD_UNIT_ID_TEST = "ca-app-pub-3940256099942544/6300978111"
+// TODO: Replace with production ad unit ID before release
+private const val BANNER_AD_UNIT_ID_PRODUCTION = "ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx"
+
+/**
+ * A simple Banner Ad wrapped for Jetpack Compose using AndroidView.
+ * Uses a fixed AdSize.BANNER (320x50 dp).
+ */
+@Composable
+private fun BannerAdView(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val adView = remember(context) {
+        AdView(context).apply {
+            setAdSize(AdSize.BANNER)
+            adUnitId = if (com.runformcoach.runformcoachai.BuildConfig.DEBUG) BANNER_AD_UNIT_ID_TEST else BANNER_AD_UNIT_ID_PRODUCTION
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    AndroidView(
+        factory = {
+            adView.loadAd(AdRequest.Builder().build())
+            adView
+        },
+        modifier = modifier
+    )
 }

@@ -3,54 +3,79 @@ import Foundation
 final class APIClient {
     static let shared = APIClient()
     private static let defaultStravaBackendBaseURL = "https://runform-coach-ai-production.up.railway.app"
+    private static let maxRetries = 2
+    private static let baseRetryDelay: TimeInterval = 0.5
 
-    private let baseURL: URL = {
-        guard
-            let urlString = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
-            !urlString.isEmpty,
-            let url = URL(string: urlString)
-        else {
-            // BACKEND_BASE_URL must be set via project.yml configs (Debug/Release).
-            fatalError("BACKEND_BASE_URL is not configured. Check project.yml build settings.")
+    /// Resolved base URL — throws if not configured, instead of fatalError.
+    private static func resolvedBaseURL() throws -> URL {
+        if let urlString = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
+           !urlString.isEmpty,
+           let url = URL(string: urlString) {
+            return url
         }
-        return url
-    }()
+        throw APIError.configuration("BACKEND_BASE_URL is not configured. Check project.yml build settings.")
+    }
 
-    private let stravaBaseURL: URL = {
+    /// Resolved Strava base URL with fallback chain.
+    private static func resolvedStravaBaseURL() throws -> URL {
         if let urlString = Bundle.main.object(forInfoDictionaryKey: "STRAVA_BACKEND_BASE_URL") as? String,
            !urlString.isEmpty,
            let url = URL(string: urlString) {
             return url
         }
-
-        if let defaultURL = URL(string: APIClient.defaultStravaBackendBaseURL) {
+        if let defaultURL = URL(string: defaultStravaBackendBaseURL) {
             return defaultURL
         }
-
-        guard
-            let fallback = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
-            !fallback.isEmpty,
-            let fallbackURL = URL(string: fallback)
-        else {
-            fatalError("BACKEND_BASE_URL is not configured. Check project.yml build settings.")
+        if let fallback = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
+           !fallback.isEmpty,
+           let fallbackURL = URL(string: fallback) {
+            return fallbackURL
         }
-        return fallbackURL
-    }()
+        throw APIError.configuration("BACKEND_BASE_URL is not configured. Check project.yml build settings.")
+    }
+
+    // MARK: - Retry policy
+
+    /// Retry an async throwing operation up to `maxRetries` times with exponential backoff.
+    private static func withRetry<T>(_ operation: @escaping () async throws -> T) async throws -> T {
+        var lastError: Error? = nil
+        for attempt in 0...maxRetries {
+            do {
+                return try await operation()
+            } catch {
+                lastError = error
+                // Do not retry on cancellation or configuration errors
+                if error is CancellationError || error is APIError.ConfigurationError {
+                    throw error
+                }
+                if attempt < maxRetries {
+                    let delay = baseRetryDelay * pow(2.0, Double(attempt))
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                }
+            }
+        }
+        throw lastError ?? APIError.server("Request failed after \(maxRetries + 1) attempts")
+    }
+
+    // MARK: - API Methods
 
     func analyzeMetrics(_ metrics: PoseMetrics) async throws -> AnalysisResponse {
+        let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("analyze-metrics")
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 45
-        request.httpBody = try JSONEncoder().encode(metrics)
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 45
+            request.httpBody = try JSONEncoder().encode(metrics)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-            throw APIError.server(message)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(AnalysisResponse.self, from: data)
         }
-        return try JSONDecoder().decode(AnalysisResponse.self, from: data)
     }
 
     func fetchStravaConnectResponse(iosUserID: String) async throws -> StravaConnectResponse {
@@ -97,56 +122,184 @@ final class APIClient {
     }
 
     func fetchStravaSummary(iosUserID: String, weeks: Int = 4) async throws -> StravaSummaryResponse {
+        let baseURL = try Self.resolvedBaseURL()
         var components = URLComponents(url: baseURL.appendingPathComponent("integrations/strava/summary"), resolvingAgainstBaseURL: false)
         components?.queryItems = [
             URLQueryItem(name: "ios_user_id", value: iosUserID),
             URLQueryItem(name: "weeks", value: String(weeks))
         ]
         guard let endpoint = components?.url else {
-            fatalError("Failed to build Strava summary URL.")
+            throw APIError.configuration("Failed to build Strava summary URL.")
         }
 
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 20
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 20
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-            throw APIError.server(message)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(StravaSummaryResponse.self, from: data)
         }
-        return try JSONDecoder().decode(StravaSummaryResponse.self, from: data)
     }
 
     // Backward-compatible fallback only. Prefer analyzeMetrics(_:), because it sends numeric pose metrics instead of the raw video.
     func analyzeVideo(fileURL: URL) async throws -> AnalysisResponse {
+        let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("analyze")
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 60
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.timeoutInterval = 60
 
-        let boundary = "Boundary-\(UUID().uuidString)"
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            let boundary = "Boundary-\(UUID().uuidString)"
+            request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
-        let videoData = try Data(contentsOf: fileURL)
-        let filename = fileURL.lastPathComponent.isEmpty ? "running-video.mov" : fileURL.lastPathComponent
-        let mimeType = filename.lowercased().hasSuffix(".mp4") ? "video/mp4" : "video/quicktime"
+            let videoData = try Data(contentsOf: fileURL)
+            let filename = fileURL.lastPathComponent.isEmpty ? "running-video.mov" : fileURL.lastPathComponent
+            let mimeType = filename.lowercased().hasSuffix(".mp4") ? "video/mp4" : "video/quicktime"
 
-        request.httpBody = makeMultipartBody(
-            fieldName: "video",
-            filename: filename,
-            mimeType: mimeType,
-            data: videoData,
-            boundary: boundary
-        )
+            request.httpBody = makeMultipartBody(
+                fieldName: "video",
+                filename: filename,
+                mimeType: mimeType,
+                data: videoData,
+                boundary: boundary
+            )
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-            throw APIError.server(message)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(AnalysisResponse.self, from: data)
         }
-        return try JSONDecoder().decode(AnalysisResponse.self, from: data)
     }
+
+    func generateTrainingPlan(input: TrainingPlanInput) async throws -> TrainingPlanResponse {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("training-plan")
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 30
+            request.httpBody = try JSONEncoder().encode(input)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            let decoder = JSONDecoder()
+            return try decoder.decode(TrainingPlanResponse.self, from: data)
+        }
+    }
+
+    func fetchAthletes() async throws -> [AthleteListItem] {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("athletes")
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 20
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode([AthleteListItem].self, from: data)
+        }
+    }
+
+    func compareWithAthlete(athleteId: String, metrics: PoseMetrics) async throws -> CompareResponse {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("compare")
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 30
+            let language = Bundle.main.preferredLocalizations.first ?? "en"
+            request.httpBody = try JSONEncoder().encode(
+                CompareRequest(userMetrics: metrics, athleteId: athleteId, language: language)
+            )
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(CompareResponse.self, from: data)
+        }
+    }
+
+    func fetchSessions() async throws -> [RunSessionResponse] {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("sessions")
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 20
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([RunSessionResponse].self, from: data)
+        }
+    }
+
+    func saveProfile(iosUserID: String, profile: TesterProfile) async throws -> ProfileSaveResponse {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("profile")
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "PUT"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 20
+
+            let dateFormatter = ISO8601DateFormatter()
+            dateFormatter.formatOptions = [.withFullDate]
+
+            let payload = ProfileSaveRequest(
+                iosUserId: iosUserID,
+                firstName: profile.firstName.isEmpty ? nil : profile.firstName,
+                lastName: profile.lastName.isEmpty ? nil : profile.lastName,
+                nickname: profile.nickname.isEmpty ? nil : profile.nickname,
+                level: profile.level.rawValue,
+                weeklyMileageKm: profile.weeklyMileageKm,
+                runningDaysPerWeek: profile.runningDaysPerWeek,
+                heightCm: profile.heightCm,
+                weightKg: profile.weightKg,
+                target: profile.target,
+                injuryNote: profile.injuryNote.isEmpty ? nil : profile.injuryNote,
+                gender: profile.gender.rawValue,
+                shoeSize: profile.shoeSize.isEmpty ? nil : profile.shoeSize,
+                shoeBrandModel: profile.shoeBrandModel.isEmpty ? nil : profile.shoeBrandModel,
+                legLengthCm: profile.legLengthCm,
+                dateOfBirth: profile.dateOfBirth.map { dateFormatter.string(from: $0) },
+                weeklyExerciseHours: profile.weeklyExerciseHours
+            )
+            request.httpBody = try JSONEncoder().encode(payload)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(ProfileSaveResponse.self, from: data)
+        }
+    }
+
+    // MARK: - Private helpers
 
     private func makeMultipartBody(
         fieldName: String,
@@ -164,22 +317,22 @@ final class APIClient {
         return body
     }
 
-    private func stravaEndpoint(path: String, iosUserID: String, baseURL: URL? = nil) -> URL {
-        let resolvedBaseURL = baseURL ?? stravaBaseURL
+    private func stravaEndpoint(path: String, iosUserID: String, baseURL: URL? = nil) throws -> URL {
+        let resolvedBaseURL = try baseURL ?? Self.resolvedStravaBaseURL()
         var components = URLComponents(url: resolvedBaseURL.appendingPathComponent("integrations/strava").appendingPathComponent(path), resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "ios_user_id", value: iosUserID)]
         guard let url = components?.url else {
-            fatalError("Failed to build Strava API URL for path: \(path)")
+            throw APIError.configuration("Failed to build Strava API URL for path: \(path)")
         }
         return url
     }
 
-    private func stravaBaseURLCandidates() -> [URL] {
-        var candidates: [URL] = [stravaBaseURL]
-        if let productionURL = URL(string: APIClient.defaultStravaBackendBaseURL) {
+    private func stravaBaseURLCandidates() throws -> [URL] {
+        var candidates: [URL] = [try Self.resolvedStravaBaseURL()]
+        if let productionURL = URL(string: Self.defaultStravaBackendBaseURL) {
             candidates.append(productionURL)
         }
-        candidates.append(baseURL)
+        candidates.append(try Self.resolvedBaseURL())
 
         var seen = Set<String>()
         return candidates.filter { candidate in
@@ -205,8 +358,9 @@ final class APIClient {
         exhaustedMessage: String
     ) async throws -> T {
         var lastError: APIError?
-        for candidateBaseURL in stravaBaseURLCandidates() {
-            let endpoint = stravaEndpoint(path: path, iosUserID: iosUserID, baseURL: candidateBaseURL)
+        let candidates = try stravaBaseURLCandidates()
+        for candidateBaseURL in candidates {
+            let endpoint = try stravaEndpoint(path: path, iosUserID: iosUserID, baseURL: candidateBaseURL)
             var request = URLRequest(url: endpoint)
             request.httpMethod = method
             request.timeoutInterval = timeout
@@ -230,105 +384,23 @@ final class APIClient {
         }
         throw lastError ?? APIError.server(exhaustedMessage)
     }
-
-    func generateTrainingPlan(input: TrainingPlanInput) async throws -> TrainingPlanResponse {
-        let endpoint = baseURL.appendingPathComponent("training-plan")
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 30
-        request.httpBody = try JSONEncoder().encode(input)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-            throw APIError.server(message)
-        }
-        let decoder = JSONDecoder()
-        return try decoder.decode(TrainingPlanResponse.self, from: data)
-    }
-
-    func fetchAthletes() async throws -> [AthleteListItem] {
-        let endpoint = baseURL.appendingPathComponent("athletes")
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 20
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-            throw APIError.server(message)
-        }
-        return try JSONDecoder().decode([AthleteListItem].self, from: data)
-    }
-
-    func compareWithAthlete(athleteId: String, metrics: PoseMetrics) async throws -> CompareResponse {
-        let endpoint = baseURL.appendingPathComponent("compare")
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 30
-        let language = Bundle.main.preferredLocalizations.first ?? "en"
-        request.httpBody = try JSONEncoder().encode(
-            CompareRequest(userMetrics: metrics, athleteId: athleteId, language: language)
-        )
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-            throw APIError.server(message)
-        }
-        return try JSONDecoder().decode(CompareResponse.self, from: data)
-    }
-
-    func saveProfile(iosUserID: String, profile: TesterProfile) async throws -> ProfileSaveResponse {
-        let endpoint = baseURL.appendingPathComponent("profile")
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "PUT"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 20
-
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withFullDate]
-
-        let payload = ProfileSaveRequest(
-            iosUserId: iosUserID,
-            firstName: profile.firstName.isEmpty ? nil : profile.firstName,
-            lastName: profile.lastName.isEmpty ? nil : profile.lastName,
-            nickname: profile.nickname.isEmpty ? nil : profile.nickname,
-            level: profile.level.rawValue,
-            weeklyMileageKm: profile.weeklyMileageKm,
-            runningDaysPerWeek: profile.runningDaysPerWeek,
-            heightCm: profile.heightCm,
-            weightKg: profile.weightKg,
-            target: profile.target,
-            injuryNote: profile.injuryNote.isEmpty ? nil : profile.injuryNote,
-            gender: profile.gender.rawValue,
-            shoeSize: profile.shoeSize.isEmpty ? nil : profile.shoeSize,
-            shoeBrandModel: profile.shoeBrandModel.isEmpty ? nil : profile.shoeBrandModel,
-            legLengthCm: profile.legLengthCm,
-            dateOfBirth: profile.dateOfBirth.map { dateFormatter.string(from: $0) },
-            weeklyExerciseHours: profile.weeklyExerciseHours
-        )
-        request.httpBody = try JSONEncoder().encode(payload)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-            throw APIError.server(message)
-        }
-        return try JSONDecoder().decode(ProfileSaveResponse.self, from: data)
-    }
 }
 
 enum APIError: LocalizedError {
     case server(String)
+    case configuration(String)
 
     var errorDescription: String? {
         switch self {
         case .server(let message): return message
+        case .configuration(let message): return message
         }
     }
+}
+
+/// Marker protocol for configuration errors that should not be retried.
+extension APIError {
+    struct ConfigurationError: Error { }
 }
 
 private extension Data {

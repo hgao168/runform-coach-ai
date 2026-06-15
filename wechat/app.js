@@ -1,12 +1,18 @@
 // app.js
+const cloudbase = require('./utils/cloudbase')
+
 App({
   globalData: {
     profile: null,
     history: [],
     nextWeekPlan: null,
+    cloudReady: false,
   },
 
   onLaunch() {
+    // RF-306: Init CloudBase
+    this.globalData.cloudReady = cloudbase.init()
+
     try {
       const profile = wx.getStorageSync('rf_profile')
       const history = wx.getStorageSync('rf_history')
@@ -17,6 +23,11 @@ App({
     } catch (e) {
       console.error('Storage load error:', e)
     }
+
+    // Sync pending cloud data when network is available
+    cloudbase.syncPending().then((res) => {
+      if (res.synced > 0) console.log('[app] Synced', res.synced, 'pending docs')
+    })
   },
 
   saveProfile(profile) {

@@ -32,7 +32,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -225,11 +229,106 @@ fun AnalyzeScreen(vm: AppViewModel) {
             }
         }
 
+        // ── RF-206: Video Compression ──────────────────────────────────────
+        if (vm.selectedVideoUri != null) {
+            item {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.compress_video),
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Switch(
+                                checked = vm.shouldCompress,
+                                onCheckedChange = { vm.shouldCompress = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = AppColors.Mint,
+                                    checkedTrackColor = AppColors.Mint.copy(alpha = 0.4f),
+                                    uncheckedThumbColor = AppColors.TextMuted,
+                                    uncheckedTrackColor = AppColors.Border
+                                )
+                            )
+                        }
+
+                        if (vm.isCompressing) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.compressing_video),
+                                        color = AppColors.Cyan,
+                                        fontSize = 13.sp
+                                    )
+                                    Text(
+                                        text = "${(vm.compressionProgress * 100).toInt()}%",
+                                        color = AppColors.Mint,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                LinearProgressIndicator(
+                                    progress = { vm.compressionProgress },
+                                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                    color = AppColors.Mint,
+                                    trackColor = AppColors.Border
+                                )
+                            }
+                        } else if (vm.compressionMessage.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = AppColors.Mint,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = vm.compressionMessage,
+                                    color = AppColors.Mint,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        } else if (vm.shouldCompress) {
+                            Text(
+                                text = stringResource(R.string.compress_video),
+                                color = AppColors.TextMuted,
+                                fontSize = 12.sp
+                            )
+                        }
+
+                        if (!vm.isCompressing && vm.shouldCompress) {
+                            OutlinedButton(
+                                onClick = { vm.compressAndAnalyze() },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = vm.selectedVideoUri != null,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.Cyan),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Cyan.copy(alpha = 0.4f))
+                            ) {
+                                Text(stringResource(R.string.compress_video), fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Analyze button
         item {
             val canAnalyze = vm.selectedVideoUri != null && vm.analysisState !is AnalysisState.Loading
             Button(
-                onClick = { vm.analyzeVideo(context) },
+                onClick = { vm.analyzeVideo() },
                 enabled = canAnalyze,
                 modifier = Modifier
                     .fillMaxWidth()

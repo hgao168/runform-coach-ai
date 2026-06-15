@@ -159,3 +159,62 @@
   align-items: center;
   margin-bottom: 12rpx;
 }
+
+/* RF-308: Angle selection */
+.angle-card {
+  padding: 28rpx 32rpx;
+}
+
+.angle-chips {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+  flex-wrap: wrap;
+}
+
+.angle-chip {
+  flex: 1;
+  min-width: 180rpx;
+  padding: 24rpx 16rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2rpx solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  transition: all 0.2s ease;
+}
+
+.angle-chip-active {
+  background: rgba(0, 245, 160, 0.12);
+  border-color: rgba(0, 245, 160, 0.5);
+  box-shadow: 0 0 20rpx rgba(0, 245, 160, 0.08);
+}
+
+.angle-chip-icon {
+  font-size: 48rpx;
+  line-height: 1;
+  margin-bottom: 4rpx;
+}
+
+.angle-chip-label {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.angle-chip-active .angle-chip-label {
+  color: #00f5a0;
+}
+
+.angle-chip-desc {
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.angle-chip-active .angle-chip-desc {
+  color: rgba(0, 245, 160, 0.7);
+}
