@@ -90,3 +90,21 @@ Generate a Fernet key example:
 ```powershell
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
+
+## Email verification mail provider (HTTP API)
+
+Email verification uses Resend HTTP API (no SMTP required).
+
+Required environment variables:
+
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL` (for example: `RunForm <noreply@movenova.ai>`)
+- one of:
+	- `EMAIL_VERIFICATION_URL_BASE` (full verify endpoint URL, e.g. `https://<domain>/api/v1/auth/verify-email`)
+	- `PUBLIC_BASE_URL` (service base URL; backend appends `/api/v1/auth/verify-email`)
+	- `RAILWAY_PUBLIC_DOMAIN` (fallback)
+
+Optional:
+
+- `RESEND_API_URL` (defaults to `https://api.resend.com/emails`)
+- `EMAIL_VERIFICATION_TOKEN_TTL_MINUTES` (default `1440`)

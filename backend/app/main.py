@@ -6,9 +6,7 @@ import string
 import hashlib
 import secrets
 import logging
-import smtplib
 from datetime import datetime, timedelta, timezone
-from email.message import EmailMessage
 from functools import wraps
 from urllib.parse import urlencode
 
@@ -263,12 +261,9 @@ EMAIL_VERIFICATION_TOKEN_TTL_MINUTES = int(os.getenv("EMAIL_VERIFICATION_TOKEN_T
 EMAIL_VERIFICATION_URL_BASE = os.getenv("EMAIL_VERIFICATION_URL_BASE", "").strip()
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip()
 RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
-SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "").strip()
-SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() not in {"0", "false", "no"}
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "").strip()
+RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com/emails").strip()
 
 def _hash_password(password: str) -> str:
     """Hash a password using PBKDF2-SHA256 with a random salt."""
@@ -333,30 +328,45 @@ def _build_verification_url(token: str) -> str:
 
 
 def _send_email_verification_email(recipient_email: str, verification_url: str) -> None:
-    if not SMTP_HOST or not SMTP_FROM_EMAIL:
+    if not RESEND_API_KEY or not RESEND_FROM_EMAIL:
         raise HTTPException(
             status_code=503,
-            detail="SMTP_HOST and SMTP_FROM_EMAIL must be configured for email verification.",
+            detail="RESEND_API_KEY and RESEND_FROM_EMAIL must be configured for email verification.",
         )
 
-    message = EmailMessage()
-    message["Subject"] = "RunForm: Verify your email"
-    message["From"] = SMTP_FROM_EMAIL
-    message["To"] = recipient_email
-    message.set_content(
+    html_body = (
+        "<p>Welcome to RunForm.</p>"
+        "<p>Please verify your email by clicking the link below:</p>"
+        f"<p><a href=\"{verification_url}\">Verify Email</a></p>"
+        f"<p>This link expires in {EMAIL_VERIFICATION_TOKEN_TTL_MINUTES} minutes.</p>"
+    )
+
+    text_body = (
         "Welcome to RunForm.\n\n"
         "Please verify your email by clicking the link below:\n"
         f"{verification_url}\n\n"
         f"This link expires in {EMAIL_VERIFICATION_TOKEN_TTL_MINUTES} minutes."
     )
 
+    payload = {
+        "from": RESEND_FROM_EMAIL,
+        "to": [recipient_email],
+        "subject": "RunForm: Verify your email",
+        "html": html_body,
+        "text": text_body,
+    }
+
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
-            if SMTP_USE_TLS:
-                server.starttls()
-            if SMTP_USERNAME:
-                server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(message)
+        response = httpx.post(
+            RESEND_API_URL,
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=20,
+        )
+        response.raise_for_status()
     except Exception as exc:
         LOGGER.exception("Failed to send verification email")
         raise HTTPException(status_code=503, detail=f"Failed to send verification email: {exc}") from exc
