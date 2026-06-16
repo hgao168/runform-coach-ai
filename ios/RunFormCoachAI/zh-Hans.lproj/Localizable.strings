@@ -180,6 +180,7 @@
 "auth.google.client_id_missing" = "构建设置中缺少 Google iOS 客户端 ID。";
 "auth.google.missing_token" = "Google 登录未返回访问令牌。";
 "auth.login.success" = "登录成功。";
+"auth.email_verification.pending" = "已登录。请检查邮箱并点击验证链接完成邮箱验证。";
 "auth.login.failed %@" = "登录失败：%@";
 "auth.sign_off" = "退出登录";
 "auth.signed_off" = "已退出登录。";

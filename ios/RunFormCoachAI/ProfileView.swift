@@ -364,6 +364,7 @@ struct ProfileView: View {
                         placeholder: "********",
                         text: $authPassword,
                         autocapitalization: .never,
+                        isSecure: true,
                         focus: $fieldFocused
                     )
 
@@ -728,7 +729,9 @@ struct ProfileView: View {
                     if authMode == .register {
                         authMode = .login
                     }
-                    authMessage = String(localized: "auth.login.success")
+                    authMessage = response.user.emailVerified
+                        ? String(localized: "auth.login.success")
+                        : String(localized: "auth.email_verification.pending")
                     isAuthBusy = false
                     refreshStravaStatus()
                 }
@@ -771,7 +774,9 @@ struct ProfileView: View {
                 let response = try await APIClient.shared.googleAuth(accessToken: accessToken)
                 appStore.signIn(response)
                 email = response.user.email
-                authMessage = String(localized: "auth.login.success")
+                authMessage = response.user.emailVerified
+                    ? String(localized: "auth.login.success")
+                    : String(localized: "auth.email_verification.pending")
                 isAuthBusy = false
                 refreshStravaStatus()
             } catch {

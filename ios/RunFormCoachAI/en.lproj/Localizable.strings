@@ -180,6 +180,7 @@
 "auth.google.client_id_missing" = "Google iOS client ID is missing from build settings.";
 "auth.google.missing_token" = "Google sign in did not return an access token.";
 "auth.login.success" = "Signed in successfully.";
+"auth.email_verification.pending" = "Signed in. Please check your email and tap the verification link to validate your account.";
 "auth.login.failed %@" = "Sign in failed: %@";
 "auth.sign_off" = "Sign Off";
 "auth.signed_off" = "Signed off.";

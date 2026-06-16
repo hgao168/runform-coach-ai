@@ -5,14 +5,17 @@ import random
 import string
 import hashlib
 import secrets
-from datetime import datetime, timezone
+import logging
+import smtplib
+from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
 from functools import wraps
 from urllib.parse import urlencode
 
 import httpx
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -52,6 +55,8 @@ from .schemas import (
     AuthResponse,
     RegisterRequest,
     LoginRequest,
+    ResendVerificationRequest,
+    ResendVerificationResponse,
     UserResponse,
     InviteCodeGenerateRequest,
     InviteCodeGenerateResponse,
@@ -101,6 +106,7 @@ from .strava_oauth import (
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 API_KEY = os.getenv("API_KEY", "")
+LOGGER = logging.getLogger(__name__)
 
 _PROFILE_FIELDS = [
     "first_name", "last_name", "nickname", "level", "weekly_mileage_km",
@@ -253,6 +259,16 @@ GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+EMAIL_VERIFICATION_TOKEN_TTL_MINUTES = int(os.getenv("EMAIL_VERIFICATION_TOKEN_TTL_MINUTES", "1440"))
+EMAIL_VERIFICATION_URL_BASE = os.getenv("EMAIL_VERIFICATION_URL_BASE", "").strip()
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip()
+RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "").strip()
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() not in {"0", "false", "no"}
 
 def _hash_password(password: str) -> str:
     """Hash a password using PBKDF2-SHA256 with a random salt."""
@@ -278,7 +294,72 @@ def _user_to_response(user: User) -> UserResponse:
         email=user.email,
         name=user.nickname or user.first_name,
         google_sub=user.google_sub,
+        email_verified=user.email_verified,
     )
+
+
+def _normalized_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _hash_email_verification_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _issue_email_verification_token() -> tuple[str, str, datetime]:
+    token = secrets.token_urlsafe(48)
+    token_hash = _hash_email_verification_token(token)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=EMAIL_VERIFICATION_TOKEN_TTL_MINUTES)
+    return token, token_hash, expires_at
+
+
+def _verification_base_url() -> str:
+    if EMAIL_VERIFICATION_URL_BASE:
+        return EMAIL_VERIFICATION_URL_BASE
+    if PUBLIC_BASE_URL:
+        return PUBLIC_BASE_URL.rstrip("/") + "/api/v1/auth/verify-email"
+    if RAILWAY_PUBLIC_DOMAIN:
+        return f"https://{RAILWAY_PUBLIC_DOMAIN}/api/v1/auth/verify-email"
+    raise HTTPException(
+        status_code=503,
+        detail="EMAIL_VERIFICATION_URL_BASE or PUBLIC_BASE_URL must be configured for email verification.",
+    )
+
+
+def _build_verification_url(token: str) -> str:
+    base_url = _verification_base_url()
+    separator = "&" if "?" in base_url else "?"
+    return f"{base_url}{separator}token={token}"
+
+
+def _send_email_verification_email(recipient_email: str, verification_url: str) -> None:
+    if not SMTP_HOST or not SMTP_FROM_EMAIL:
+        raise HTTPException(
+            status_code=503,
+            detail="SMTP_HOST and SMTP_FROM_EMAIL must be configured for email verification.",
+        )
+
+    message = EmailMessage()
+    message["Subject"] = "RunForm: Verify your email"
+    message["From"] = SMTP_FROM_EMAIL
+    message["To"] = recipient_email
+    message.set_content(
+        "Welcome to RunForm.\n\n"
+        "Please verify your email by clicking the link below:\n"
+        f"{verification_url}\n\n"
+        f"This link expires in {EMAIL_VERIFICATION_TOKEN_TTL_MINUTES} minutes."
+    )
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
+            if SMTP_USE_TLS:
+                server.starttls()
+            if SMTP_USERNAME:
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(message)
+    except Exception as exc:
+        LOGGER.exception("Failed to send verification email")
+        raise HTTPException(status_code=503, detail=f"Failed to send verification email: {exc}") from exc
 
 
 @app.post("/api/v1/auth/google", response_model=AuthResponse)
@@ -317,6 +398,12 @@ async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
             # 3. Update google_sub if not set
             if not user.google_sub:
                 user.google_sub = google_sub
+            if not user.email_verified:
+                user.email_verified = True
+                user.email_verified_at = datetime.now(timezone.utc)
+                user.email_verification_token_hash = None
+                user.email_verification_expires_at = None
+                user.email_verification_sent_at = None
                 session.commit()
                 session.refresh(user)
         else:
@@ -339,6 +426,8 @@ async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
                     email=email,
                     google_sub=google_sub,
                     nickname=name,
+                    email_verified=True,
+                    email_verified_at=datetime.now(timezone.utc),
                 )
                 session.add(user)
                 session.commit()
@@ -407,6 +496,12 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
             # Update google_sub if not set
             if not user.google_sub:
                 user.google_sub = google_sub
+            if not user.email_verified:
+                user.email_verified = True
+                user.email_verified_at = datetime.now(timezone.utc)
+                user.email_verification_token_hash = None
+                user.email_verification_expires_at = None
+                user.email_verification_sent_at = None
                 session.commit()
                 session.refresh(user)
         else:
@@ -429,6 +524,8 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
                     email=email,
                     google_sub=google_sub,
                     nickname=name,
+                    email_verified=True,
+                    email_verified_at=datetime.now(timezone.utc),
                 )
                 session.add(user)
                 session.commit()
@@ -442,24 +539,34 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
 def register(payload: RegisterRequest) -> AuthResponse:
     """Register a new user with email and password."""
     try:
+        normalized_email = _normalized_email(payload.email)
+        verification_token, token_hash, token_expires_at = _issue_email_verification_token()
+
         with get_db_session() as session:
             # Check if email already exists
-            existing = session.scalar(select(User).where(User.email == payload.email))
+            existing = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
             if existing is not None:
                 raise HTTPException(status_code=409, detail="Email already registered.")
 
             # Create ios_user_id from email
-            ios_user_id = f"email_{payload.email}"
+            ios_user_id = f"email_{normalized_email}"
 
             user = User(
                 ios_user_id=ios_user_id,
-                email=payload.email,
+                email=normalized_email,
                 password_hash=_hash_password(payload.password),
                 nickname=payload.name,
+                email_verified=False,
+                email_verification_token_hash=token_hash,
+                email_verification_expires_at=token_expires_at,
+                email_verification_sent_at=datetime.now(timezone.utc),
             )
             session.add(user)
             session.commit()
             session.refresh(user)
+
+        verification_url = _build_verification_url(verification_token)
+        _send_email_verification_email(normalized_email, verification_url)
 
         access_token = _make_access_token(user.ios_user_id)
         return AuthResponse(access_token=access_token, user=_user_to_response(user))
@@ -473,8 +580,9 @@ def register(payload: RegisterRequest) -> AuthResponse:
 def login(payload: LoginRequest) -> AuthResponse:
     """Login with email and password."""
     try:
+        normalized_email = _normalized_email(payload.email)
         with get_db_session() as session:
-            user = session.scalar(select(User).where(User.email == payload.email))
+            user = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
             if user is None:
                 raise HTTPException(status_code=401, detail="Invalid email or password.")
             if not user.password_hash or not _verify_password(payload.password, user.password_hash):
@@ -486,6 +594,63 @@ def login(payload: LoginRequest) -> AuthResponse:
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Login failed: {exc}") from exc
+
+
+@app.post("/api/v1/auth/resend-verification", response_model=ResendVerificationResponse)
+def resend_verification(payload: ResendVerificationRequest) -> ResendVerificationResponse:
+    """Send a fresh email verification link for an unverified account."""
+    normalized_email = _normalized_email(payload.email)
+    try:
+        with get_db_session() as session:
+            user = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
+            if user is None:
+                return ResendVerificationResponse(sent=True, message="If the account exists, a verification email has been sent.")
+            if user.email_verified:
+                return ResendVerificationResponse(sent=True, message="Email is already verified.")
+
+            token, token_hash, expires_at = _issue_email_verification_token()
+            user.email_verification_token_hash = token_hash
+            user.email_verification_expires_at = expires_at
+            user.email_verification_sent_at = datetime.now(timezone.utc)
+            session.commit()
+
+        verification_url = _build_verification_url(token)
+        _send_email_verification_email(normalized_email, verification_url)
+        return ResendVerificationResponse(sent=True, message="Verification email sent.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to resend verification email: {exc}") from exc
+
+
+@app.get("/api/v1/auth/verify-email", response_class=HTMLResponse)
+def verify_email(token: str = Query(..., min_length=24)) -> HTMLResponse:
+    """Verify email by one-time token clicked from email."""
+    token_hash = _hash_email_verification_token(token)
+    now = datetime.now(timezone.utc)
+
+    try:
+        with get_db_session() as session:
+            user = session.scalar(select(User).where(User.email_verification_token_hash == token_hash))
+            if user is None:
+                return HTMLResponse("<h2>Verification link is invalid.</h2>", status_code=400)
+
+            if user.email_verified:
+                return HTMLResponse("<h2>Email is already verified. You can close this page.</h2>", status_code=200)
+
+            if user.email_verification_expires_at is None or user.email_verification_expires_at < now:
+                return HTMLResponse("<h2>Verification link expired. Request a new email in the app.</h2>", status_code=400)
+
+            user.email_verified = True
+            user.email_verified_at = now
+            user.email_verification_token_hash = None
+            user.email_verification_expires_at = None
+            user.email_verification_sent_at = None
+            session.commit()
+
+        return HTMLResponse("<h2>Email verified successfully. You can return to RunForm.</h2>", status_code=200)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to verify email: {exc}") from exc
 
 
 @app.get("/api/v1/auth/me", response_model=UserResponse)

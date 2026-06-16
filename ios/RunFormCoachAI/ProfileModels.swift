@@ -175,12 +175,31 @@ struct UserResponse: Codable, Equatable {
     let email: String
     let name: String?
     let googleSub: String?
+    let emailVerified: Bool
 
     enum CodingKeys: String, CodingKey {
         case id
         case email
         case name
         case googleSub = "google_sub"
+        case emailVerified = "email_verified"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        email = try container.decode(String.self, forKey: .email)
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+        googleSub = try container.decodeIfPresent(String.self, forKey: .googleSub)
+        emailVerified = try container.decodeIfPresent(Bool.self, forKey: .emailVerified) ?? false
+    }
+
+    init(id: String, email: String, name: String?, googleSub: String?, emailVerified: Bool) {
+        self.id = id
+        self.email = email
+        self.name = name
+        self.googleSub = googleSub
+        self.emailVerified = emailVerified
     }
 }
 

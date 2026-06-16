@@ -180,6 +180,7 @@
 "auth.google.client_id_missing" = "Google iOS-client-ID ontbreekt in buildinstellingen.";
 "auth.google.missing_token" = "Google-login gaf geen access token terug.";
 "auth.login.success" = "Succesvol ingelogd.";
+"auth.email_verification.pending" = "Ingelogd. Controleer je e-mail en tik op de verificatielink om je account te bevestigen.";
 "auth.login.failed %@" = "Inloggen mislukt: %@";
 "auth.sign_off" = "Afmelden";
 "auth.signed_off" = "Afgemeld.";

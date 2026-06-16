@@ -682,11 +682,19 @@ class LoginRequest(BaseModel):
     email: str = Field(..., max_length=255)
     password: str
 
+class ResendVerificationRequest(BaseModel):
+    email: str = Field(..., max_length=255)
+
+class ResendVerificationResponse(BaseModel):
+    sent: bool
+    message: str
+
 class UserResponse(BaseModel):
     id: str
     email: str | None = None
     name: str | None = None
     google_sub: str | None = None
+    email_verified: bool = False
 
 class AuthResponse(BaseModel):
     access_token: str
