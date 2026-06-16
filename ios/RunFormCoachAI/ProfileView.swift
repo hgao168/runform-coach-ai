@@ -736,39 +736,25 @@ struct ProfileView: View {
         let configuration = GIDConfiguration(clientID: clientID)
 
         GIDSignIn.sharedInstance.configuration = configuration
-        GIDSignIn.sharedInstance.signIn(withPresenting: presentingVC) { signInResult, error in
-            if let error {
-                Task { @MainActor in
-                    self.authMessage = String(format: String(localized: "auth.login.failed %@"), error.localizedDescription)
-                    self.isAuthBusy = false
+        Task {
+            do {
+                let signInResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: presentingVC)
+                let accessToken = signInResult.user.accessToken.tokenString
+                if accessToken.isEmpty {
+                    authMessage = String(localized: "auth.google.missing_token")
+                    isAuthBusy = false
+                    return
                 }
-                return
-            }
 
-            guard let accessToken = signInResult?.user.accessToken.tokenString else {
-                Task { @MainActor in
-                    self.authMessage = String(localized: "auth.google.missing_token")
-                    self.isAuthBusy = false
-                }
-                return
-            }
-
-            Task {
-                do {
-                    let response = try await APIClient.shared.googleAuth(accessToken: accessToken)
-                    await MainActor.run {
-                        appStore.signIn(response)
-                        email = response.user.email
-                        authMessage = String(localized: "auth.login.success")
-                        isAuthBusy = false
-                        refreshStravaStatus()
-                    }
-                } catch {
-                    await MainActor.run {
-                        authMessage = String(format: String(localized: "auth.login.failed %@"), error.localizedDescription)
-                        isAuthBusy = false
-                    }
-                }
+                let response = try await APIClient.shared.googleAuth(accessToken: accessToken)
+                appStore.signIn(response)
+                email = response.user.email
+                authMessage = String(localized: "auth.login.success")
+                isAuthBusy = false
+                refreshStravaStatus()
+            } catch {
+                authMessage = String(format: String(localized: "auth.login.failed %@"), error.localizedDescription)
+                isAuthBusy = false
             }
         }
     }
