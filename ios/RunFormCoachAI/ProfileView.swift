@@ -343,15 +343,15 @@ struct ProfileView: View {
 
                     if authMode == .register {
                         ProfileLabeledTextField(
-                            label: String(localized: "Nickname"),
-                            placeholder: String(localized: "Nickname"),
+                            label: LocalizedStringKey("Nickname"),
+                            placeholder: LocalizedStringKey("Nickname"),
                             text: $authName,
                             focus: $fieldFocused
                         )
                     }
 
                     ProfileLabeledTextField(
-                        label: String(localized: "Email"),
+                        label: LocalizedStringKey("Email"),
                         placeholder: "you@example.com",
                         text: $authEmail,
                         autocapitalization: .never,
@@ -360,7 +360,7 @@ struct ProfileView: View {
                     )
 
                     ProfileLabeledTextField(
-                        label: String(localized: "auth.password"),
+                        label: LocalizedStringKey("auth.password"),
                         placeholder: "********",
                         text: $authPassword,
                         autocapitalization: .never,
