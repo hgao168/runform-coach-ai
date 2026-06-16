@@ -294,8 +294,8 @@ struct ProfileView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
                 SectionTitle(
-                    String(localized: "strava.card.title"),
-                    subtitle: String(localized: "strava.card.subtitle"),
+                    LocalizedStringKey("strava.card.title"),
+                    subtitle: LocalizedStringKey("strava.card.subtitle"),
                     systemImage: "link.circle.fill"
                 )
                 Text(String(localized: "strava.auth_required"))
@@ -309,8 +309,8 @@ struct ProfileView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 SectionTitle(
-                    String(localized: "auth.card.title"),
-                    subtitle: String(localized: "auth.card.subtitle"),
+                    LocalizedStringKey("auth.card.title"),
+                    subtitle: LocalizedStringKey("auth.card.subtitle"),
                     systemImage: "person.badge.key"
                 )
 

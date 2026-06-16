@@ -17,8 +17,8 @@ struct ProfileStravaCard: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 SectionTitle(
-                    String(localized: "strava.card.title"),
-                    subtitle: String(localized: "strava.card.subtitle"),
+                    LocalizedStringKey("strava.card.title"),
+                    subtitle: LocalizedStringKey("strava.card.subtitle"),
                     systemImage: "link.circle.fill"
                 )
 
