@@ -1,8 +1,5 @@
 import SwiftUI
 import os.signpost
-#if canImport(GoogleMobileAds)
-import GoogleMobileAds
-#endif
 
 @main
 struct RunFormCoachAIApp: App {

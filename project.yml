@@ -6,9 +6,6 @@ options:
     iOS: "16.0"
 
 packages:
-  GoogleMobileAds:
-    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
-    from: "11.0.0"
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS
     from: "8.0.0"
@@ -60,7 +57,6 @@ targets:
           GOOGLE_IOS_CLIENT_ID: 800424302505-n39j4tt9fc72tutmecekqjvn2g2puhj5.apps.googleusercontent.com
           GOOGLE_REVERSED_CLIENT_ID: com.googleusercontent.apps.800424302505-n39j4tt9fc72tutmecekqjvn2g2puhj5
     dependencies:
-      - package: GoogleMobileAds
       - package: GoogleSignIn
 
   RunFormCoachAITests:

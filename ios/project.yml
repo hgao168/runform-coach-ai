@@ -20,9 +20,6 @@ configs:
     type: release
 
 packages:
-  GoogleMobileAds:
-    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
-    from: "11.0.0"
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS
     from: "8.0.0"
@@ -65,7 +62,6 @@ targets:
           GCC_OPTIMIZATION_LEVEL: "s"
           SWIFT_OPTIMIZATION_LEVEL: "-O"
     dependencies:
-      - package: GoogleMobileAds
       - package: GoogleSignIn
     preBuildScripts:
       - name: SwiftLint
