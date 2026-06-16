@@ -287,7 +287,7 @@ final class APIClient {
                 legLengthCm: profile.legLengthCm,
                 dateOfBirth: profile.dateOfBirth.map { dateFormatter.string(from: $0) },
                 weeklyExerciseHours: profile.weeklyExerciseHours,
-                email: profile.email.isEmpty ? nil : profile.email
+                email: profile.email.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             request.httpBody = try JSONEncoder().encode(payload)
 
@@ -297,6 +297,70 @@ final class APIClient {
                 throw APIError.server(message)
             }
             return try JSONDecoder().decode(ProfileSaveResponse.self, from: data)
+        }
+    }
+
+    func register(email: String, password: String, name: String?) async throws -> AuthResponse {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("api/v1/auth/register")
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 20
+            let payload = RegisterRequest(
+                email: email,
+                password: password,
+                name: name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : name
+            )
+            request.httpBody = try JSONEncoder().encode(payload)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(AuthResponse.self, from: data)
+        }
+    }
+
+    func login(email: String, password: String) async throws -> AuthResponse {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("api/v1/auth/login")
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 20
+            let payload = LoginRequest(email: email, password: password)
+            request.httpBody = try JSONEncoder().encode(payload)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(AuthResponse.self, from: data)
+        }
+    }
+
+    func googleAuth(accessToken: String) async throws -> AuthResponse {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("api/v1/auth/google")
+        return try await Self.withRetry {
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 20
+            let payload = GoogleAuthRequest(accessToken: accessToken)
+            request.httpBody = try JSONEncoder().encode(payload)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(AuthResponse.self, from: data)
         }
     }
 

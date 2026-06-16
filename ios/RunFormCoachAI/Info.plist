@@ -10,6 +10,14 @@
     <array>
         <dict>
             <key>CFBundleURLName</key>
+            <string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleURLName</key>
             <string>runformcoachai.strava.callback</string>
             <key>CFBundleURLSchemes</key>
             <array>
@@ -19,6 +27,8 @@
     </array>
     <key>BACKEND_BASE_URL</key>
     <string>$(BACKEND_BASE_URL)</string>
+    <key>GOOGLE_IOS_CLIENT_ID</key>
+    <string>$(GOOGLE_IOS_CLIENT_ID)</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>NSMotionUsageDescription</key>

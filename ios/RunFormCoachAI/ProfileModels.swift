@@ -135,7 +135,7 @@ struct ProfileSaveRequest: Encodable {
     let legLengthCm: Double?
     let dateOfBirth: String?
     let weeklyExerciseHours: Double?
-    let email: String?
+    let email: String
 
     enum CodingKeys: String, CodingKey {
         case iosUserId = "ios_user_id"
@@ -165,5 +165,50 @@ struct ProfileSaveResponse: Decodable {
     enum CodingKeys: String, CodingKey {
         case saved
         case iosUserId = "ios_user_id"
+    }
+}
+
+// MARK: - Auth
+
+struct UserResponse: Codable, Equatable {
+    let id: String
+    let email: String
+    let name: String?
+    let googleSub: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case email
+        case name
+        case googleSub = "google_sub"
+    }
+}
+
+struct AuthResponse: Codable, Equatable {
+    let accessToken: String
+    let user: UserResponse
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case user
+    }
+}
+
+struct RegisterRequest: Encodable {
+    let email: String
+    let password: String
+    let name: String?
+}
+
+struct LoginRequest: Encodable {
+    let email: String
+    let password: String
+}
+
+struct GoogleAuthRequest: Encodable {
+    let accessToken: String
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
     }
 }

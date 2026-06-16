@@ -160,9 +160,30 @@
 "Injury note" = "Injury note";
 "Optional" = "Optional";
 "Save Profile" = "Save Profile";
+"profile.email.required" = "Email is required to save your profile.";
+"profile.email.invalid" = "Please enter a valid email address.";
+"profile.save.failed %@" = "Failed to save profile: %@";
 "Why this matters" = "Why this matters";
 "Better coaching needs context" = "Better coaching needs context";
 "RunForm stores this locally and uses it to understand tester feedback. Future versions can use it to personalize running plans and strength recommendations." = "RunForm stores this locally and uses it to understand tester feedback. Future versions can use it to personalize running plans and strength recommendations.";
+"Login" = "Login";
+"Register" = "Register";
+"auth.card.title" = "Account";
+"auth.card.subtitle" = "Sign in with RunForm or Google";
+"auth.password" = "Password";
+"auth.password.required" = "Password is required.";
+"auth.runform_login" = "Login with RunForm";
+"auth.runform_register" = "Create RunForm Account";
+"auth.google.sign_in" = "Sign in with Google";
+"auth.google.signing_in" = "Signing in...";
+"auth.google.no_presenter" = "Unable to present Google sign in.";
+"auth.google.client_id_missing" = "Google iOS client ID is missing from build settings.";
+"auth.google.missing_token" = "Google sign in did not return an access token.";
+"auth.login.success" = "Signed in successfully.";
+"auth.login.failed %@" = "Sign in failed: %@";
+"auth.sign_off" = "Sign Off";
+"auth.signed_off" = "Signed off.";
+"auth.signed_in_as %@" = "Signed in as %@";
 
 /* Feedback view */
 "Tester Feedback" = "Tester Feedback";
@@ -276,6 +297,37 @@
 "injury.trunk_lean %@" = "%@ → Excessive forward lean puts strain on lower back and hamstrings. Work on upright posture.";
 "injury.overstride %@" = "%@ → Overstriding increases impact shock to knees and shins. Shorten your stride and land under your hips.";
 "injury.hip_drop %@" = "%@ → Hip drop can cause IT band syndrome and knee pain. Strengthen gluteus medius.";
+
+/* Strava profile card */
+"strava.card.title" = "Connect Strava";
+"strava.card.subtitle" = "Bring weekly load into future plans";
+"strava.auth_required" = "Sign in first to connect and sync Strava.";
+"strava.card.privacy" = "Strava data is used only for your coaching and plan generation. It is not used to train AI models.";
+"strava.card.checking" = "Checking Strava connection...";
+"strava.badge.connected" = "Connected";
+"strava.connected.title" = "Connected with Strava";
+"strava.athlete.id %@" = "Athlete ID: %@";
+"strava.scopes %@" = "Scopes: %@";
+"strava.last_sync %@" = "Last sync: %@";
+"strava.last_refresh %@" = "Last refresh: %@";
+"strava.last_refresh.unavailable" = "Last refresh: not available yet";
+"strava.button.sync" = "Sync runs from Strava";
+"strava.button.syncing" = "Syncing runs...";
+"strava.button.disconnect" = "Disconnect Strava";
+"strava.disconnected.body" = "Connect Strava to bring your weekly load into future plan suggestions.";
+"strava.button.connect" = "Connect Strava";
+"strava.button.connecting" = "Connecting...";
+"strava.status.connected" = "Strava connected.";
+"strava.status.cancelled" = "Strava sign in cancelled.";
+"strava.sync.success %lld" = "Synced %lld run(s) from Strava.";
+"strava.error.status %@" = "Unable to check Strava status. %@";
+"strava.error.start" = "Unable to start Strava sign in. Please try again.";
+"strava.error.open %@" = "Failed to open Strava sign in. %@";
+"strava.error.signin %@" = "Strava sign in failed. %@";
+"strava.error.callback_missing" = "Strava sign in did not return a callback URL.";
+"strava.error.oauth %@" = "Strava sign in failed: %@";
+"strava.error.disconnect %@" = "Failed to disconnect Strava. %@";
+"strava.error.sync %@" = "Failed to sync Strava runs. %@";
 
 /* Adjustment 4: Weekly form recheck card */
 "plan.recheck.title" = "Weekly Form Recheck";

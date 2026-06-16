@@ -7,6 +7,8 @@ final class AppStore: ObservableObject {
     }
 
     @Published private(set) var appUserID: String
+    @Published private(set) var accessToken: String?
+    @Published private(set) var currentUser: UserResponse?
     @Published private(set) var stravaStatus: StravaStatusResponse?
 
     @Published private(set) var history: [AnalysisHistoryItem] = []
@@ -37,6 +39,8 @@ final class AppStore: ObservableObject {
 
     private let profileKey = "tester.profile.v1"
     private let appUserIDKey = "app.user.id.v1"
+    private let accessTokenKey = "auth.access.token.v1"
+    private let currentUserKey = "auth.current.user.v1"
     private let stravaStatusKey = "strava.status.v1"
     private let historyKey = "analysis.history.v1"
     private let savedPlansKey = "saved.plans.v1"
@@ -62,6 +66,14 @@ final class AppStore: ObservableObject {
             profile = savedProfile
         } else {
             profile = TesterProfile()
+        }
+
+        accessToken = UserDefaults.standard.string(forKey: accessTokenKey)
+        if let data = UserDefaults.standard.data(forKey: currentUserKey),
+           let savedUser = try? decoder.decode(UserResponse.self, from: data) {
+            currentUser = savedUser
+        } else {
+            currentUser = nil
         }
 
         if let data = UserDefaults.standard.data(forKey: stravaStatusKey),
@@ -222,6 +234,30 @@ final class AppStore: ObservableObject {
     func updateStravaStatus(_ status: StravaStatusResponse?) {
         stravaStatus = status
         saveStravaStatus()
+    }
+
+    func signIn(_ response: AuthResponse) {
+        accessToken = response.accessToken
+        currentUser = response.user
+        appUserID = response.user.id
+        UserDefaults.standard.set(response.accessToken, forKey: accessTokenKey)
+        UserDefaults.standard.set(response.user.id, forKey: appUserIDKey)
+        if let userData = try? encoder.encode(response.user) {
+            UserDefaults.standard.set(userData, forKey: currentUserKey)
+        }
+    }
+
+    func signOut() {
+        accessToken = nil
+        currentUser = nil
+        stravaStatus = nil
+        let newAppUserID = UUID().uuidString
+        appUserID = newAppUserID
+
+        UserDefaults.standard.removeObject(forKey: accessTokenKey)
+        UserDefaults.standard.removeObject(forKey: currentUserKey)
+        UserDefaults.standard.removeObject(forKey: stravaStatusKey)
+        UserDefaults.standard.set(newAppUserID, forKey: appUserIDKey)
     }
 
     private func saveStravaStatus() {

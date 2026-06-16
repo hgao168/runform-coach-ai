@@ -160,9 +160,30 @@
 "Injury note" = "伤病备注";
 "Optional" = "可选";
 "Save Profile" = "保存资料";
+"profile.email.required" = "保存资料前必须填写邮箱。";
+"profile.email.invalid" = "请输入有效的邮箱地址。";
+"profile.save.failed %@" = "资料保存失败：%@";
 "Why this matters" = "为什么这很重要";
 "Better coaching needs context" = "更好的指导需要背景信息";
 "RunForm stores this locally and uses it to understand tester feedback. Future versions can use it to personalize running plans and strength recommendations." = "RunForm将这些信息本地存储，用于理解测试反馈。未来版本可用于个性化训练计划和力量建议。";
+"Login" = "登录";
+"Register" = "注册";
+"auth.card.title" = "账号";
+"auth.card.subtitle" = "使用 RunForm 或 Google 登录";
+"auth.password" = "密码";
+"auth.password.required" = "必须填写密码。";
+"auth.runform_login" = "使用 RunForm 登录";
+"auth.runform_register" = "创建 RunForm 账号";
+"auth.google.sign_in" = "使用 Google 登录";
+"auth.google.signing_in" = "登录中...";
+"auth.google.no_presenter" = "无法显示 Google 登录窗口。";
+"auth.google.client_id_missing" = "构建设置中缺少 Google iOS 客户端 ID。";
+"auth.google.missing_token" = "Google 登录未返回访问令牌。";
+"auth.login.success" = "登录成功。";
+"auth.login.failed %@" = "登录失败：%@";
+"auth.sign_off" = "退出登录";
+"auth.signed_off" = "已退出登录。";
+"auth.signed_in_as %@" = "当前登录账号：%@";
 
 /* Feedback view */
 "Tester Feedback" = "测试者反馈";
@@ -273,6 +294,37 @@
 "injury.trunk_lean %@" = "%@ → 躯干过度前倾会增加下背部和腘绳肌压力。练习保持直立姿态。";
 "injury.overstride %@" = "%@ → 步幅过大会增加膝盖和胫骨的冲击力。缩短步幅，落脚在髋部下方。";
 "injury.hip_drop %@" = "%@ → 髋下沉可能导致髂胫束综合征和膝盖疼痛。强化臀中肌。";
+
+/* Strava profile card */
+"strava.card.title" = "连接 Strava";
+"strava.card.subtitle" = "将每周训练负荷带入后续计划";
+"strava.auth_required" = "请先登录，再连接并同步 Strava。";
+"strava.card.privacy" = "Strava 数据仅用于你的教练建议和训练计划生成，不会用于训练 AI 模型。";
+"strava.card.checking" = "正在检查 Strava 连接...";
+"strava.badge.connected" = "已连接";
+"strava.connected.title" = "已连接 Strava";
+"strava.athlete.id %@" = "运动员 ID：%@";
+"strava.scopes %@" = "权限：%@";
+"strava.last_sync %@" = "上次同步：%@";
+"strava.last_refresh %@" = "上次刷新：%@";
+"strava.last_refresh.unavailable" = "上次刷新：暂无";
+"strava.button.sync" = "从 Strava 同步跑步记录";
+"strava.button.syncing" = "正在同步跑步记录...";
+"strava.button.disconnect" = "断开 Strava";
+"strava.disconnected.body" = "连接 Strava，将你的每周训练负荷用于后续训练计划建议。";
+"strava.button.connect" = "连接 Strava";
+"strava.button.connecting" = "连接中...";
+"strava.status.connected" = "Strava 已连接。";
+"strava.status.cancelled" = "已取消 Strava 登录。";
+"strava.sync.success %lld" = "已从 Strava 同步 %lld 条跑步记录。";
+"strava.error.status %@" = "无法检查 Strava 状态。%@";
+"strava.error.start" = "无法启动 Strava 登录，请重试。";
+"strava.error.open %@" = "无法打开 Strava 登录。%@";
+"strava.error.signin %@" = "Strava 登录失败。%@";
+"strava.error.callback_missing" = "Strava 登录未返回回调地址。";
+"strava.error.oauth %@" = "Strava 登录失败：%@";
+"strava.error.disconnect %@" = "断开 Strava 失败。%@";
+"strava.error.sync %@" = "同步 Strava 跑步记录失败。%@";
 
 /* Adjustment 4: Weekly form recheck card */
 "plan.recheck.title" = "本周跑姿复检";

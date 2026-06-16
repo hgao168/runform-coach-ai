@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 
 
@@ -293,7 +293,7 @@ class ProfileSaveRequest(BaseModel):
     leg_length_cm: Optional[float] = None
     date_of_birth: Optional[str] = None
     weekly_exercise_hours: Optional[float] = None
-    email: Optional[str] = None
+    email: EmailStr
 
 
 class ProfileSaveResponse(BaseModel):
