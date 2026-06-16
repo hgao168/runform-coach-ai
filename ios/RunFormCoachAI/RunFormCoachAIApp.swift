@@ -21,11 +21,11 @@ struct RunFormCoachAIApp: App {
                     if !launchCompleted {
                         launchCompleted = true
                         PerformanceOptimizer.markFirstFrameRender()
-
-                        Task {
-                            await PerformanceOptimizer.performDeferredInitialization()
-                            PerformanceOptimizer.logLaunchReport()
-                        }
+                        // Hotfix: keep launch path minimal to avoid startup-time crashes
+                        // from non-critical deferred background initialization.
+                        PerformanceOptimizer.markDeferredInitComplete()
+                        PerformanceOptimizer.markFullInteractive()
+                        PerformanceOptimizer.logLaunchReport()
                     }
                 }
         }
