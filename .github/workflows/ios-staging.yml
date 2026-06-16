@@ -99,8 +99,6 @@ jobs:
             -configuration Debug \
             -archivePath "$RUNNER_TEMP/RunFormCoachAI-Staging.xcarchive" \
             -destination 'generic/platform=iOS' \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM=39CYNW3CYT \
             BACKEND_BASE_URL="https://runform-coach-ai-staging.up.railway.app" \
             CURRENT_PROJECT_VERSION="2.${{ github.run_number }}" \
             MARKETING_VERSION="1.2"
@@ -124,7 +122,12 @@ jobs:
             <key>compileBitcode</key>
             <false/>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.movex.runformcoachai</key>
+              <string>RunFormCoachAI-Prod</string>
+            </dict>
           </dict>
           </plist>
           PLIST
