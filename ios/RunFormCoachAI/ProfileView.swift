@@ -498,8 +498,21 @@ struct ProfileView: View {
     }
 
     private func isValidEmail(_ value: String) -> Bool {
-        let pattern = "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$"
-        return value.range(of: pattern, options: .regularExpression) != nil
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains(" ") else {
+            return false
+        }
+
+        // NSDataDetector handles many valid RFC-compliant address forms
+        // better than a restrictive regex and avoids false negatives.
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
+            return false
+        }
+        let range = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+        guard let match = detector.firstMatch(in: trimmed, options: [], range: range) else {
+            return false
+        }
+        return match.range == range && match.url?.scheme == "mailto"
     }
 
     private func refreshStravaStatus() {
@@ -695,15 +708,26 @@ struct ProfileView: View {
                 if authMode == .login {
                     response = try await APIClient.shared.login(email: normalizedEmail, password: authPassword)
                 } else {
-                    response = try await APIClient.shared.register(
-                        email: normalizedEmail,
-                        password: authPassword,
-                        name: authName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    )
+                    do {
+                        response = try await APIClient.shared.register(
+                            email: normalizedEmail,
+                            password: authPassword,
+                            name: authName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        )
+                    } catch {
+                        if shouldFallbackToLogin(after: error) {
+                            response = try await APIClient.shared.login(email: normalizedEmail, password: authPassword)
+                        } else {
+                            throw error
+                        }
+                    }
                 }
                 await MainActor.run {
                     appStore.signIn(response)
                     email = response.user.email
+                    if authMode == .register {
+                        authMode = .login
+                    }
                     authMessage = String(localized: "auth.login.success")
                     isAuthBusy = false
                     refreshStravaStatus()
@@ -723,9 +747,7 @@ struct ProfileView: View {
             return
         }
 
-        guard let clientID = Bundle.main.object(forInfoDictionaryKey: "GOOGLE_IOS_CLIENT_ID") as? String,
-              !clientID.isEmpty,
-              !clientID.contains("$(") else {
+        guard let clientID = resolvedGoogleClientID() else {
             authMessage = String(localized: "auth.google.client_id_missing")
             return
         }
@@ -757,6 +779,43 @@ struct ProfileView: View {
                 isAuthBusy = false
             }
         }
+    }
+
+    private func resolvedGoogleClientID() -> String? {
+        if let rawClientID = Bundle.main.object(forInfoDictionaryKey: "GOOGLE_IOS_CLIENT_ID") as? String {
+            let clientID = rawClientID.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clientID.isEmpty && !clientID.contains("$(") {
+                return clientID
+            }
+        }
+
+        // Fallback: derive from reversed client id URL scheme
+        // com.googleusercontent.apps.<id> -> <id>.apps.googleusercontent.com
+        guard let urlTypes = Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]] else {
+            return nil
+        }
+
+        let prefix = "com.googleusercontent.apps."
+        for entry in urlTypes {
+            guard let schemes = entry["CFBundleURLSchemes"] as? [String] else { continue }
+            for scheme in schemes {
+                guard scheme.hasPrefix(prefix) else { continue }
+                let id = String(scheme.dropFirst(prefix.count))
+                if !id.isEmpty {
+                    return "\(id).apps.googleusercontent.com"
+                }
+            }
+        }
+        return nil
+    }
+
+    private func shouldFallbackToLogin(after error: Error) -> Bool {
+        let message = error.localizedDescription.lowercased()
+        return message.contains("already")
+            || message.contains("exists")
+            || message.contains("registered")
+            || message.contains("duplicate")
+            || message.contains("taken")
     }
 
     private func activeViewController() -> UIViewController? {

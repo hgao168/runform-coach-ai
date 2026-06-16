@@ -29,6 +29,8 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         BACKEND_BASE_URL: $(BACKEND_BASE_URL)
+        GOOGLE_IOS_CLIENT_ID: $(GOOGLE_IOS_CLIENT_ID)
+        GOOGLE_REVERSED_CLIENT_ID: $(GOOGLE_REVERSED_CLIENT_ID)
         NSCameraUsageDescription: Record your running form with live framing guidance for accurate analysis.
         NSPhotoLibraryUsageDescription: Select a short running video for form analysis.
         UISupportedInterfaceOrientations:
