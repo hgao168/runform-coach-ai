@@ -13,12 +13,11 @@ import html
 from email.message import EmailMessage
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from urllib.parse import urlencode
 
 import httpx
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -101,7 +100,6 @@ from .strava_summary import build_strava_summary
 from .strava_oauth import (
     StravaOAuthConfigError,
     StravaOAuthError,
-    app_callback_url,
     build_authorize_url,
     decrypt_secret,
     deauthorize_access_token,
@@ -1503,21 +1501,29 @@ async def strava_callback(code: str | None = None, state: str | None = None, err
         session.commit()
         provider_athlete_id = connection.provider_athlete_id
 
-    if app_url := app_callback_url():
-        query = urlencode({
-            "status": "connected",
-            "ios_user_id": ios_user_id,
-            "provider": "strava",
-            "provider_athlete_id": provider_athlete_id,
-        })
-        return RedirectResponse(url=f"{app_url}?{query}")
-
-    return StravaCallbackResponse(
-        connected=True,
-        ios_user_id=ios_user_id,
-        provider_athlete_id=provider_athlete_id,
+    escaped_athlete_id = html.escape(provider_athlete_id or "")
+    return HTMLResponse(
+        (
+            "<!doctype html>"
+            "<html><head>"
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+            "<title>Strava connected</title>"
+            "<style>"
+            "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"
+            "margin:0;padding:32px;background:#0b1117;color:#fff;line-height:1.45}"
+            ".card{max-width:520px;margin:20vh auto 0;padding:28px;border-radius:18px;"
+            "background:#121b24;border:1px solid rgba(255,255,255,.12)}"
+            "h1{font-size:28px;margin:0 0 12px}"
+            "p{font-size:17px;color:rgba(255,255,255,.76);margin:0 0 12px}"
+            ".muted{font-size:14px;color:rgba(255,255,255,.55)}"
+            "</style></head><body><main class=\"card\">"
+            "<h1>Strava connected</h1>"
+            "<p>Your Strava account is connected to RunFormCoachAI.</p>"
+            "<p>You can close this window and return to the app.</p>"
+            f"<p class=\"muted\">Athlete ID: {escaped_athlete_id}</p>"
+            "</main></body></html>"
+        )
     )
-
 
 @app.get("/integrations/strava/status", response_model=StravaStatusResponse)
 @_strava_endpoint("Failed to get Strava status")

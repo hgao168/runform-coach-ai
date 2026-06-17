@@ -536,6 +536,7 @@ struct ProfileView: View {
             if let authError = error as? ASWebAuthenticationSessionError,
                authError.code == .canceledLogin {
                 stravaMessage = String(localized: "strava.status.cancelled")
+                refreshStravaStatus()
             } else {
                 stravaMessage = String(format: String(localized: "strava.error.signin %@"), error.localizedDescription)
             }
