@@ -29,99 +29,123 @@ struct LoginView: View {
     @State private var isAuthBusy = false
 
     private let onLoginSuccess: (() -> Void)?
+    private let showsCloseButton: Bool
+    private let wrapsInNavigation: Bool
+    private let dismissOnSuccess: Bool
 
-    init(initialEmail: String = "", onLoginSuccess: (() -> Void)? = nil) {
+    init(
+        initialEmail: String = "",
+        onLoginSuccess: (() -> Void)? = nil,
+        showsCloseButton: Bool = true,
+        wrapsInNavigation: Bool = true,
+        dismissOnSuccess: Bool = true
+    ) {
         _authEmail = State(initialValue: initialEmail)
         self.onLoginSuccess = onLoginSuccess
+        self.showsCloseButton = showsCloseButton
+        self.wrapsInNavigation = wrapsInNavigation
+        self.dismissOnSuccess = dismissOnSuccess
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppBackground()
-                ScrollView(showsIndicators: false) {
-                    GlassCard {
-                        VStack(alignment: .leading, spacing: 12) {
-                            SectionTitle(
-                                "Login",
-                                subtitle: "Sign in to sync your profile and data",
-                                systemImage: "person.badge.key"
-                            )
-
-                            Picker("", selection: $authMode) {
-                                ForEach(LoginAuthMode.allCases) { mode in
-                                    Text(LocalizedStringKey(mode.rawValue)).tag(mode)
+        Group {
+            if wrapsInNavigation {
+                NavigationStack {
+                    loginContent
+                        .navigationTitle("Login")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            if showsCloseButton {
+                                ToolbarItem(placement: .topBarTrailing) {
+                                    Button("Close") {
+                                        dismiss()
+                                    }
+                                    .foregroundStyle(AppTheme.mint)
                                 }
-                            }
-                            .pickerStyle(.segmented)
-
-                            if authMode == .register {
-                                ProfileLabeledTextField(
-                                    label: "Nickname",
-                                    placeholder: "Nickname",
-                                    text: $authName
-                                )
-                            }
-
-                            ProfileLabeledTextField(
-                                label: "Email",
-                                placeholder: "you@example.com",
-                                text: $authEmail,
-                                autocapitalization: .never,
-                                keyboardType: .emailAddress
-                            )
-
-                            ProfileLabeledTextField(
-                                label: "Password",
-                                placeholder: "********",
-                                text: $authPassword,
-                                autocapitalization: .never,
-                                isSecure: true
-                            )
-
-                            Button {
-                                runformAuth()
-                            } label: {
-                                Label(
-                                    authMode == .login ? "Login" : "Register",
-                                    systemImage: "person.crop.circle.badge.checkmark"
-                                )
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(GradientButtonStyle(disabled: isAuthBusy))
-                            .disabled(isAuthBusy)
-
-                            if authMode == .login {
-                                Button {
-                                    forgotPassword()
-                                } label: {
-                                    Text("Forgot password?")
-                                        .font(.footnote.weight(.semibold))
-                                        .foregroundStyle(AppTheme.mint)
-                                        .frame(maxWidth: .infinity, alignment: .trailing)
-                                }
-                                .disabled(isAuthBusy)
-                            }
-
-                            if let authMessage {
-                                Text(authMessage)
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.75))
                             }
                         }
-                    }
-                    .padding(18)
                 }
+            } else {
+                loginContent
             }
-            .navigationTitle("Login")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Close") {
-                        dismiss()
+        }
+    }
+
+    private var loginContent: some View {
+        ZStack {
+            AppBackground()
+            ScrollView(showsIndicators: false) {
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        SectionTitle(
+                            "Login",
+                            subtitle: "Sign in to sync your profile and data",
+                            systemImage: "person.badge.key"
+                        )
+
+                        Picker("", selection: $authMode) {
+                            ForEach(LoginAuthMode.allCases) { mode in
+                                Text(LocalizedStringKey(mode.rawValue)).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        if authMode == .register {
+                            ProfileLabeledTextField(
+                                label: "Nickname",
+                                placeholder: "Nickname",
+                                text: $authName
+                            )
+                        }
+
+                        ProfileLabeledTextField(
+                            label: "Email",
+                            placeholder: "you@example.com",
+                            text: $authEmail,
+                            autocapitalization: .never,
+                            keyboardType: .emailAddress
+                        )
+
+                        ProfileLabeledTextField(
+                            label: "Password",
+                            placeholder: "********",
+                            text: $authPassword,
+                            autocapitalization: .never,
+                            isSecure: true
+                        )
+
+                        Button {
+                            runformAuth()
+                        } label: {
+                            Label(
+                                authMode == .login ? "Login" : "Register",
+                                systemImage: "person.crop.circle.badge.checkmark"
+                            )
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(GradientButtonStyle(disabled: isAuthBusy))
+                        .disabled(isAuthBusy)
+
+                        if authMode == .login {
+                            Button {
+                                forgotPassword()
+                            } label: {
+                                Text("Forgot password?")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(AppTheme.mint)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                            .disabled(isAuthBusy)
+                        }
+
+                        if let authMessage {
+                            Text(authMessage)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.75))
+                        }
                     }
-                    .foregroundStyle(AppTheme.mint)
                 }
+                .padding(18)
             }
         }
     }
@@ -169,7 +193,9 @@ struct LoginView: View {
                     authMessage = "Login successful."
                     isAuthBusy = false
                     onLoginSuccess?()
-                    dismiss()
+                    if dismissOnSuccess {
+                        dismiss()
+                    }
                 }
             } catch {
                 await MainActor.run {

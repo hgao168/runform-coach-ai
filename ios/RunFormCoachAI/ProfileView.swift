@@ -32,29 +32,36 @@ struct ProfileView: View {
     @State private var isSyncingStravaRuns = false
     @State private var isConnectingStrava = false
     @State private var stravaAuthSession: ASWebAuthenticationSession?
-    @State private var showLoginSheet = false
-    @State private var profileNeedsLoginSync = false
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppBackground()
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        profileHero
-                        formCard
-                        authCard
-                        whyCard
-                        if appStore.currentUser != nil {
-                            stravaCard
-                        } else {
-                            stravaLoginRequiredCard
+            Group {
+                if appStore.currentUser == nil {
+                    LoginView(
+                        initialEmail: email,
+                        onLoginSuccess: nil,
+                        showsCloseButton: false,
+                        wrapsInNavigation: false,
+                        dismissOnSuccess: false
+                    )
+                    .environmentObject(appStore)
+                } else {
+                    ZStack {
+                        AppBackground()
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 16) {
+                                profileHero
+                                formCard
+                                authCard
+                                whyCard
+                                stravaCard
+                            }
+                            .padding(18)
                         }
+                        .scrollDismissesKeyboard(.immediately)
                     }
-                    .padding(18)
                 }
-                .scrollDismissesKeyboard(.immediately)
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
@@ -76,32 +83,6 @@ struct ProfileView: View {
                 if appStore.currentUser != nil {
                     refreshStravaStatus()
                 }
-            }
-            .sheet(isPresented: $showLoginSheet) {
-                LoginView(initialEmail: email) {
-                    profileNeedsLoginSync = false
-                    let profile = TesterProfile(
-                        firstName: firstName,
-                        lastName: lastName,
-                        nickname: nickname,
-                        email: email,
-                        level: level,
-                        weeklyMileageKm: weeklyMileageKm,
-                        runningDaysPerWeek: runningDaysPerWeek,
-                        heightCm: heightCm,
-                        weightKg: weightKg,
-                        target: target.rawValue,
-                        injuryNote: injuryNote,
-                        dateOfBirth: dateOfBirth,
-                        weeklyExerciseHours: weeklyExerciseHours,
-                        gender: gender,
-                        shoeSize: shoeSize,
-                        legLengthCm: Double(legLengthCmText.replacingOccurrences(of: ",", with: ".")),
-                        shoeBrandModel: shoeBrandModel
-                    )
-                    syncProfileToBackend(profile)
-                }
-                .environmentObject(appStore)
             }
         }
     }
@@ -305,21 +286,6 @@ struct ProfileView: View {
         )
     }
 
-    private var stravaLoginRequiredCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 10) {
-                SectionTitle(
-                    LocalizedStringKey("strava.card.title"),
-                    subtitle: LocalizedStringKey("strava.card.subtitle"),
-                    systemImage: "link.circle.fill"
-                )
-                Text(String(localized: "strava.auth_required"))
-                    .font(.callout)
-                    .foregroundStyle(.white.opacity(0.68))
-            }
-        }
-    }
-
     private var authCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -437,13 +403,6 @@ struct ProfileView: View {
         )
         appStore.profile = profile
         savedMessage = String(localized: "profile.saved")
-
-        guard appStore.currentUser != nil else {
-            profileNeedsLoginSync = true
-            savedMessage = "Profile saved locally. Please login to sync profile."
-            showLoginSheet = true
-            return
-        }
 
         syncProfileToBackend(profile)
     }

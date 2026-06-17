@@ -486,7 +486,12 @@ final class APIClient {
             }
 
             let message = Self.extractServerMessage(from: data, fallback: "Bad server response")
-            if http.statusCode != 404 {
+            // For auth, user/action errors should surface immediately. Route-not-found
+            // and backend outages should fall through to the next candidate backend.
+            if http.statusCode == 400 || http.statusCode == 401 || http.statusCode == 403 || http.statusCode == 409 {
+                throw APIError.server(message)
+            }
+            if http.statusCode != 404 && !(500...599).contains(http.statusCode) {
                 throw APIError.server(message)
             }
             lastError = .server(message.isEmpty ? notFoundMessage : message)
