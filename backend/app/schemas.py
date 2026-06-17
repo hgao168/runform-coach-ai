@@ -689,6 +689,21 @@ class ResendVerificationResponse(BaseModel):
     sent: bool
     message: str
 
+class PasswordResetRequest(BaseModel):
+    email: str = Field(..., max_length=255)
+
+class PasswordResetRequestResponse(BaseModel):
+    sent: bool
+    message: str
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = Field(..., min_length=16, max_length=4096)
+    new_password: str = Field(..., min_length=6, max_length=128)
+
+class PasswordResetConfirmResponse(BaseModel):
+    reset: bool
+    message: str
+
 class UserResponse(BaseModel):
     id: str
     email: str | None = None

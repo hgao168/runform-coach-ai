@@ -1,16 +1,9 @@
 import SwiftUI
 import AuthenticationServices
-import GoogleSignIn
 
 #if canImport(UIKit)
 import UIKit
 #endif
-
-private enum AuthMode: String, CaseIterable, Identifiable {
-    case login = "Login"
-    case register = "Register"
-    var id: String { rawValue }
-}
 
 struct ProfileView: View {
     @EnvironmentObject private var appStore: AppStore
@@ -39,12 +32,8 @@ struct ProfileView: View {
     @State private var isSyncingStravaRuns = false
     @State private var isConnectingStrava = false
     @State private var stravaAuthSession: ASWebAuthenticationSession?
-    @State private var authMode: AuthMode = .login
-    @State private var authEmail = ""
-    @State private var authPassword = ""
-    @State private var authName = ""
-    @State private var authMessage: String?
-    @State private var isAuthBusy = false
+    @State private var showLoginSheet = false
+    @State private var profileNeedsLoginSync = false
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
@@ -87,6 +76,32 @@ struct ProfileView: View {
                 if appStore.currentUser != nil {
                     refreshStravaStatus()
                 }
+            }
+            .sheet(isPresented: $showLoginSheet) {
+                LoginView(initialEmail: email) {
+                    profileNeedsLoginSync = false
+                    let profile = TesterProfile(
+                        firstName: firstName,
+                        lastName: lastName,
+                        nickname: nickname,
+                        email: email,
+                        level: level,
+                        weeklyMileageKm: weeklyMileageKm,
+                        runningDaysPerWeek: runningDaysPerWeek,
+                        heightCm: heightCm,
+                        weightKg: weightKg,
+                        target: target.rawValue,
+                        injuryNote: injuryNote,
+                        dateOfBirth: dateOfBirth,
+                        weeklyExerciseHours: weeklyExerciseHours,
+                        gender: gender,
+                        shoeSize: shoeSize,
+                        legLengthCm: Double(legLengthCmText.replacingOccurrences(of: ",", with: ".")),
+                        shoeBrandModel: shoeBrandModel
+                    )
+                    syncProfileToBackend(profile)
+                }
+                .environmentObject(appStore)
             }
         }
     }
@@ -309,14 +324,14 @@ struct ProfileView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 SectionTitle(
-                    LocalizedStringKey("auth.card.title"),
-                    subtitle: LocalizedStringKey("auth.card.subtitle"),
+                    "Account",
+                    subtitle: "Use login to sync your profile to backend",
                     systemImage: "person.badge.key"
                 )
 
                 if let currentUser = appStore.currentUser {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(String(format: String(localized: "auth.signed_in_as %@"), currentUser.email))
+                        Text("Logged in as \(currentUser.email)")
                             .font(.callout)
                             .foregroundStyle(.white.opacity(0.82))
                         if let name = currentUser.name, !name.isEmpty {
@@ -329,66 +344,14 @@ struct ProfileView: View {
                     Button(role: .destructive) {
                         signOff()
                     } label: {
-                        Label(String(localized: "auth.sign_off"), systemImage: "rectangle.portrait.and.arrow.right")
+                        Label("Sign Off", systemImage: "rectangle.portrait.and.arrow.right")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(GradientButtonStyle())
                 } else {
-                    Picker("", selection: $authMode) {
-                        ForEach(AuthMode.allCases) { mode in
-                            Text(LocalizedStringKey(mode.rawValue)).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    if authMode == .register {
-                        ProfileLabeledTextField(
-                            label: LocalizedStringKey("Nickname"),
-                            placeholder: LocalizedStringKey("Nickname"),
-                            text: $authName,
-                            focus: $fieldFocused
-                        )
-                    }
-
-                    ProfileLabeledTextField(
-                        label: LocalizedStringKey("Email"),
-                        placeholder: "you@example.com",
-                        text: $authEmail,
-                        autocapitalization: .never,
-                        keyboardType: .emailAddress,
-                        focus: $fieldFocused
-                    )
-
-                    ProfileLabeledTextField(
-                        label: LocalizedStringKey("auth.password"),
-                        placeholder: "********",
-                        text: $authPassword,
-                        autocapitalization: .never,
-                        isSecure: true,
-                        focus: $fieldFocused
-                    )
-
-                    Button {
-                        runformAuth()
-                    } label: {
-                        Label(
-                            authMode == .login
-                                ? String(localized: "auth.runform_login")
-                                : String(localized: "auth.runform_register"),
-                            systemImage: "person.crop.circle.badge.checkmark"
-                        )
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(GradientButtonStyle(disabled: isAuthBusy))
-                    .disabled(isAuthBusy)
-
-                    // Temporarily hidden while Google login stability is being fixed.
-                }
-
-                if let authMessage {
-                    Text(authMessage)
+                    Text("You are not logged in. Tap Save Profile to continue to login and sync this profile.")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(.white.opacity(0.68))
                 }
             }
         }
@@ -475,9 +438,23 @@ struct ProfileView: View {
         appStore.profile = profile
         savedMessage = String(localized: "profile.saved")
 
+        guard appStore.currentUser != nil else {
+            profileNeedsLoginSync = true
+            savedMessage = "Profile saved locally. Please login to sync profile."
+            showLoginSheet = true
+            return
+        }
+
+        syncProfileToBackend(profile)
+    }
+
+    private func syncProfileToBackend(_ profile: TesterProfile) {
         Task {
             do {
                 _ = try await APIClient.shared.saveProfile(iosUserID: appStore.appUserID, profile: profile)
+                await MainActor.run {
+                    savedMessage = "Profile synced successfully."
+                }
             } catch {
                 await MainActor.run {
                     savedMessage = String(format: String(localized: "profile.save.failed %@"), error.localizedDescription)
@@ -670,160 +647,7 @@ struct ProfileView: View {
         appStore.signOut()
         appStore.updateStravaStatus(nil)
         stravaMessage = nil
-        authMessage = String(localized: "auth.signed_off")
-    }
-
-    private func runformAuth() {
-        let normalizedEmail = authEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !normalizedEmail.isEmpty else {
-            authMessage = String(localized: "profile.email.required")
-            return
-        }
-        guard isValidEmail(normalizedEmail) else {
-            authMessage = String(localized: "profile.email.invalid")
-            return
-        }
-        guard !authPassword.isEmpty else {
-            authMessage = String(localized: "auth.password.required")
-            return
-        }
-
-        isAuthBusy = true
-        authMessage = nil
-
-        Task {
-            do {
-                let response: AuthResponse
-                if authMode == .login {
-                    response = try await APIClient.shared.login(email: normalizedEmail, password: authPassword)
-                } else {
-                    do {
-                        response = try await APIClient.shared.register(
-                            email: normalizedEmail,
-                            password: authPassword,
-                            name: authName.trimmingCharacters(in: .whitespacesAndNewlines)
-                        )
-                    } catch {
-                        if shouldFallbackToLogin(after: error) {
-                            response = try await APIClient.shared.login(email: normalizedEmail, password: authPassword)
-                        } else {
-                            throw error
-                        }
-                    }
-                }
-                await MainActor.run {
-                    appStore.signIn(response)
-                    email = response.user.email
-                    if authMode == .register {
-                        authMode = .login
-                    }
-                    authMessage = response.user.emailVerified
-                        ? String(localized: "auth.login.success")
-                        : String(localized: "auth.email_verification.pending")
-                    isAuthBusy = false
-                    refreshStravaStatus()
-                }
-            } catch {
-                await MainActor.run {
-                    authMessage = String(format: String(localized: "auth.login.failed %@"), error.localizedDescription)
-                    isAuthBusy = false
-                }
-            }
-        }
-    }
-
-    private func googleSignIn() {
-        guard let presentingVC = activeViewController() else {
-            authMessage = String(localized: "auth.google.no_presenter")
-            return
-        }
-
-        guard let clientID = resolvedGoogleClientID() else {
-            authMessage = String(localized: "auth.google.client_id_missing")
-            return
-        }
-
-        isAuthBusy = true
-        authMessage = nil
-
-        let configuration = GIDConfiguration(clientID: clientID)
-
-        GIDSignIn.sharedInstance.configuration = configuration
-        Task {
-            do {
-                let signInResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: presentingVC)
-                let accessToken = signInResult.user.accessToken.tokenString
-                if accessToken.isEmpty {
-                    authMessage = String(localized: "auth.google.missing_token")
-                    isAuthBusy = false
-                    return
-                }
-
-                let response = try await APIClient.shared.googleAuth(accessToken: accessToken)
-                appStore.signIn(response)
-                email = response.user.email
-                authMessage = response.user.emailVerified
-                    ? String(localized: "auth.login.success")
-                    : String(localized: "auth.email_verification.pending")
-                isAuthBusy = false
-                refreshStravaStatus()
-            } catch {
-                authMessage = String(format: String(localized: "auth.login.failed %@"), error.localizedDescription)
-                isAuthBusy = false
-            }
-        }
-    }
-
-    private func resolvedGoogleClientID() -> String? {
-        if let rawClientID = Bundle.main.object(forInfoDictionaryKey: "GOOGLE_IOS_CLIENT_ID") as? String {
-            let clientID = rawClientID.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !clientID.isEmpty && !clientID.contains("$(") {
-                return clientID
-            }
-        }
-
-        // Fallback: derive from reversed client id URL scheme
-        // com.googleusercontent.apps.<id> -> <id>.apps.googleusercontent.com
-        guard let urlTypes = Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]] else {
-            return nil
-        }
-
-        let prefix = "com.googleusercontent.apps."
-        for entry in urlTypes {
-            guard let schemes = entry["CFBundleURLSchemes"] as? [String] else { continue }
-            for scheme in schemes {
-                guard scheme.hasPrefix(prefix) else { continue }
-                let id = String(scheme.dropFirst(prefix.count))
-                if !id.isEmpty {
-                    return "\(id).apps.googleusercontent.com"
-                }
-            }
-        }
-        return nil
-    }
-
-    private func shouldFallbackToLogin(after error: Error) -> Bool {
-        let message = error.localizedDescription.lowercased()
-        return message.contains("already")
-            || message.contains("exists")
-            || message.contains("registered")
-            || message.contains("duplicate")
-            || message.contains("taken")
-    }
-
-    private func activeViewController() -> UIViewController? {
-        guard let scene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }),
-              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
-            return nil
-        }
-
-        var current: UIViewController = root
-        while let presented = current.presentedViewController {
-            current = presented
-        }
-        return current
+        savedMessage = "Signed out"
     }
 
     private func dismissKeyboard() {

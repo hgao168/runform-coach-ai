@@ -3,6 +3,7 @@ import Foundation
 final class APIClient {
     static let shared = APIClient()
     private static let defaultStravaBackendBaseURL = "https://runform-coach-ai-production.up.railway.app"
+    private static let defaultAuthFallbackBaseURL = "https://runform-coach-ai-staging.up.railway.app"
     private static let maxRetries = 2
     private static let baseRetryDelay: TimeInterval = 0.5
 
@@ -32,6 +33,16 @@ final class APIClient {
             return fallbackURL
         }
         throw APIError.configuration("BACKEND_BASE_URL is not configured. Check project.yml build settings.")
+    }
+
+    /// Resolved auth base URL with optional explicit override.
+    private static func resolvedAuthBaseURL() throws -> URL {
+        if let urlString = Bundle.main.object(forInfoDictionaryKey: "AUTH_BACKEND_BASE_URL") as? String,
+           !urlString.isEmpty,
+           let url = URL(string: urlString) {
+            return url
+        }
+        return try resolvedBaseURL()
     }
 
     // MARK: - Retry policy
@@ -301,67 +312,47 @@ final class APIClient {
     }
 
     func register(email: String, password: String, name: String?) async throws -> AuthResponse {
-        let baseURL = try Self.resolvedBaseURL()
-        let endpoint = baseURL.appendingPathComponent("api/v1/auth/register")
-        return try await Self.withRetry {
-            var request = URLRequest(url: endpoint)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.timeoutInterval = 20
-            let payload = RegisterRequest(
-                email: email,
-                password: password,
-                name: name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : name
-            )
-            request.httpBody = try JSONEncoder().encode(payload)
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
-            }
-            return try JSONDecoder().decode(AuthResponse.self, from: data)
-        }
+        let payload = RegisterRequest(
+            email: email,
+            password: password,
+            name: name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : name
+        )
+        return try await requestAuth(
+            path: "register",
+            payload: payload,
+            notFoundMessage: "Auth register route not found",
+            exhaustedMessage: "Unable to reach auth service from available backends."
+        )
     }
 
     func login(email: String, password: String) async throws -> AuthResponse {
-        let baseURL = try Self.resolvedBaseURL()
-        let endpoint = baseURL.appendingPathComponent("api/v1/auth/login")
-        return try await Self.withRetry {
-            var request = URLRequest(url: endpoint)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.timeoutInterval = 20
-            let payload = LoginRequest(email: email, password: password)
-            request.httpBody = try JSONEncoder().encode(payload)
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
-            }
-            return try JSONDecoder().decode(AuthResponse.self, from: data)
-        }
+        let payload = LoginRequest(email: email, password: password)
+        return try await requestAuth(
+            path: "login",
+            payload: payload,
+            notFoundMessage: "Auth login route not found",
+            exhaustedMessage: "Unable to reach auth service from available backends."
+        )
     }
 
     func googleAuth(accessToken: String) async throws -> AuthResponse {
-        let baseURL = try Self.resolvedBaseURL()
-        let endpoint = baseURL.appendingPathComponent("api/v1/auth/google")
-        return try await Self.withRetry {
-            var request = URLRequest(url: endpoint)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.timeoutInterval = 20
-            let payload = GoogleAuthRequest(accessToken: accessToken)
-            request.httpBody = try JSONEncoder().encode(payload)
+        let payload = GoogleAuthRequest(accessToken: accessToken)
+        return try await requestAuth(
+            path: "google",
+            payload: payload,
+            notFoundMessage: "Auth google route not found",
+            exhaustedMessage: "Unable to reach auth service from available backends."
+        )
+    }
 
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
-            }
-            return try JSONDecoder().decode(AuthResponse.self, from: data)
-        }
+    func requestPasswordReset(email: String) async throws -> PasswordResetRequestResponse {
+        let payload = PasswordResetRequest(email: email)
+        return try await requestAuth(
+            path: "forgot-password",
+            payload: payload,
+            notFoundMessage: "Auth forgot-password route not found",
+            exhaustedMessage: "Unable to reach auth service from available backends."
+        )
     }
 
     // MARK: - Private helpers
@@ -398,6 +389,24 @@ final class APIClient {
             candidates.append(productionURL)
         }
         candidates.append(try Self.resolvedBaseURL())
+
+        var seen = Set<String>()
+        return candidates.filter { candidate in
+            let key = candidate.absoluteString.lowercased()
+            if seen.contains(key) {
+                return false
+            }
+            seen.insert(key)
+            return true
+        }
+    }
+
+    private func authBaseURLCandidates() throws -> [URL] {
+        var candidates: [URL] = [try Self.resolvedAuthBaseURL()]
+        candidates.append(try Self.resolvedBaseURL())
+        if let stagingURL = URL(string: Self.defaultAuthFallbackBaseURL) {
+            candidates.append(stagingURL)
+        }
 
         var seen = Set<String>()
         return candidates.filter { candidate in
@@ -448,6 +457,69 @@ final class APIClient {
             lastError = .server(String(data: data, encoding: .utf8) ?? notFoundMessage)
         }
         throw lastError ?? APIError.server(exhaustedMessage)
+    }
+
+    /// Generic auth request with backend-URL fallback. Falls through on 404 so
+    /// auth can still function if the primary backend is temporarily missing auth routes.
+    private func requestAuth<T: Decodable, P: Encodable>(
+        path: String,
+        payload: P,
+        notFoundMessage: String,
+        exhaustedMessage: String
+    ) async throws -> T {
+        var lastError: APIError?
+        let candidates = try authBaseURLCandidates()
+        for candidateBaseURL in candidates {
+            let endpoint = candidateBaseURL.appendingPathComponent("api/v1/auth").appendingPathComponent(path)
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 20
+            request.httpBody = try JSONEncoder().encode(payload)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                continue
+            }
+            if (200..<300).contains(http.statusCode) {
+                return try JSONDecoder().decode(T.self, from: data)
+            }
+
+            let message = Self.extractServerMessage(from: data, fallback: "Bad server response")
+            if http.statusCode != 404 {
+                throw APIError.server(message)
+            }
+            lastError = .server(message.isEmpty ? notFoundMessage : message)
+        }
+        throw lastError ?? APIError.server(exhaustedMessage)
+    }
+
+    private static func extractServerMessage(from data: Data, fallback: String) -> String {
+        guard !data.isEmpty else { return fallback }
+
+        struct ErrorBody: Decodable {
+            let detail: String?
+            let message: String?
+            let error: String?
+        }
+
+        if let parsed = try? JSONDecoder().decode(ErrorBody.self, from: data) {
+            if let detail = parsed.detail?.trimmingCharacters(in: .whitespacesAndNewlines), !detail.isEmpty {
+                return detail
+            }
+            if let message = parsed.message?.trimmingCharacters(in: .whitespacesAndNewlines), !message.isEmpty {
+                return message
+            }
+            if let error = parsed.error?.trimmingCharacters(in: .whitespacesAndNewlines), !error.isEmpty {
+                return error
+            }
+        }
+
+        let raw = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let raw, !raw.isEmpty {
+            return raw
+        }
+        return fallback
     }
 }
 

@@ -1,11 +1,14 @@
 import asyncio
 import os
 import json
+import base64
 import random
 import string
+import hmac
 import hashlib
 import secrets
 import logging
+import html
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from urllib.parse import urlencode
@@ -53,6 +56,10 @@ from .schemas import (
     AuthResponse,
     RegisterRequest,
     LoginRequest,
+    PasswordResetRequest,
+    PasswordResetRequestResponse,
+    PasswordResetConfirmRequest,
+    PasswordResetConfirmResponse,
     ResendVerificationRequest,
     ResendVerificationResponse,
     UserResponse,
@@ -259,6 +266,9 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 EMAIL_VERIFICATION_TOKEN_TTL_MINUTES = int(os.getenv("EMAIL_VERIFICATION_TOKEN_TTL_MINUTES", "1440"))
 EMAIL_VERIFICATION_URL_BASE = os.getenv("EMAIL_VERIFICATION_URL_BASE", "").strip()
+RESET_PASSWORD_URL_BASE = os.getenv("RESET_PASSWORD_URL_BASE", "").strip()
+RESET_PASSWORD_TOKEN_TTL_MINUTES = int(os.getenv("RESET_PASSWORD_TOKEN_TTL_MINUTES", "30"))
+RESET_PASSWORD_TOKEN_SECRET = os.getenv("RESET_PASSWORD_TOKEN_SECRET", "").strip()
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip()
 RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
@@ -327,6 +337,80 @@ def _build_verification_url(token: str) -> str:
     return f"{base_url}{separator}token={token}"
 
 
+def _password_reset_secret() -> str:
+    if RESET_PASSWORD_TOKEN_SECRET:
+        return RESET_PASSWORD_TOKEN_SECRET
+    # Fallbacks for emergency compatibility in existing deployments.
+    for candidate in (API_KEY, GOOGLE_CLIENT_SECRET, RESEND_API_KEY):
+        if candidate and len(candidate) >= 16:
+            return candidate
+    raise HTTPException(
+        status_code=503,
+        detail="RESET_PASSWORD_TOKEN_SECRET must be configured for password reset.",
+    )
+
+
+def _urlsafe_b64encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode("utf-8").rstrip("=")
+
+
+def _urlsafe_b64decode(value: str) -> bytes:
+    padding = "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode(value + padding)
+
+
+def _issue_password_reset_token(email: str) -> str:
+    expires_ts = int((datetime.now(timezone.utc) + timedelta(minutes=RESET_PASSWORD_TOKEN_TTL_MINUTES)).timestamp())
+    payload = json.dumps({"email": email, "exp": expires_ts}, separators=(",", ":")).encode("utf-8")
+    secret = _password_reset_secret().encode("utf-8")
+    signature = hmac.new(secret, payload, hashlib.sha256).digest()
+    return f"{_urlsafe_b64encode(payload)}.{_urlsafe_b64encode(signature)}"
+
+
+def _verify_password_reset_token(token: str) -> str:
+    try:
+        payload_part, sig_part = token.split(".", 1)
+        payload = _urlsafe_b64decode(payload_part)
+        provided_sig = _urlsafe_b64decode(sig_part)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid reset token format.") from exc
+
+    expected_sig = hmac.new(_password_reset_secret().encode("utf-8"), payload, hashlib.sha256).digest()
+    if not hmac.compare_digest(provided_sig, expected_sig):
+        raise HTTPException(status_code=400, detail="Invalid reset token.")
+
+    try:
+        data = json.loads(payload.decode("utf-8"))
+        email = _normalized_email(data["email"])
+        expires_ts = int(data["exp"])
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid reset token payload.") from exc
+
+    if datetime.now(timezone.utc).timestamp() > expires_ts:
+        raise HTTPException(status_code=400, detail="Reset token has expired.")
+
+    return email
+
+
+def _password_reset_base_url() -> str:
+    if RESET_PASSWORD_URL_BASE:
+        return RESET_PASSWORD_URL_BASE
+    if PUBLIC_BASE_URL:
+        return PUBLIC_BASE_URL.rstrip("/") + "/reset-password"
+    if RAILWAY_PUBLIC_DOMAIN:
+        return f"https://{RAILWAY_PUBLIC_DOMAIN}/reset-password"
+    raise HTTPException(
+        status_code=503,
+        detail="RESET_PASSWORD_URL_BASE or PUBLIC_BASE_URL must be configured for password reset.",
+    )
+
+
+def _build_password_reset_url(token: str) -> str:
+    base_url = _password_reset_base_url()
+    separator = "&" if "?" in base_url else "?"
+    return f"{base_url}{separator}token={token}"
+
+
 def _send_email_verification_email(recipient_email: str, verification_url: str) -> None:
     if not RESEND_API_KEY or not RESEND_FROM_EMAIL:
         raise HTTPException(
@@ -370,6 +454,53 @@ def _send_email_verification_email(recipient_email: str, verification_url: str) 
     except Exception as exc:
         LOGGER.exception("Failed to send verification email")
         raise HTTPException(status_code=503, detail=f"Failed to send verification email: {exc}") from exc
+
+
+def _send_password_reset_email(recipient_email: str, reset_url: str) -> None:
+    if not RESEND_API_KEY or not RESEND_FROM_EMAIL:
+        raise HTTPException(
+            status_code=503,
+            detail="RESEND_API_KEY and RESEND_FROM_EMAIL must be configured for password reset.",
+        )
+
+    html_body = (
+        "<p>We received a request to reset your RunForm password.</p>"
+        "<p>Click the link below to set a new password:</p>"
+        f"<p><a href=\"{reset_url}\">Reset Password</a></p>"
+        f"<p>This link expires in {RESET_PASSWORD_TOKEN_TTL_MINUTES} minutes.</p>"
+        "<p>If you did not request this, you can ignore this email.</p>"
+    )
+
+    text_body = (
+        "We received a request to reset your RunForm password.\n\n"
+        "Use this link to set a new password:\n"
+        f"{reset_url}\n\n"
+        f"This link expires in {RESET_PASSWORD_TOKEN_TTL_MINUTES} minutes.\n"
+        "If you did not request this, you can ignore this email."
+    )
+
+    payload = {
+        "from": RESEND_FROM_EMAIL,
+        "to": [recipient_email],
+        "subject": "RunForm: Reset your password",
+        "html": html_body,
+        "text": text_body,
+    }
+
+    try:
+        response = httpx.post(
+            RESEND_API_URL,
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=20,
+        )
+        response.raise_for_status()
+    except Exception as exc:
+        LOGGER.exception("Failed to send password reset email")
+        raise HTTPException(status_code=503, detail=f"Failed to send password reset email: {exc}") from exc
 
 
 @app.post("/api/v1/auth/google", response_model=AuthResponse)
@@ -586,6 +717,137 @@ def login(payload: LoginRequest) -> AuthResponse:
 def resend_verification(payload: ResendVerificationRequest) -> ResendVerificationResponse:
     """Temporarily disabled until DB migration is fully aligned."""
     raise HTTPException(status_code=503, detail="Email verification is temporarily unavailable during backend migration.")
+
+
+@app.post("/api/v1/auth/forgot-password", response_model=PasswordResetRequestResponse)
+def forgot_password(payload: PasswordResetRequest) -> PasswordResetRequestResponse:
+    """Send a password reset link if the email exists.
+
+    Response is intentionally generic to avoid account enumeration.
+    """
+    normalized_email = _normalized_email(payload.email)
+
+    try:
+        with get_db_session() as session:
+            user = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
+
+        if user is not None and user.email:
+            token = _issue_password_reset_token(normalized_email)
+            reset_url = _build_password_reset_url(token)
+            _send_password_reset_email(user.email, reset_url)
+
+        return PasswordResetRequestResponse(
+            sent=True,
+            message="If that email is registered, a password reset link has been sent.",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to process password reset request: {exc}") from exc
+
+
+@app.post("/api/v1/auth/reset-password", response_model=PasswordResetConfirmResponse)
+def reset_password(payload: PasswordResetConfirmRequest) -> PasswordResetConfirmResponse:
+    """Reset password using a signed, time-limited token sent by email."""
+    normalized_email = _verify_password_reset_token(payload.token)
+
+    try:
+        with get_db_session() as session:
+            user = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
+            if user is None:
+                raise HTTPException(status_code=400, detail="Invalid reset token.")
+
+            user.password_hash = _hash_password(payload.new_password)
+            session.commit()
+
+        return PasswordResetConfirmResponse(
+            reset=True,
+            message="Password has been reset successfully.",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to reset password: {exc}") from exc
+
+
+@app.get("/reset-password", response_class=HTMLResponse)
+def reset_password_page(token: str = Query("")) -> HTMLResponse:
+        """Minimal reset-password web page for emailed links."""
+        safe_token = html.escape(token, quote=True)
+        page = f"""
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>RunForm Password Reset</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; }}
+        .wrap {{ max-width: 420px; margin: 64px auto; padding: 24px; background: #111827; border-radius: 12px; border: 1px solid #1f2937; }}
+        h1 {{ font-size: 22px; margin: 0 0 10px; }}
+        p {{ color: #94a3b8; margin: 0 0 18px; }}
+        label {{ display: block; margin: 12px 0 6px; font-size: 14px; color: #cbd5e1; }}
+        input {{ width: 100%; box-sizing: border-box; padding: 11px 12px; border-radius: 8px; border: 1px solid #334155; background: #0b1220; color: #e2e8f0; }}
+        button {{ width: 100%; margin-top: 16px; padding: 12px; border: 0; border-radius: 8px; background: #10b981; color: #042f2e; font-weight: 700; cursor: pointer; }}
+        .msg {{ margin-top: 12px; font-size: 14px; color: #cbd5e1; }}
+        .err {{ color: #fca5a5; }}
+        .ok {{ color: #86efac; }}
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>Reset your password</h1>
+        <p>Enter a new password for your RunForm account.</p>
+        <form id="reset-form">
+            <label for="token">Reset token</label>
+            <input id="token" name="token" value="{safe_token}" required />
+
+            <label for="new_password">New password</label>
+            <input id="new_password" name="new_password" type="password" minlength="6" maxlength="128" required />
+
+            <button type="submit">Reset Password</button>
+            <div id="msg" class="msg"></div>
+        </form>
+    </div>
+    <script>
+        const form = document.getElementById('reset-form');
+        const msg = document.getElementById('msg');
+
+        form.addEventListener('submit', async (event) => {{
+            event.preventDefault();
+            msg.textContent = 'Submitting...';
+            msg.className = 'msg';
+
+            const payload = {{
+                token: document.getElementById('token').value,
+                new_password: document.getElementById('new_password').value
+            }};
+
+            try {{
+                const response = await fetch('/api/v1/auth/reset-password', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(payload)
+                }});
+                const data = await response.json();
+
+                if (!response.ok) {{
+                    throw new Error(data.detail || 'Reset failed.');
+                }}
+
+                msg.textContent = data.message || 'Password has been reset successfully.';
+                msg.className = 'msg ok';
+                form.reset();
+            }} catch (error) {{
+                msg.textContent = error.message || 'Reset failed.';
+                msg.className = 'msg err';
+            }}
+        }});
+    </script>
+</body>
+</html>
+"""
+        return HTMLResponse(page)
 
 
 @app.get("/api/v1/auth/verify-email", response_class=HTMLResponse)

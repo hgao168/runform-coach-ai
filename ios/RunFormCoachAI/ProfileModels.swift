@@ -224,6 +224,15 @@ struct LoginRequest: Encodable {
     let password: String
 }
 
+struct PasswordResetRequest: Encodable {
+    let email: String
+}
+
+struct PasswordResetRequestResponse: Decodable {
+    let sent: Bool
+    let message: String
+}
+
 struct GoogleAuthRequest: Encodable {
     let accessToken: String
 
