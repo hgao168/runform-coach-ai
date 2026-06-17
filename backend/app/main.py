@@ -1,4 +1,5 @@
 import asyncio
+import smtplib
 import os
 import json
 import base64
@@ -9,6 +10,7 @@ import hashlib
 import secrets
 import logging
 import html
+from email.message import EmailMessage
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from urllib.parse import urlencode
@@ -274,6 +276,12 @@ RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "").strip()
 RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com/emails").strip()
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "").strip()
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").strip().lower() in {"1", "true", "yes", "on"}
 
 def _hash_password(password: str) -> str:
     """Hash a password using PBKDF2-SHA256 with a random salt."""
@@ -305,6 +313,21 @@ def _user_to_response(user: User) -> UserResponse:
 
 def _normalized_email(email: str) -> str:
     return email.strip().lower()
+
+
+def _find_user_by_email(session, normalized_email: str) -> User | None:
+    """Find one user by normalized email and fail closed on duplicate rows."""
+    rows = session.execute(
+        select(User)
+        .where(func.lower(User.email) == normalized_email)
+        .limit(2)
+    ).scalars().all()
+    if not rows:
+        return None
+    if len(rows) > 1:
+        LOGGER.error("Duplicate normalized email detected in users table", extra={"email": normalized_email})
+        raise HTTPException(status_code=409, detail="Account data conflict. Please contact support.")
+    return rows[0]
 
 
 def _hash_email_verification_token(token: str) -> str:
@@ -411,13 +434,71 @@ def _build_password_reset_url(token: str) -> str:
     return f"{base_url}{separator}token={token}"
 
 
-def _send_email_verification_email(recipient_email: str, verification_url: str) -> None:
-    if not RESEND_API_KEY or not RESEND_FROM_EMAIL:
+def _send_transactional_email(recipient_email: str, subject: str, html_body: str, text_body: str) -> None:
+    """Send email via Resend first, then SMTP as a fallback."""
+    resend_errors: list[str] = []
+    smtp_errors: list[str] = []
+
+    if RESEND_API_KEY and RESEND_FROM_EMAIL:
+        payload = {
+            "from": RESEND_FROM_EMAIL,
+            "to": [recipient_email],
+            "subject": subject,
+            "html": html_body,
+            "text": text_body,
+        }
+        try:
+            response = httpx.post(
+                RESEND_API_URL,
+                headers={
+                    "Authorization": f"Bearer {RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=20,
+            )
+            response.raise_for_status()
+            return
+        except Exception as exc:
+            LOGGER.exception("Failed to send email via Resend")
+            resend_errors.append(str(exc))
+
+    if SMTP_HOST and SMTP_FROM_EMAIL:
+        message = EmailMessage()
+        message["From"] = SMTP_FROM_EMAIL
+        message["To"] = recipient_email
+        message["Subject"] = subject
+        message.set_content(text_body)
+        message.add_alternative(html_body, subtype="html")
+
+        try:
+            if SMTP_USE_TLS:
+                with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
+                    server.starttls()
+                    if SMTP_USERNAME:
+                        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                    server.send_message(message)
+            else:
+                with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
+                    if SMTP_USERNAME:
+                        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                    server.send_message(message)
+            return
+        except Exception as exc:
+            LOGGER.exception("Failed to send email via SMTP")
+            smtp_errors.append(str(exc))
+
+    if not (RESEND_API_KEY and RESEND_FROM_EMAIL) and not (SMTP_HOST and SMTP_FROM_EMAIL):
         raise HTTPException(
             status_code=503,
-            detail="RESEND_API_KEY and RESEND_FROM_EMAIL must be configured for email verification.",
+            detail="Email provider is not configured. Set Resend or SMTP environment variables.",
         )
 
+    combined = "; ".join(filter(None, [*resend_errors, *smtp_errors]))
+    raise HTTPException(status_code=503, detail=f"Failed to send email: {combined or 'Unknown email transport error.'}")
+
+
+def _send_email_verification_email(recipient_email: str, verification_url: str) -> None:
     html_body = (
         "<p>Welcome to RunForm.</p>"
         "<p>Please verify your email by clicking the link below:</p>"
@@ -432,37 +513,15 @@ def _send_email_verification_email(recipient_email: str, verification_url: str) 
         f"This link expires in {EMAIL_VERIFICATION_TOKEN_TTL_MINUTES} minutes."
     )
 
-    payload = {
-        "from": RESEND_FROM_EMAIL,
-        "to": [recipient_email],
-        "subject": "RunForm: Verify your email",
-        "html": html_body,
-        "text": text_body,
-    }
-
-    try:
-        response = httpx.post(
-            RESEND_API_URL,
-            headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=20,
-        )
-        response.raise_for_status()
-    except Exception as exc:
-        LOGGER.exception("Failed to send verification email")
-        raise HTTPException(status_code=503, detail=f"Failed to send verification email: {exc}") from exc
+    _send_transactional_email(
+        recipient_email=recipient_email,
+        subject="RunForm: Verify your email",
+        html_body=html_body,
+        text_body=text_body,
+    )
 
 
 def _send_password_reset_email(recipient_email: str, reset_url: str) -> None:
-    if not RESEND_API_KEY or not RESEND_FROM_EMAIL:
-        raise HTTPException(
-            status_code=503,
-            detail="RESEND_API_KEY and RESEND_FROM_EMAIL must be configured for password reset.",
-        )
-
     html_body = (
         "<p>We received a request to reset your RunForm password.</p>"
         "<p>Click the link below to set a new password:</p>"
@@ -479,28 +538,12 @@ def _send_password_reset_email(recipient_email: str, reset_url: str) -> None:
         "If you did not request this, you can ignore this email."
     )
 
-    payload = {
-        "from": RESEND_FROM_EMAIL,
-        "to": [recipient_email],
-        "subject": "RunForm: Reset your password",
-        "html": html_body,
-        "text": text_body,
-    }
-
-    try:
-        response = httpx.post(
-            RESEND_API_URL,
-            headers={
-                "Authorization": f"Bearer {RESEND_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=20,
-        )
-        response.raise_for_status()
-    except Exception as exc:
-        LOGGER.exception("Failed to send password reset email")
-        raise HTTPException(status_code=503, detail=f"Failed to send password reset email: {exc}") from exc
+    _send_transactional_email(
+        recipient_email=recipient_email,
+        subject="RunForm: Reset your password",
+        html_body=html_body,
+        text_body=text_body,
+    )
 
 
 @app.post("/api/v1/auth/google", response_model=AuthResponse)
@@ -524,6 +567,7 @@ async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
     email = user_info.get("email")
     if not email:
         raise HTTPException(status_code=401, detail="Google token missing email field. Email scope may not be granted.")
+    normalized_email = _normalized_email(email)
 
     google_sub = user_info.get("sub")
     if not google_sub:
@@ -533,7 +577,7 @@ async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
 
     with get_db_session() as session:
         # 2. Look up user by email
-        user = session.scalar(select(User).where(User.email == email))
+        user = _find_user_by_email(session, normalized_email)
 
         if user is not None:
             # 3. Update google_sub if not set
@@ -549,7 +593,7 @@ async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
             existing = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
             if existing is not None:
                 # Link existing user (by ios_user_id) to this Google account
-                existing.email = email
+                existing.email = normalized_email
                 existing.google_sub = google_sub
                 existing.nickname = name
                 session.commit()
@@ -558,7 +602,7 @@ async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
             else:
                 user = User(
                     ios_user_id=ios_user_id,
-                    email=email,
+                    email=normalized_email,
                     google_sub=google_sub,
                     nickname=name,
                 )
@@ -614,6 +658,7 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
     email = user_info.get("email")
     if not email:
         raise HTTPException(status_code=401, detail="Google token missing email field. Email scope may not be granted.")
+    normalized_email = _normalized_email(email)
 
     google_sub = user_info.get("sub")
     if not google_sub:
@@ -623,7 +668,7 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
 
     with get_db_session() as session:
         # 3. Look up user by email
-        user = session.scalar(select(User).where(User.email == email))
+        user = _find_user_by_email(session, normalized_email)
 
         if user is not None:
             # Update google_sub if not set
@@ -639,7 +684,7 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
             existing = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
             if existing is not None:
                 # Link existing user (by ios_user_id) to this Google account
-                existing.email = email
+                existing.email = normalized_email
                 existing.google_sub = google_sub
                 existing.nickname = name
                 session.commit()
@@ -648,7 +693,7 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
             else:
                 user = User(
                     ios_user_id=ios_user_id,
-                    email=email,
+                    email=normalized_email,
                     google_sub=google_sub,
                     nickname=name,
                 )
@@ -668,7 +713,7 @@ def register(payload: RegisterRequest) -> AuthResponse:
 
         with get_db_session() as session:
             # Check if email already exists
-            existing = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
+            existing = _find_user_by_email(session, normalized_email)
             if existing is not None:
                 raise HTTPException(status_code=409, detail="Email already registered.")
 
@@ -699,8 +744,10 @@ def login(payload: LoginRequest) -> AuthResponse:
     try:
         normalized_email = _normalized_email(payload.email)
         with get_db_session() as session:
-            user = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
+            user = _find_user_by_email(session, normalized_email)
             if user is None:
+                raise HTTPException(status_code=401, detail="Invalid email or password.")
+            if not user.email or _normalized_email(user.email) != normalized_email:
                 raise HTTPException(status_code=401, detail="Invalid email or password.")
             if not user.password_hash or not _verify_password(payload.password, user.password_hash):
                 raise HTTPException(status_code=401, detail="Invalid email or password.")
@@ -729,7 +776,7 @@ def forgot_password(payload: PasswordResetRequest) -> PasswordResetRequestRespon
 
     try:
         with get_db_session() as session:
-            user = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
+            user = _find_user_by_email(session, normalized_email)
 
         if user is not None and user.email:
             token = _issue_password_reset_token(normalized_email)
@@ -753,7 +800,7 @@ def reset_password(payload: PasswordResetConfirmRequest) -> PasswordResetConfirm
 
     try:
         with get_db_session() as session:
-            user = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
+            user = _find_user_by_email(session, normalized_email)
             if user is None:
                 raise HTTPException(status_code=400, detail="Invalid reset token.")
 
