@@ -274,7 +274,7 @@ class ProfileSaveRequest(BaseModel):
         ...,
         min_length=3,
         max_length=128,
-        pattern=r'^[a-zA-Z0-9._\-]+$',
+        pattern=r'^[a-zA-Z0-9.@_\-]+$',
         description="iOS user identifier",
     )
     first_name: Optional[str] = None

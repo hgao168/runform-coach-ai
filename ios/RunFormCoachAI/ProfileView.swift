@@ -93,6 +93,11 @@ struct ProfileView: View {
                 IconBubble(systemImage: "person.crop.circle.fill", gradient: AppTheme.actionGradient, size: 62)
                 VStack(alignment: .leading, spacing: 5) {
                     let displayName: String = {
+                        if let currentUser = appStore.currentUser,
+                           let dbName = currentUser.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+                           !dbName.isEmpty {
+                            return dbName
+                        }
                         let full = "\(firstName.trimmingCharacters(in: .whitespacesAndNewlines)) \(lastName.trimmingCharacters(in: .whitespacesAndNewlines))".trimmingCharacters(in: .whitespacesAndNewlines)
                         if !full.isEmpty { return full }
                         let nick = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -362,6 +367,20 @@ struct ProfileView: View {
         }
         dateOfBirth = profile.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
         weeklyExerciseHours = profile.weeklyExerciseHours
+
+        if let currentUser = appStore.currentUser {
+            let normalizedAuthEmail = currentUser.email.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !normalizedAuthEmail.isEmpty {
+                email = normalizedAuthEmail
+            }
+            let dbName = currentUser.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !dbName.isEmpty,
+               firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                nickname = dbName
+            }
+        }
     }
 
     private func saveProfile() {

@@ -229,11 +229,30 @@ struct LoginView: View {
                 }
             } catch {
                 await MainActor.run {
-                    authMessage = "Unable to send reset email right now. Please try again."
+                    authMessage = userFriendlyPasswordResetMessage(for: error)
                     isAuthBusy = false
                 }
             }
         }
+    }
+
+    private func userFriendlyPasswordResetMessage(for error: Error) -> String {
+        let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = message.lowercased()
+
+        if normalized.contains("if that email is registered") {
+            return "If this email is registered, a password reset link has been sent."
+        }
+        if normalized.contains("not configured") || normalized.contains("email provider") {
+            return "Password reset email is not configured on server: \(message)"
+        }
+        if normalized.contains("network") || normalized.contains("offline") || normalized.contains("timed out") {
+            return "Network error while requesting reset email. Please try again."
+        }
+        if !message.isEmpty {
+            return "Password reset failed: \(message)"
+        }
+        return "Unable to send reset email right now. Please try again."
     }
 
     private func isValidEmail(_ value: String) -> Bool {
