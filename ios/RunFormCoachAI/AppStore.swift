@@ -244,12 +244,10 @@ final class AppStore: ObservableObject {
         // Keep local profile aligned with the authenticated backend user.
         profile.email = response.user.email
         if let backendName = response.user.name?.trimmingCharacters(in: .whitespacesAndNewlines), !backendName.isEmpty {
-            if profile.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                profile.nickname = backendName
-            }
-            if profile.firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-               profile.lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-               profile.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let nicknameEmpty = profile.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let firstNameEmpty = profile.firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let lastNameEmpty = profile.lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if nicknameEmpty || (firstNameEmpty && lastNameEmpty) {
                 profile.nickname = backendName
             }
         }

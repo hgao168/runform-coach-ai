@@ -389,9 +389,11 @@ struct ProfileView: View {
         fieldFocused = false
         dismissKeyboard()
 
-        let normalizedEmail = appStore.currentUser?.email.trimmingCharacters(in: .whitespacesAndNewlines)
-            .flatMap { $0.isEmpty ? nil : $0 }
-            ?? email.trimmingCharacters(in: .whitespacesAndNewlines)
+        var normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let authenticatedEmail = appStore.currentUser?.email.trimmingCharacters(in: .whitespacesAndNewlines),
+           !authenticatedEmail.isEmpty {
+            normalizedEmail = authenticatedEmail
+        }
         if normalizedEmail.isEmpty {
             emailError = String(localized: "profile.email.required")
             savedMessage = nil
