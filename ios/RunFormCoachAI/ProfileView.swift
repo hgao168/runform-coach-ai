@@ -150,6 +150,8 @@ struct ProfileView: View {
                     keyboardType: .emailAddress,
                     focus: $fieldFocused
                 )
+                .disabled(appStore.currentUser != nil)
+                .opacity(appStore.currentUser != nil ? 0.7 : 1)
                 .onChange(of: email) { _ in
                     emailError = nil
                 }
@@ -387,7 +389,9 @@ struct ProfileView: View {
         fieldFocused = false
         dismissKeyboard()
 
-        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedEmail = appStore.currentUser?.email.trimmingCharacters(in: .whitespacesAndNewlines)
+            .flatMap { $0.isEmpty ? nil : $0 }
+            ?? email.trimmingCharacters(in: .whitespacesAndNewlines)
         if normalizedEmail.isEmpty {
             emailError = String(localized: "profile.email.required")
             savedMessage = nil

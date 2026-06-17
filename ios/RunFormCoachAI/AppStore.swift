@@ -241,15 +241,17 @@ final class AppStore: ObservableObject {
         currentUser = response.user
         appUserID = response.user.id
 
-        // Keep local profile aligned with authenticated identity from backend.
-        if profile.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            profile.email = response.user.email
-        }
-        if (profile.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && profile.firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && profile.lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && (response.user.name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)) {
-            profile.nickname = response.user.name ?? ""
+        // Keep local profile aligned with the authenticated backend user.
+        profile.email = response.user.email
+        if let backendName = response.user.name?.trimmingCharacters(in: .whitespacesAndNewlines), !backendName.isEmpty {
+            if profile.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                profile.nickname = backendName
+            }
+            if profile.firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               profile.lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               profile.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                profile.nickname = backendName
+            }
         }
 
         UserDefaults.standard.set(response.accessToken, forKey: accessTokenKey)

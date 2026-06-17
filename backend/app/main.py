@@ -439,29 +439,43 @@ def _send_transactional_email(recipient_email: str, subject: str, html_body: str
     resend_errors: list[str] = []
     smtp_errors: list[str] = []
 
-    if RESEND_API_KEY and RESEND_FROM_EMAIL:
-        payload = {
-            "from": RESEND_FROM_EMAIL,
-            "to": [recipient_email],
-            "subject": subject,
-            "html": html_body,
-            "text": text_body,
-        }
-        try:
-            response = httpx.post(
-                RESEND_API_URL,
-                headers={
-                    "Authorization": f"Bearer {RESEND_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-                timeout=20,
-            )
-            response.raise_for_status()
-            return
-        except Exception as exc:
-            LOGGER.exception("Failed to send email via Resend")
-            resend_errors.append(str(exc))
+    resend_from_candidates: list[str] = []
+    if RESEND_FROM_EMAIL:
+        resend_from_candidates.append(RESEND_FROM_EMAIL)
+        fallback_from = "RunForm <onboarding@resend.dev>"
+        if RESEND_FROM_EMAIL != fallback_from:
+            resend_from_candidates.append(fallback_from)
+
+    if RESEND_API_KEY and resend_from_candidates:
+        for resend_from in resend_from_candidates:
+            payload = {
+                "from": resend_from,
+                "to": [recipient_email],
+                "subject": subject,
+                "html": html_body,
+                "text": text_body,
+            }
+            try:
+                response = httpx.post(
+                    RESEND_API_URL,
+                    headers={
+                        "Authorization": f"Bearer {RESEND_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                    timeout=20,
+                )
+                response.raise_for_status()
+                return
+            except httpx.HTTPStatusError as exc:
+                resend_errors.append(f"{resend_from}: {exc.response.status_code} {exc.response.text}")
+                LOGGER.exception("Failed to send email via Resend")
+                if exc.response.status_code not in {401, 403} or resend_from == resend_from_candidates[-1]:
+                    continue
+            except Exception as exc:
+                LOGGER.exception("Failed to send email via Resend")
+                resend_errors.append(f"{resend_from}: {exc}")
+                continue
 
     if SMTP_HOST and SMTP_FROM_EMAIL:
         message = EmailMessage()
@@ -488,7 +502,7 @@ def _send_transactional_email(recipient_email: str, subject: str, html_body: str
             LOGGER.exception("Failed to send email via SMTP")
             smtp_errors.append(str(exc))
 
-    if not (RESEND_API_KEY and RESEND_FROM_EMAIL) and not (SMTP_HOST and SMTP_FROM_EMAIL):
+    if not resend_from_candidates and not (SMTP_HOST and SMTP_FROM_EMAIL):
         raise HTTPException(
             status_code=503,
             detail="Email provider is not configured. Set Resend or SMTP environment variables.",
