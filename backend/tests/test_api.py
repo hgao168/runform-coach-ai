@@ -7,6 +7,8 @@ Tests are written to work without a database or external API key.
 
 import pytest
 
+from app import main as main_mod
+
 # ---------------------------------------------------------------------------
 # Health endpoint
 # ---------------------------------------------------------------------------
@@ -126,3 +128,29 @@ async def test_analyze_video_requires_video_file(client):
     # Sending multipart without the required 'video' field
     response = await client.post("/analyze")
     assert response.status_code == 422, response.text
+
+
+def test_transactional_email_uses_movenova_sender_by_default(monkeypatch):
+    """Resend payload should use the production sender when no override is set."""
+    captured_payload = {}
+
+    class DummyResponse:
+        def raise_for_status(self):
+            return None
+
+    def fake_post(url, headers, json, timeout):
+        captured_payload.update(json)
+        return DummyResponse()
+
+    monkeypatch.setattr(main_mod, "RESEND_API_KEY", "test-resend-api-key")
+    monkeypatch.setattr(main_mod, "RESEND_FROM_EMAIL", "")
+    monkeypatch.setattr(main_mod.httpx, "post", fake_post)
+
+    main_mod._send_transactional_email(
+        recipient_email="runner@example.com",
+        subject="Reset",
+        html_body="<p>Reset</p>",
+        text_body="Reset",
+    )
+
+    assert captured_payload["from"] == "noreply@movenova.ai"

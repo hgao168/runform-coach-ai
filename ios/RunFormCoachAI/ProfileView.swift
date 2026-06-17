@@ -84,6 +84,12 @@ struct ProfileView: View {
                     refreshStravaStatus()
                 }
             }
+            .onChange(of: appStore.currentUser) { currentUser in
+                loadDraftFromStore()
+                if currentUser != nil {
+                    refreshStravaStatus()
+                }
+            }
         }
     }
 

@@ -72,6 +72,7 @@ final class AppStore: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: currentUserKey),
            let savedUser = try? decoder.decode(UserResponse.self, from: data) {
             currentUser = savedUser
+            alignProfileWithAuthenticatedUser(savedUser)
         } else {
             currentUser = nil
         }
@@ -242,7 +243,7 @@ final class AppStore: ObservableObject {
         appUserID = response.user.id
 
         // Keep local profile aligned with the authenticated backend user.
-        profile.email = response.user.email
+        alignProfileWithAuthenticatedUser(response.user)
         if let backendName = response.user.name?.trimmingCharacters(in: .whitespacesAndNewlines), !backendName.isEmpty {
             let nicknameEmpty = profile.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             let firstNameEmpty = profile.firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -256,6 +257,16 @@ final class AppStore: ObservableObject {
         UserDefaults.standard.set(response.user.id, forKey: appUserIDKey)
         if let userData = try? encoder.encode(response.user) {
             UserDefaults.standard.set(userData, forKey: currentUserKey)
+        }
+    }
+
+    private func alignProfileWithAuthenticatedUser(_ user: UserResponse) {
+        let authenticatedEmail = user.email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !authenticatedEmail.isEmpty else { return }
+
+        if profile.email != authenticatedEmail {
+            profile.email = authenticatedEmail
+            saveProfile()
         }
     }
 

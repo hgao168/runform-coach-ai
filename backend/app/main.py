@@ -276,6 +276,7 @@ RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "").strip()
 RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com/emails").strip()
+DEFAULT_TRANSACTIONAL_FROM_EMAIL = "noreply@movenova.ai"
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
@@ -442,9 +443,8 @@ def _send_transactional_email(recipient_email: str, subject: str, html_body: str
     resend_from_candidates: list[str] = []
     if RESEND_FROM_EMAIL:
         resend_from_candidates.append(RESEND_FROM_EMAIL)
-        fallback_from = "RunForm <onboarding@resend.dev>"
-        if RESEND_FROM_EMAIL != fallback_from:
-            resend_from_candidates.append(fallback_from)
+    if DEFAULT_TRANSACTIONAL_FROM_EMAIL not in resend_from_candidates:
+        resend_from_candidates.append(DEFAULT_TRANSACTIONAL_FROM_EMAIL)
 
     if RESEND_API_KEY and resend_from_candidates:
         for resend_from in resend_from_candidates:
