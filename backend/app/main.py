@@ -289,7 +289,7 @@ def _user_to_response(user: User) -> UserResponse:
         email=user.email,
         name=user.nickname or user.first_name,
         google_sub=user.google_sub,
-        email_verified=user.email_verified,
+        email_verified=False,
     )
 
 
@@ -408,12 +408,6 @@ async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
             # 3. Update google_sub if not set
             if not user.google_sub:
                 user.google_sub = google_sub
-            if not user.email_verified:
-                user.email_verified = True
-                user.email_verified_at = datetime.now(timezone.utc)
-                user.email_verification_token_hash = None
-                user.email_verification_expires_at = None
-                user.email_verification_sent_at = None
                 session.commit()
                 session.refresh(user)
         else:
@@ -436,8 +430,6 @@ async def google_auth(payload: GoogleAuthRequest) -> AuthResponse:
                     email=email,
                     google_sub=google_sub,
                     nickname=name,
-                    email_verified=True,
-                    email_verified_at=datetime.now(timezone.utc),
                 )
                 session.add(user)
                 session.commit()
@@ -506,12 +498,6 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
             # Update google_sub if not set
             if not user.google_sub:
                 user.google_sub = google_sub
-            if not user.email_verified:
-                user.email_verified = True
-                user.email_verified_at = datetime.now(timezone.utc)
-                user.email_verification_token_hash = None
-                user.email_verification_expires_at = None
-                user.email_verification_sent_at = None
                 session.commit()
                 session.refresh(user)
         else:
@@ -534,8 +520,6 @@ async def google_callback(payload: GoogleCallbackRequest) -> AuthResponse:
                     email=email,
                     google_sub=google_sub,
                     nickname=name,
-                    email_verified=True,
-                    email_verified_at=datetime.now(timezone.utc),
                 )
                 session.add(user)
                 session.commit()
@@ -550,7 +534,6 @@ def register(payload: RegisterRequest) -> AuthResponse:
     """Register a new user with email and password."""
     try:
         normalized_email = _normalized_email(payload.email)
-        verification_token, token_hash, token_expires_at = _issue_email_verification_token()
 
         with get_db_session() as session:
             # Check if email already exists
@@ -566,17 +549,10 @@ def register(payload: RegisterRequest) -> AuthResponse:
                 email=normalized_email,
                 password_hash=_hash_password(payload.password),
                 nickname=payload.name,
-                email_verified=False,
-                email_verification_token_hash=token_hash,
-                email_verification_expires_at=token_expires_at,
-                email_verification_sent_at=datetime.now(timezone.utc),
             )
             session.add(user)
             session.commit()
             session.refresh(user)
-
-        verification_url = _build_verification_url(verification_token)
-        _send_email_verification_email(normalized_email, verification_url)
 
         access_token = _make_access_token(user.ios_user_id)
         return AuthResponse(access_token=access_token, user=_user_to_response(user))
@@ -608,59 +584,15 @@ def login(payload: LoginRequest) -> AuthResponse:
 
 @app.post("/api/v1/auth/resend-verification", response_model=ResendVerificationResponse)
 def resend_verification(payload: ResendVerificationRequest) -> ResendVerificationResponse:
-    """Send a fresh email verification link for an unverified account."""
-    normalized_email = _normalized_email(payload.email)
-    try:
-        with get_db_session() as session:
-            user = session.scalar(select(User).where(func.lower(User.email) == normalized_email))
-            if user is None:
-                return ResendVerificationResponse(sent=True, message="If the account exists, a verification email has been sent.")
-            if user.email_verified:
-                return ResendVerificationResponse(sent=True, message="Email is already verified.")
-
-            token, token_hash, expires_at = _issue_email_verification_token()
-            user.email_verification_token_hash = token_hash
-            user.email_verification_expires_at = expires_at
-            user.email_verification_sent_at = datetime.now(timezone.utc)
-            session.commit()
-
-        verification_url = _build_verification_url(token)
-        _send_email_verification_email(normalized_email, verification_url)
-        return ResendVerificationResponse(sent=True, message="Verification email sent.")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to resend verification email: {exc}") from exc
+    """Temporarily disabled until DB migration is fully aligned."""
+    raise HTTPException(status_code=503, detail="Email verification is temporarily unavailable during backend migration.")
 
 
 @app.get("/api/v1/auth/verify-email", response_class=HTMLResponse)
 def verify_email(token: str = Query(..., min_length=24)) -> HTMLResponse:
-    """Verify email by one-time token clicked from email."""
-    token_hash = _hash_email_verification_token(token)
-    now = datetime.now(timezone.utc)
-
-    try:
-        with get_db_session() as session:
-            user = session.scalar(select(User).where(User.email_verification_token_hash == token_hash))
-            if user is None:
-                return HTMLResponse("<h2>Verification link is invalid.</h2>", status_code=400)
-
-            if user.email_verified:
-                return HTMLResponse("<h2>Email is already verified. You can close this page.</h2>", status_code=200)
-
-            if user.email_verification_expires_at is None or user.email_verification_expires_at < now:
-                return HTMLResponse("<h2>Verification link expired. Request a new email in the app.</h2>", status_code=400)
-
-            user.email_verified = True
-            user.email_verified_at = now
-            user.email_verification_token_hash = None
-            user.email_verification_expires_at = None
-            user.email_verification_sent_at = None
-            session.commit()
-
-        return HTMLResponse("<h2>Email verified successfully. You can return to RunForm.</h2>", status_code=200)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to verify email: {exc}") from exc
+    """Temporarily disabled until DB migration is fully aligned."""
+    _ = token
+    return HTMLResponse("<h2>Email verification is temporarily unavailable during backend migration.</h2>", status_code=503)
 
 
 @app.get("/api/v1/auth/me", response_model=UserResponse)

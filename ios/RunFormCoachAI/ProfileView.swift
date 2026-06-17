@@ -382,19 +382,7 @@ struct ProfileView: View {
                     .buttonStyle(GradientButtonStyle(disabled: isAuthBusy))
                     .disabled(isAuthBusy)
 
-                    Button {
-                        googleSignIn()
-                    } label: {
-                        Label(
-                            isAuthBusy
-                                ? String(localized: "auth.google.signing_in")
-                                : String(localized: "auth.google.sign_in"),
-                            systemImage: "g.circle"
-                        )
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(GradientButtonStyle(disabled: isAuthBusy))
-                    .disabled(isAuthBusy)
+                    // Temporarily hidden while Google login stability is being fixed.
                 }
 
                 if let authMessage {

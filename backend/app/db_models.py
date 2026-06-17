@@ -47,11 +47,6 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     google_sub: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
-    email_verified: Mapped[bool] = mapped_column(default=False, nullable=False)
-    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    email_verification_token_hash: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
-    email_verification_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    email_verification_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     oauth_connections: Mapped[list["OAuthConnection"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     strava_runs: Mapped[list["StravaRun"]] = relationship(back_populates="user", cascade="all, delete-orphan")
