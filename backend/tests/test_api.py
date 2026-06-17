@@ -8,6 +8,7 @@ Tests are written to work without a database or external API key.
 import pytest
 
 from app import main as main_mod
+from app import strava_oauth
 
 # ---------------------------------------------------------------------------
 # Health endpoint
@@ -154,3 +155,9 @@ def test_transactional_email_uses_movenova_sender_by_default(monkeypatch):
     )
 
     assert captured_payload["from"] == "noreply@movenova.ai"
+
+
+def test_strava_app_callback_url_normalizes_bare_scheme(monkeypatch):
+    monkeypatch.setenv("STRAVA_APP_CALLBACK_URL", "runformcoachai")
+
+    assert strava_oauth.app_callback_url() == "runformcoachai://strava/callback"

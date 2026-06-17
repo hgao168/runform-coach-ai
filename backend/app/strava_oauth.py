@@ -315,4 +315,9 @@ def time_to_utc_datetime(epoch_seconds: int):
 
 
 def app_callback_url() -> str | None:
-    return os.getenv("STRAVA_APP_CALLBACK_URL")
+    raw_url = os.getenv("STRAVA_APP_CALLBACK_URL", "").strip()
+    if not raw_url:
+        return None
+    if "://" in raw_url:
+        return raw_url
+    return f"{raw_url}://strava/callback"

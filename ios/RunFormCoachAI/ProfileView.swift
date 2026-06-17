@@ -6,6 +6,8 @@ import UIKit
 #endif
 
 struct ProfileView: View {
+    private static let stravaCallbackScheme = "runformcoachai"
+
     @EnvironmentObject private var appStore: AppStore
     @State private var firstName = ""
     @State private var lastName = ""
@@ -625,12 +627,14 @@ struct ProfileView: View {
             return nil
         }
         for entry in urlTypes {
+            let urlName = entry["CFBundleURLName"] as? String
             guard let schemes = entry["CFBundleURLSchemes"] as? [String] else { continue }
-            if let scheme = schemes.first, !scheme.isEmpty {
-                return scheme
+            if urlName == "runformcoachai.strava.callback",
+               schemes.contains(Self.stravaCallbackScheme) {
+                return Self.stravaCallbackScheme
             }
         }
-        return nil
+        return Self.stravaCallbackScheme
     }
 
     private func signOff() {
