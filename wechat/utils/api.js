@@ -1,5 +1,6 @@
 // utils/api.js
 const { BASE_URL } = require('./config')
+const auth = require('./auth')
 
 /**
  * JSON request helper.
@@ -129,6 +130,39 @@ function compareWithAthlete(athleteId, userMetrics, language) {
  */
 function health() {
   return request('GET', '/health')
+}
+
+function _wechatEmailForUserId(userId) {
+  const safe = String(userId || 'wechat_user')
+    .replace(/^wx_/, 'wechat_')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .slice(0, 64)
+  return `${safe}@wechat.runform.ai`
+}
+
+/**
+ * Save or register a user profile in the backend.
+ * The backend uses ios_user_id as its stable cross-platform user key.
+ */
+function saveProfile(profile, userId) {
+  const resolvedUserId = userId || getUserId()
+  const payload = {
+    ios_user_id: resolvedUserId,
+    email: profile.email || _wechatEmailForUserId(resolvedUserId),
+    first_name: profile.firstName || '',
+    last_name: profile.lastName || '',
+    nickname: profile.nickname || '',
+    level: profile.level || '',
+    weekly_mileage_km: profile.weeklyMileageKm ? Number(profile.weeklyMileageKm) : null,
+    running_days_per_week: profile.runningDaysPerWeek ? Number(profile.runningDaysPerWeek) : null,
+    target: profile.target || '',
+    injury_note: profile.injuryNote || '',
+    gender: profile.gender || '',
+    shoe_size: profile.shoeSize || '',
+    shoe_brand_model: profile.shoeBrandModel || '',
+    leg_length_cm: profile.legLengthCm ? Number(profile.legLengthCm) : null,
+  }
+  return request('PUT', '/profile', payload)
 }
 
 /**
@@ -267,6 +301,11 @@ function getCoachDashboard(coachId) {
  * Checks globalData first, then storage. Generates a UUID if neither exists.
  */
 function getUserId() {
+  const wechatAuth = auth.getAuth()
+  if (wechatAuth && wechatAuth.userId) {
+    return wechatAuth.userId
+  }
+
   const app = getApp()
   if (app && app.globalData && app.globalData.userId) {
     return app.globalData.userId
@@ -292,6 +331,7 @@ module.exports = {
   generatePlan,
   fetchAthletes,
   compareWithAthlete,
+  saveProfile,
   submitFeedback,
   health,
   getWeeklyInsight,

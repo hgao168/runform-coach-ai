@@ -3,11 +3,45 @@
 
   <!-- Avatar hero -->
   <view class="avatar-section">
-    <view class="avatar-circle">
+    <view wx:if="{{form.avatarUrl}}" class="avatar-circle avatar-image-wrap">
+      <image class="avatar-image" src="{{form.avatarUrl}}" mode="aspectFill" />
+    </view>
+    <view wx:else class="avatar-circle">
       <text class="avatar-initial">{{avatarInitial}}</text>
     </view>
     <text class="profile-name">{{displayName}}</text>
     <text class="profile-level-badge level-{{form.level}}">{{levelLabel}}</text>
+  </view>
+
+  <!-- WeChat login / registration -->
+  <view class="card auth-card">
+    <view class="auth-header">
+      <view>
+        <text class="section-title">{{i.authTitle}}</text>
+        <text class="auth-subtitle">{{i.authSubtitle}}</text>
+      </view>
+      <text class="auth-status {{authLoggedIn ? 'auth-status-on' : ''}}">
+        {{authLoggedIn ? i.authLoggedIn : i.authNotLoggedIn}}
+      </text>
+    </view>
+
+    <view wx:if="{{authLoggedIn}}" class="auth-linked">
+      <text class="auth-linked-label">{{i.linkedAccount}}</text>
+      <text class="auth-linked-value">{{maskedOpenId}}</text>
+    </view>
+
+    <button
+      class="btn-wechat-login"
+      loading="{{authLoading}}"
+      disabled="{{authLoading}}"
+      bindtap="useWechatLogin"
+    >
+      {{i.useWechatLogin}}
+    </button>
+
+    <button class="btn-avatar" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      {{i.chooseAvatar}}
+    </button>
   </view>
 
   <!-- Form card -->
@@ -26,7 +60,7 @@
 
     <view class="field-row">
       <text class="field-label">{{i.nickname}}</text>
-      <input class="input-field" value="{{form.nickname}}" placeholder="昵称" bindinput="onInput" data-key="nickname" />
+      <input class="input-field" type="nickname" value="{{form.nickname}}" placeholder="昵称" bindinput="onInput" data-key="nickname" />
     </view>
 
     <view class="field-row">

@@ -1,5 +1,6 @@
 // app.js
 const cloudbase = require('./utils/cloudbase')
+const auth = require('./utils/auth')
 
 App({
   globalData: {
@@ -7,11 +8,17 @@ App({
     history: [],
     nextWeekPlan: null,
     cloudReady: false,
+    auth: null,
+    userId: '',
   },
 
   onLaunch() {
     // RF-306: Init CloudBase
     this.globalData.cloudReady = cloudbase.init()
+    this.globalData.auth = auth.getAuth()
+    if (this.globalData.auth && this.globalData.auth.userId) {
+      this.globalData.userId = this.globalData.auth.userId
+    }
 
     try {
       const profile = wx.getStorageSync('rf_profile')
@@ -62,6 +69,10 @@ App({
       shoeSize: '',
       legLengthCm: '',
       shoeBrandModel: '',
+      avatarUrl: '',
+      wechatOpenId: '',
+      wechatUnionId: '',
+      isWechatRegistered: false,
     }
   },
 })
