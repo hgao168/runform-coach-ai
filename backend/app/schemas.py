@@ -293,7 +293,7 @@ class ProfileSaveRequest(BaseModel):
     leg_length_cm: Optional[float] = None
     date_of_birth: Optional[str] = None
     weekly_exercise_hours: Optional[float] = None
-    email: EmailStr
+    email: Optional[EmailStr] = None
 
 
 class ProfileSaveResponse(BaseModel):
