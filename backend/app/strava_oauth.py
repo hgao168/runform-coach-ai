@@ -34,7 +34,7 @@ class StravaOAuthError(RuntimeError):
 
 def _required_env(name: str) -> str:
     if value := os.getenv(name):
-        return value
+        return value.strip()
     raise StravaOAuthConfigError(f"Missing required environment variable: {name}")
 
 
@@ -52,8 +52,7 @@ def _redirect_uri() -> str:
 
 def _state_secret() -> str:
     # Fallback to client secret if dedicated state secret is not configured.
-    value = os.getenv("STRAVA_STATE_SECRET")
-    if value:
+    if value := os.getenv("STRAVA_STATE_SECRET"):
         return value.strip()
     return _client_secret()
 
