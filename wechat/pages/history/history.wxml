@@ -1,6 +1,25 @@
 <!-- pages/history/history.wxml -->
 <view class="page-container">
 
+  <!-- RF-605: Milestone banner -->
+  <view wx:if="{{milestone}}" class="milestone-banner" bindtap="onMilestoneTap">
+    <view class="milestone-banner-content">
+      <text class="milestone-banner-icon">🎉</text>
+      <view class="milestone-banner-text">
+        <text class="milestone-banner-title">{{isZh ? '里程碑达成！' : 'Milestone Achieved!'}}</text>
+        <text class="milestone-banner-sub">
+          <text wx:if="{{milestone.cadence}}">步频 +{{milestone.cadence}} SPM </text>
+          <text wx:if="{{milestone.gct}}">触地 -{{milestone.gct}}ms </text>
+          <text wx:if="{{milestone.score}}">评分 +{{milestone.score}}分</text>
+        </text>
+      </view>
+    </view>
+    <view class="milestone-banner-actions">
+      <text class="milestone-banner-arrow">查看 ›</text>
+      <text class="milestone-dismiss-btn" catchtap="dismissMilestone">✕</text>
+    </view>
+  </view>
+
   <!-- Header -->
   <view class="history-header">
     <text class="title">{{i.historyTitle}}</text>
@@ -85,6 +104,11 @@
 
     <!-- RF-913: Share & Save buttons -->
     <view class="action-section">
+      <!-- RF-1010: Weekly insight entry -->
+      <button class="btn-mint-outline full-btn" style="margin-bottom: 20rpx;" bindtap="goInsight">
+        📊 {{isZh ? '周训练洞察' : 'Weekly Insight'}}
+      </button>
+
       <button class="btn-mint-outline full-btn" style="margin-top: 8rpx;" open-type="share">
         📤 {{isZh ? '分享记录' : 'Share Records'}}
       </button>
@@ -92,6 +116,55 @@
       <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="saveShareToAlbum">
         🖼️ {{isZh ? '保存到相册' : 'Save to Album'}}
       </button>
+    </view>
+  </view>
+
+  <!-- RF-913: Hidden canvas for share image generation -->
+  <canvas
+    type="2d"
+    id="shareCanvas"
+    style="position: fixed; left: -9999rpx; top: -9999rpx; width: 600rpx; height: 928rpx;"
+  />
+
+  <!-- RF-605: Milestone Celebration Modal -->
+  <view wx:if="{{milestoneVisible}}" class="milestone-modal-backdrop" bindtap="closeMilestoneModal">
+    <view class="milestone-modal" catchtap="">
+      <view class="milestone-modal-header">
+        <text class="milestone-modal-title">{{isZh ? '🎉 里程碑达成！' : '🎉 Milestone Achieved!'}}</text>
+        <text class="milestone-modal-close" bindtap="closeMilestoneModal">✕</text>
+      </view>
+
+      <!-- Canvas preview -->
+      <view class="milestone-canvas-wrap">
+        <canvas
+          type="2d"
+          id="milestoneCanvas"
+          class="milestone-canvas"
+        ></canvas>
+      </view>
+
+      <!-- Achievement summary -->
+      <view class="milestone-summary">
+        <text wx:if="{{milestone.cadence}}" class="milestone-stat">
+          ⬆️ {{isZh ? '步频提升' : 'Cadence'}} <text class="milestone-stat-value">+{{milestone.cadence}} SPM</text>
+        </text>
+        <text wx:if="{{milestone.gct}}" class="milestone-stat">
+          ⬇️ {{isZh ? '触地缩短' : 'GCT'}} <text class="milestone-stat-value">-{{milestone.gct}}ms</text>
+        </text>
+        <text wx:if="{{milestone.score}}" class="milestone-stat">
+          🏆 {{isZh ? '评分提升' : 'Score'}} <text class="milestone-stat-value">+{{milestone.score}}{{isZh ? '分' : 'pts'}}</text>
+        </text>
+      </view>
+
+      <!-- Action buttons -->
+      <view class="milestone-actions">
+        <button class="btn-secondary" style="flex: 1; height: 80rpx;" bindtap="saveMilestoneToAlbum">
+          🖼️ {{isZh ? '保存到相册' : 'Save to Album'}}
+        </button>
+        <button class="btn-mint-outline" style="flex: 1; height: 80rpx; margin-left: 16rpx;" open-type="share">
+          📤 {{isZh ? '分享我的进步' : 'Share Progress'}}
+        </button>
+      </view>
     </view>
   </view>
 

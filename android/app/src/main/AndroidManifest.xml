@@ -14,7 +14,7 @@
     <application
         android:name=".RunFormApplication"
         android:allowBackup="true"
-        android:label="RunForm Coach AI"
+        android:label="RunForm Injury Prevention Coach"
         android:theme="@style/Theme.Material3.DynamicColors.DayNight"
         android:usesCleartextTraffic="true">
 

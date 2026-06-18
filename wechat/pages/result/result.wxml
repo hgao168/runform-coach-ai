@@ -25,42 +25,200 @@
     </view>
   </view>
 
-  <!-- Issues / Insights -->
-  <view class="card" wx:if="{{insights.length > 0}}">
-    <text class="section-title">⚠️ {{i.insightsTitle}}</text>
-    <view wx:for="{{insights}}" wx:key="index" class="insight-item">
-      <view class="insight-badge" style="background: {{item.color}}20; border-color: {{item.color}}40;">
-        <text class="insight-severity" style="color: {{item.color}};">{{item.severityText}}</text>
+  <!-- Strength Focus — merged issues + inline exercises (iOS-style) -->
+  <view class="card card-dark" wx:if="{{strengthFocusItems.length > 0}}">
+    <view class="sf-header">
+      <text class="sf-header-icon">🏋️</text>
+      <text class="section-title sf-header-title">{{i.strengthFocus}}</text>
+    </view>
+    <text class="sf-subtitle">{{i.strengthFocusDesc}}</text>
+
+    <view wx:for="{{strengthFocusItems}}" wx:key="index" class="sf-issue-block">
+      <!-- Issue header with severity badge -->
+      <view class="sf-issue-header">
+        <view class="insight-badge" style="background: {{item.color}}20; border-color: {{item.color}}40;">
+          <text class="insight-severity" style="color: {{item.color}};">{{item.severityText}}</text>
+        </view>
+        <view class="insight-body">
+          <text class="insight-title">{{item.title}}</text>
+          <text class="insight-desc">{{item.description}}</text>
+        </view>
       </view>
-      <view class="insight-body">
-        <text class="insight-title">{{item.title}}</text>
-        <text class="insight-desc">{{item.description}}</text>
+
+      <!-- Exercises under this issue (inline) -->
+      <view wx:if="{{item.exercises.length > 0}}" class="sf-exercises">
+        <view
+          wx:for="{{item.exercises}}"
+          wx:key="name"
+          wx:for-item="ex"
+          class="exercise-card"
+          bindtap="openExercise"
+          data-url="{{ex.searchUrl}}"
+          data-bilibili="{{ex.bilibiliUrl}}"
+        >
+          <!-- Exercise header: icon + name -->
+          <view class="ex-card-header">
+            <view class="ex-icon-wrap">
+              <text class="ex-icon">{{ex.icon}}</text>
+            </view>
+            <view class="ex-title-wrap">
+              <text class="ex-name">{{ex.name}}</text>
+              <text class="ex-category" wx:if="{{ex.category}}">{{ex.category}}</text>
+            </view>
+            <text class="ex-arrow">→</text>
+          </view>
+
+          <!-- Description / reason -->
+          <text class="ex-desc" wx:if="{{ex.description}}">{{ex.description}}</text>
+
+          <!-- Sets / Reps / Frequency -->
+          <view wx:if="{{ex.sets || ex.duration}}" class="ex-meta-row">
+            <view wx:if="{{ex.sets}}" class="ex-meta-chip">
+              <text class="ex-meta-num">{{ex.sets}}</text>
+              <text class="ex-meta-label">{{i.setLabel}}</text>
+              <text class="ex-meta-sep">×</text>
+              <text class="ex-meta-num">{{ex.reps}}</text>
+              <text class="ex-meta-label">{{i.repLabel}}</text>
+            </view>
+            <view wx:if="{{ex.duration}}" class="ex-meta-chip ex-meta-chip-alt">
+              <text>⏱ {{ex.duration}}</text>
+            </view>
+            <view wx:if="{{ex.frequency_per_week}}" class="ex-meta-chip ex-meta-chip-alt">
+              <text>📅 {{ex.frequency_per_week}}{{i.perWeek}}</text>
+            </view>
+          </view>
+
+          <!-- Video search link -->
+          <view class="ex-video-link">
+            <view class="ex-video-link-inner">
+              <text class="ex-video-icon">🎬</text>
+              <text class="ex-video-text">{{i.watchTutorial}}</text>
+              <text class="ex-video-arrow">›</text>
+            </view>
+          </view>
+        </view>
       </view>
     </view>
   </view>
 
   <!-- No issues -->
-  <view class="card" wx:if="{{insights.length === 0}}">
+  <view class="card" wx:if="{{strengthFocusItems.length === 0}}">
     <view class="empty-good">
       <text style="font-size: 64rpx;">✅</text>
       <text class="text-mint" style="font-size: 30rpx; font-weight: 600; margin-top: 12rpx;">{{i.noIssues}}</text>
     </view>
   </view>
 
-  <!-- Strength / Exercise recommendations -->
-  <view class="card" wx:if="{{exercises.length > 0}}">
-    <text class="section-title">💪 {{i.strengthFocus}}</text>
-    <view wx:for="{{exercises}}" wx:key="index" class="exercise-item" bindtap="openExercise" data-index="{{index}}">
-      <view class="exercise-header">
-        <text class="exercise-name">{{item.name}}</text>
-        <text class="exercise-link-icon text-mint">▶</text>
+  <!-- ──────── RF-302: User Feedback Rating ──────── -->
+  <view class="card feedback-card" wx:if="{{!feedbackSubmitted}}">
+    <view class="feedback-header">
+      <text class="section-title" style="margin-bottom: 6rpx;">{{i.feedbackTitle}}</text>
+      <text class="feedback-subtitle">{{i.feedbackSubtitle}}</text>
+    </view>
+
+    <!-- Star rating -->
+    <view class="star-row">
+      <text
+        wx:for="{{[1,2,3,4,5]}}"
+        wx:key="*this"
+        class="star {{item <= feedbackRating ? 'star-active' : ''}}"
+        data-star="{{item}}"
+        bindtap="onStarTap"
+      >★</text>
+    </view>
+
+    <!-- Text comment -->
+    <textarea
+      class="feedback-textarea"
+      placeholder="{{i.feedbackPlaceholder}}"
+      placeholder-style="color: rgba(255,255,255,0.3);"
+      maxlength="500"
+      auto-height
+      value="{{feedbackComment}}"
+      bindinput="onFeedbackCommentInput"
+    />
+
+    <!-- Submit button -->
+    <button
+      class="btn-primary feedback-submit-btn"
+      bindtap="submitFeedback"
+      disabled="{{feedbackRating === 0 || feedbackSubmitting}}"
+      loading="{{feedbackSubmitting}}"
+    >
+      {{feedbackSubmitting ? i.feedbackSubmitting : i.feedbackSubmit}}
+    </button>
+
+    <!-- Offline saved hint -->
+    <view wx:if="{{feedbackSavedOffline}}" class="offline-hint">
+      <text class="offline-hint-text">📡 {{i.feedbackSavedOffline}}</text>
+    </view>
+  </view>
+
+  <!-- Feedback submitted confirmation -->
+  <view class="card feedback-done-card" wx:if="{{feedbackSubmitted}}">
+    <view class="feedback-done-content">
+      <text style="font-size: 48rpx;">✅</text>
+      <text class="text-mint" style="font-size: 28rpx; font-weight: 600;">{{i.feedbackSubmitted}}</text>
+    </view>
+  </view>
+
+  <!-- ──────── RF-305: Voice Coach ──────── -->
+  <view class="card voice-coach-card">
+    <view class="voice-coach-header">
+      <text class="section-title">🎙️ {{voiceCoachLabels.title}}</text>
+      <view class="voice-coach-status-badge" wx:if="{{voiceState === 'playing'}}">
+        <text class="voice-status-text playing">{{voiceCoachLabels.playing}}</text>
       </view>
-      <text class="exercise-desc">{{item.description}}</text>
-      <view wx:if="{{item.sets || item.duration}}" class="exercise-meta">
-        <text wx:if="{{item.sets}}" class="meta-chip">{{item.sets}} 组 × {{item.reps}} 次</text>
-        <text wx:if="{{item.duration}}" class="meta-chip">{{item.duration}}</text>
-        <text wx:if="{{item.frequency_per_week}}" class="meta-chip">{{item.frequency_per_week}}x/周</text>
+      <view class="voice-coach-status-badge" wx:elif="{{voiceState === 'paused'}}">
+        <text class="voice-status-text paused">{{voiceCoachLabels.paused}}</text>
       </view>
+      <view class="voice-coach-status-badge" wx:elif="{{voiceState === 'stopped' && voiceQueueLength === 0}}">
+        <text class="voice-status-text stopped">{{voiceCoachLabels.stopped}}</text>
+      </view>
+    </view>
+
+    <view class="voice-coach-controls" wx:if="{{voiceEnabled}}">
+      <!-- Play/Pause -->
+      <button
+        class="voice-btn voice-btn-play"
+        bindtap="onVoiceCoachToggle"
+        disabled="{{voiceMuted}}"
+      >
+        <text wx:if="{{voiceState === 'playing'}}">⏸️ {{voiceCoachLabels.playing}}</text>
+        <text wx:elif="{{voiceState === 'paused'}}">▶️ {{voiceCoachLabels.paused}}</text>
+        <text wx:else>▶️ {{voiceCoachLabels.play}}</text>
+      </button>
+
+      <!-- Stop -->
+      <button
+        class="voice-btn voice-btn-stop"
+        bindtap="onVoiceCoachStop"
+        disabled="{{voiceState === 'stopped'}}"
+      >
+        ⏹️ {{voiceCoachLabels.stop}}
+      </button>
+
+      <!-- Mute toggle -->
+      <button
+        class="voice-btn voice-btn-mute"
+        bindtap="onVoiceCoachMuteToggle"
+      >
+        <text wx:if="{{voiceMuted}}">🔇 {{voiceCoachLabels.unmute}}</text>
+        <text wx:else>🔊 {{voiceCoachLabels.mute}}</text>
+      </button>
+    </view>
+
+    <!-- Disabled state -->
+    <view class="voice-coach-disabled" wx:if="{{!voiceEnabled}}">
+      <text class="voice-disabled-text">🔕 {{voiceCoachLabels.disabled}}</text>
+      <button class="voice-btn voice-btn-enable" bindtap="onVoiceCoachEnableToggle">
+        {{voiceCoachLabels.enable}}
+      </button>
+    </view>
+
+    <!-- No audio files hint (dev mode) -->
+    <view class="voice-coach-no-audio-hint">
+      <text class="voice-no-audio-text">ℹ️ {{voiceCoachLabels.noAudio}}</text>
     </view>
   </view>
 
@@ -181,6 +339,11 @@
   <view class="action-section">
     <button class="btn-secondary full-btn" bindtap="goCompare">{{i.compareWithElite}}</button>
 
+    <!-- RF-1010: Weekly insight entry -->
+    <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" bindtap="goInsight">
+      📊 {{isZh ? '周训练洞察' : 'Weekly Insight'}}
+    </button>
+
     <!-- RF-304: Share button (uses WeChat native share) -->
     <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" open-type="share">
       📤 {{i.shareResult}}
@@ -190,6 +353,73 @@
     <button class="btn-secondary full-btn" style="margin-top: 20rpx;" bindtap="saveShareToAlbum">
       🖼️ {{i.saveToAlbum}}
     </button>
+
+    <!-- RF-604: UGC Content Submission -->
+    <button class="btn-mint-outline full-btn" style="margin-top: 20rpx;" bindtap="onUgcSubmitBtn">
+      {{i.ugcSubmitBtn}}
+    </button>
+  </view>
+
+  <!-- RF-604: UGC Submission Modal -->
+  <view wx:if="{{ugcModalVisible}}" class="ugc-modal-backdrop" bindtap="onUgcModalClose">
+    <view class="ugc-modal" catchtap="onUgcModalPrevent">
+      <view class="ugc-modal-header">
+        <text class="ugc-modal-title">{{i.ugcModalTitle}}</text>
+        <text class="ugc-modal-close" bindtap="onUgcModalClose">✕</text>
+      </view>
+
+      <!-- Platform selector -->
+      <view class="ugc-section">
+        <text class="ugc-label">{{i.ugcPlatformLabel}}</text>
+        <view class="ugc-platform-row">
+          <view
+            wx:for="{{ugcPlatforms}}"
+            wx:key="key"
+            class="ugc-platform-chip {{ugcPlatform === item.key ? 'ugc-platform-chip-active' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onUgcPlatformSelect"
+          >
+            <text>{{item.label}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- Link input -->
+      <view class="ugc-section">
+        <text class="ugc-label">{{i.ugcLinkLabel}}</text>
+        <input
+          class="ugc-input"
+          placeholder="{{i.ugcLinkPlaceholder}}"
+          placeholder-style="color: rgba(255,255,255,0.3);"
+          value="{{ugcLink}}"
+          bindinput="onUgcLinkInput"
+        />
+      </view>
+
+      <!-- Note input -->
+      <view class="ugc-section">
+        <text class="ugc-label">{{i.ugcNoteLabel}}</text>
+        <textarea
+          class="ugc-textarea"
+          placeholder="{{i.ugcNotePlaceholder}}"
+          placeholder-style="color: rgba(255,255,255,0.3);"
+          maxlength="300"
+          auto-height
+          value="{{ugcNote}}"
+          bindinput="onUgcNoteInput"
+        />
+      </view>
+
+      <!-- Submit button -->
+      <button
+        class="btn-primary ugc-submit-btn"
+        bindtap="submitUgc"
+        loading="{{ugcSubmitting}}"
+        disabled="{{ugcSubmitting || !ugcPlatform || !ugcLink}}"
+      >
+        {{ugcSubmitting ? i.ugcSubmitting : i.ugcSubmitAction}}
+      </button>
+    </view>
   </view>
 
   <!-- RF-963: Rewarded video ad -->

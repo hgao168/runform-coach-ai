@@ -16,7 +16,11 @@ struct ProfileStravaCard: View {
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                SectionTitle("Connect Strava", subtitle: "Bring weekly load into future plans", systemImage: "link.circle.fill")
+                SectionTitle(
+                    LocalizedStringKey("strava.card.title"),
+                    subtitle: LocalizedStringKey("strava.card.subtitle"),
+                    systemImage: "link.circle.fill"
+                )
 
                 if let status = appStore.stravaStatus, status.connected {
                     connectedSection(status: status)
@@ -24,7 +28,7 @@ struct ProfileStravaCard: View {
                     disconnectedSection
                 }
 
-                Text("Strava data is used only for your coaching and plan generation. It is not used to train AI models.")
+                Text(String(localized: "strava.card.privacy"))
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.54))
 
@@ -32,7 +36,7 @@ struct ProfileStravaCard: View {
                     HStack(spacing: 10) {
                         ProgressView()
                             .tint(AppTheme.mint)
-                        Text("Checking Strava connection…")
+                        Text(String(localized: "strava.card.checking"))
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.55))
                     }
@@ -50,13 +54,13 @@ struct ProfileStravaCard: View {
     @ViewBuilder
     private func connectedSection(status: StravaStatusResponse) -> some View {
         HStack(spacing: 12) {
-            StatusBadge(text: "Connected")
+            StatusBadge(text: String(localized: "strava.badge.connected"))
             VStack(alignment: .leading, spacing: 2) {
-                Text("Connected with Strava")
+                Text(String(localized: "strava.connected.title"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                 if let athleteID = status.providerAthleteId {
-                    Text("Athlete ID: \(athleteID)")
+                    Text(String(format: String(localized: "strava.athlete.id %@"), athleteID))
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.58))
                 }
@@ -65,21 +69,21 @@ struct ProfileStravaCard: View {
         }
 
         if let scope = status.scope, !scope.isEmpty {
-            Text("Scopes: \(scope)")
+            Text(String(format: String(localized: "strava.scopes %@"), scope))
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.54))
         }
 
         if let localSync = lastSyncedAt {
-            Text("Last sync: \(localSync.formatted(.dateTime.month().day().hour().minute()))")
+            Text(String(format: String(localized: "strava.last_sync %@"), localSync.formatted(.dateTime.month().day().hour().minute())))
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.54))
         } else if let lastRefreshAt = status.lastRefreshAt, !lastRefreshAt.isEmpty {
-            Text("Last refresh: \(lastRefreshAt)")
+            Text(String(format: String(localized: "strava.last_refresh %@"), lastRefreshAt))
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.54))
         } else {
-            Text("Last refresh: not available yet")
+            Text(String(localized: "strava.last_refresh.unavailable"))
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.54))
         }
@@ -87,7 +91,12 @@ struct ProfileStravaCard: View {
         Button {
             onSync()
         } label: {
-            Label(isSyncingStravaRuns ? "Syncing runs…" : "Sync runs from Strava", systemImage: "arrow.triangle.2.circlepath")
+            Label(
+                isSyncingStravaRuns
+                    ? String(localized: "strava.button.syncing")
+                    : String(localized: "strava.button.sync"),
+                systemImage: "arrow.triangle.2.circlepath"
+            )
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(GradientButtonStyle())
@@ -96,7 +105,7 @@ struct ProfileStravaCard: View {
         Button(role: .destructive) {
             onDisconnect()
         } label: {
-            Label("Disconnect Strava", systemImage: "link.slash")
+            Label(String(localized: "strava.button.disconnect"), systemImage: "link.slash")
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(GradientButtonStyle())
@@ -104,14 +113,19 @@ struct ProfileStravaCard: View {
 
     @ViewBuilder
     private var disconnectedSection: some View {
-        Text("Connect Strava to bring your weekly load into future plan suggestions.")
+        Text(String(localized: "strava.disconnected.body"))
             .font(.callout)
             .foregroundStyle(.white.opacity(0.66))
 
         Button {
             onConnect()
         } label: {
-            Label(isConnectingStrava ? "Connecting…" : "Connect Strava", systemImage: "link")
+            Label(
+                isConnectingStrava
+                    ? String(localized: "strava.button.connecting")
+                    : String(localized: "strava.button.connect"),
+                systemImage: "link"
+            )
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(GradientButtonStyle())

@@ -44,12 +44,35 @@ jobs:
         run: swiftlint --config ios/.swiftlint.yml --strict
         continue-on-error: true
 
+      - name: List available simulators (debug)
+        run: xcrun simctl list devices available | head -20
+
+      - name: Pre-boot simulator
+        id: simulator
+        run: |
+          DEST="iPhone 16"
+          # Use simctl JSON to reliably extract UDID (sed regex is brittle on macOS)
+          UDID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; devs=[d for rt,ds in json.load(sys.stdin)["devices"].items() if "iOS" in rt for d in ds if d["name"]=="'"$DEST"'"]; print(devs[0]["udid"] if devs else "")' 2>/dev/null)
+          if [ -n "$UDID" ]; then
+            echo "simulator_udid=$UDID" >> "$GITHUB_OUTPUT"
+            echo "Booting simulator: $UDID"
+            xcrun simctl boot "$UDID" || true
+          else
+            echo "simulator_udid=" >> "$GITHUB_OUTPUT"
+            echo "⚠️  Simulator '$DEST' not found, will let xcodebuild create it"
+          fi
+
       - name: Run XCTest
         run: |
+          SIM_DEST="platform=iOS Simulator,name=iPhone 16"
+          if [ -n "${{ steps.simulator.outputs.simulator_udid }}" ]; then
+            SIM_DEST="platform=iOS Simulator,id=${{ steps.simulator.outputs.simulator_udid }}"
+            echo "Using simulator UDID: ${{ steps.simulator.outputs.simulator_udid }}"
+          fi
           xcodebuild test \
             -project RunFormCoachAI.xcodeproj \
             -scheme RunFormCoachAI \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination "$SIM_DEST" \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             | tee xcode_test.log

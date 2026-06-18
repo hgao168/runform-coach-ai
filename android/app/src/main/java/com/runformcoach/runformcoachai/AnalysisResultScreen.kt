@@ -3,6 +3,7 @@ package com.runformcoach.runformcoachai
 import android.content.Intent
 import android.net.Uri
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -51,6 +53,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -67,12 +72,13 @@ fun AnalysisResultScreen(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ── RF-207: Share button ───────────────────────────────────────────
+        // ── RF-207 / RF-1001: Share buttons ────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Share text (existing)
             IconButton(onClick = {
                 val scorePercent = (result.confidence * 100).toInt()
                 val summary = result.summary
@@ -89,6 +95,54 @@ fun AnalysisResultScreen(
                     imageVector = Icons.Default.Share,
                     contentDescription = stringResource(R.string.share),
                     tint = AppColors.Mint,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            // Share archaeology template (P1: Marketing alignment)
+            IconButton(onClick = {
+                val issueCount = result.issues.size
+                val subject = context.getString(R.string.share_archaeology_subject, issueCount)
+                val body = context.getString(R.string.share_archaeology_body, issueCount)
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, subject)
+                    putExtra(Intent.EXTRA_TEXT, body)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share archaeology",
+                    tint = AppColors.Orange,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            // Share as image card (RF-1001)
+            IconButton(onClick = {
+                Toast.makeText(context, context.getString(R.string.share_card_saving), Toast.LENGTH_SHORT).show()
+                CoroutineScope(Dispatchers.IO).launch {
+                    val bitmap = ShareCardRenderer.renderAnalysisCard(context, result)
+                    val uri = ShareCardRenderer.saveToGallery(context, bitmap, "runform_analysis")
+                    bitmap.recycle()
+                    CoroutineScope(Dispatchers.Main).launch {
+                        if (uri != null) {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "image/png"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            Toast.makeText(context, context.getString(R.string.share_card_saved), Toast.LENGTH_SHORT).show()
+                            context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.share_card_failed), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Image,
+                    contentDescription = stringResource(R.string.share_card),
+                    tint = AppColors.Cyan,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -356,16 +410,47 @@ private fun ConfidenceRing(confidence: Double, modifier: Modifier = Modifier) {
 
 @Composable
 private fun MetricRow(metric: Metric) {
+    // P0: Color based on abnormality — normal=green (#00f5a0), abnormal=red (#ff4444)
+    val isAbnormal = metric.status.lowercase() in listOf("critical", "poor", "needs work")
+    val metricColor = if (isAbnormal) AppColors.Red else AppColors.Mint
+    
+    // P1: Injury risk hint mapping
+    val injuryHint = injuryRiskHint(metric.name, metric.status)
+    
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(metric.name, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("${(metric.score * 100).toInt()}%", color = AppColors.Mint, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text("${(metric.score * 100).toInt()}%", color = metricColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 StatusBadge(metric.status)
             }
         }
-        MetricBar(progress = metric.score.toFloat(), color = AppColors.Mint)
+        MetricBar(progress = metric.score.toFloat(), color = metricColor)
         Text(metric.explanation, color = AppColors.TextMuted, fontSize = 12.sp, lineHeight = 16.sp)
+        // P1: Injury risk hint below explanation
+        if (injuryHint != null) {
+            Text(injuryHint, color = if (isAbnormal) AppColors.Red.copy(alpha = 0.7f) else AppColors.Mint.copy(alpha = 0.7f), fontSize = 11.sp, lineHeight = 14.sp)
+        }
+    }
+}
+
+/**
+ * Map metric name + status to an injury risk hint string.
+ * Returns null if no relevant hint.
+ */
+@Composable
+private fun injuryRiskHint(metricName: String, status: String): String? {
+    if (status.lowercase() in listOf("good", "excellent")) return null
+    val nameLower = metricName.lowercase()
+    return when {
+        nameLower.contains("cadence") || nameLower.contains("步频") -> "⚠ " + stringResource(R.string.injury_risk_cadence_low)
+        nameLower.contains("overstride") || nameLower.contains("stride") || nameLower.contains("步幅") || nameLower.contains("跨步") -> "⚠ " + stringResource(R.string.injury_risk_overstride)
+        nameLower.contains("trunk") || nameLower.contains("lean") || nameLower.contains("躯干") || nameLower.contains("倾") -> "⚠ " + stringResource(R.string.injury_risk_trunk_lean)
+        nameLower.contains("hip") || nameLower.contains("drop") || nameLower.contains("髋") -> "⚠ " + stringResource(R.string.injury_risk_hip_drop)
+        nameLower.contains("knee") || nameLower.contains("valgus") || nameLower.contains("膝") -> "⚠ " + stringResource(R.string.injury_risk_knee_valgus)
+        nameLower.contains("gct") || nameLower.contains("ground contact") || nameLower.contains("触地") -> "⚠ " + stringResource(R.string.injury_risk_gct_long)
+        nameLower.contains("oscillation") || nameLower.contains("amplitude") || nameLower.contains("振幅") -> "⚠ " + stringResource(R.string.injury_risk_amplitude_high)
+        else -> null
     }
 }
 

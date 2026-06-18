@@ -90,3 +90,46 @@ Generate a Fernet key example:
 ```powershell
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
+
+## Email verification mail provider (HTTP API)
+
+Email verification uses Resend HTTP API (no SMTP required).
+
+Required environment variables:
+
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL` (for example: `RunForm <noreply@movenova.ai>`)
+- one of:
+	- `EMAIL_VERIFICATION_URL_BASE` (full verify endpoint URL, e.g. `https://<domain>/api/v1/auth/verify-email`)
+	- `PUBLIC_BASE_URL` (service base URL; backend appends `/api/v1/auth/verify-email`)
+	- `RAILWAY_PUBLIC_DOMAIN` (fallback)
+
+Optional:
+
+- `RESEND_API_URL` (defaults to `https://api.resend.com/emails`)
+- `EMAIL_VERIFICATION_TOKEN_TTL_MINUTES` (default `1440`)
+
+## Password reset mail flow
+
+The backend now supports password reset via email link:
+
+- `POST /api/v1/auth/forgot-password`
+- `POST /api/v1/auth/reset-password`
+
+Required environment variables:
+
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- one of:
+	- `RESET_PASSWORD_URL_BASE` (full reset page URL, e.g. `https://app.movenova.ai/reset-password`)
+	- `PUBLIC_BASE_URL` (backend appends `/reset-password`)
+	- `RAILWAY_PUBLIC_DOMAIN` (fallback appends `/reset-password`)
+
+Recommended:
+
+- `RESET_PASSWORD_TOKEN_SECRET` (strong random secret for signing reset tokens)
+
+Optional:
+
+- `RESET_PASSWORD_TOKEN_TTL_MINUTES` (default `30`)
+- `RESEND_API_URL` (defaults to `https://api.resend.com/emails`)

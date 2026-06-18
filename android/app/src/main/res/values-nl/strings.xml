@@ -10,8 +10,8 @@
     <string name="tab_profile">Profiel</string>
 
     <!-- ── Analyze tab - hero ─────────────────────────────────────────────── -->
-    <string name="analyze_title">RunForm Coach AI</string>
-    <string name="analyze_subtitle">Upload of neem een video op voor AI-loopcoaching</string>
+    <string name="analyze_title">RunForm Blessurepreventie Coach</string>
+    <string name="analyze_subtitle">Upload of neem een video op — AI checkt je looptechniek op blessurerisico\'s</string>
 
     <!-- ── Analyze tab - camera angle ─────────────────────────────────────── -->
     <string name="camera_angle">Camerahoek</string>
@@ -58,6 +58,15 @@
     <string name="exercises">Oefeningen</string>
     <string name="analyze_new_video">Nieuwe video analyseren</string>
 
+    <!-- ── Injury risk hints per metric (Marketing alignment) ──────────────── -->
+    <string name="injury_risk_cadence_low">Lage cadans kan knie-impact verhogen</string>
+    <string name="injury_risk_overstride">Overstap verhoogt scheenbeen- en kniestress</string>
+    <string name="injury_risk_trunk_lean">Overmatige vooroverhelling riskeert lage rugbelasting</string>
+    <string name="injury_risk_hip_drop">Heupdaling voegt laterale kniestress toe</string>
+    <string name="injury_risk_knee_valgus">Knievalgus verhoogt ACL-belastingsrisico</string>
+    <string name="injury_risk_gct_long">Lang grondcontact vermindert efficiëntie, verhoogt gewrichtsbelasting</string>
+    <string name="injury_risk_amplitude_high">Hoge verticale oscillatie verspilt energie, verhoogt impact</string>
+
     <!-- ── Analysis result - exercise card ───────────────────────────────── -->
     <string name="sets_reps_freq">%1$d sets × %2$s — %3$dx/week</string>
 
@@ -75,6 +84,17 @@
     <!-- ── Plan tab ──────────────────────────────────────────────────────── -->
     <string name="training_plan">Trainingsplan</string>
     <string name="plan_subtitle">Ontvang een AI-gegenereerd weekplan</string>
+
+    <!-- ── Weekly form recheck card (Marketing alignment) ──────────────────── -->
+    <string name="form_recheck_title">Wekelijkse Looptechniek Check</string>
+    <string name="form_recheck_subtitle">Het is maandag — tijd om te checken of je techniek is veranderd</string>
+    <string name="form_recheck_cta">Check Mijn Techniek</string>
+    <string name="form_recheck_last_score">Vorige week: %1$d%%</string>
+    <string name="form_recheck_this_score">Deze week: %1$d%%</string>
+    <string name="form_recheck_improved">↑ Verbeterd met %1$d%%</string>
+    <string name="form_recheck_declined">↓ Verslechterd met %1$d%%</string>
+    <string name="form_recheck_no_data">Geen recente analyse — tik om te starten</string>
+
     <string name="plan_settings">Planinstellingen</string>
     <string name="current_weekly_km">Huidige wekelijkse km</string>
     <string name="training_goal">Trainingsdoel</string>
@@ -283,10 +303,14 @@
     <!-- ── Share (RF-207) ────────────────────────────────────────────────── -->
     <string name="share">Delen</string>
     <string name="share_analysis_subject">RunForm analyse — %1$d%% score</string>
-    <string name="share_analysis_body">Mijn RunForm Coach AI analyse:\n• Score: %1$d%%\n• Samenvatting: %2$s\n\nDownload RunForm: https://runform.coach</string>
+    <string name="share_analysis_body">Mijn RunForm blessurepreventie analyse:\n• Score: %1$d%%\n• Samenvatting: %2$s\n\nDownload RunForm: https://runform.coach</string>
     <string name="share_compare_subject">RunForm vergelijking — %1$s vs %2$s</string>
     <string name="share_compare_body">Mijn RunForm vergelijking:\n• Ik matched %1$s op %2$d%%\n• Grootste verschil: %3$s\n\nDownload RunForm: https://runform.coach</string>
     <string name="share_download_link">https://runform.coach</string>
+
+    <!-- ── Share archaeology template (Marketing alignment) ────────────────── -->
+    <string name="share_archaeology_subject">Mijn looptechniek is AI-gearcheologiseerd — %1$d problemen gevonden</string>
+    <string name="share_archaeology_body">Mijn RunForm-analyse heeft %1$d techniekproblemen ontdekt.\nKan jouw looptechniek de AI-archeologie doorstaan? Upload een video voor een loopanalyse.\n\nDownload RunForm: https://runform.coach</string>
 
     <!-- ── Profile Extended Fields (RF-208) ───────────────────────────────── -->
     <string name="gear_fit">Uitrusting &amp; Pasvorm</string>
@@ -347,7 +371,7 @@
     <string name="weekly_insights_sessions">Sessies</string>
     <string name="weekly_insights_duration">Duur</string>
     <string name="weekly_insights_badges">Deze Week Verdiende Badges</string>
-    <string name="weekly_insights_ai_coach">AI Coach Zegt</string>
+    <string name="weekly_insights_ai_coach">Blessurepreventie Coach Zegt</string>
     <string name="weekly_insights_4week_trends">4-Weekse Trends</string>
     <string name="weekly_insights_improving">Verbeterend</string>
     <string name="weekly_insights_declining">Achteruitgaand</string>
@@ -372,4 +396,55 @@
     <string name="compare_selected">Vergelijk Geselecteerde</string>
     <string name="your_analyses">Jouw Analyses</string>
     <string name="select_analysis">Selecteer analyse</string>
+
+    <!-- ── Share Card (RF-1001) ────────────────────────────────────────── -->
+    <string name="share_card">Deel kaart</string>
+    <string name="share_card_saving">Kaart opslaan…</string>
+    <string name="share_card_saved">Kaart opgeslagen in galerij</string>
+    <string name="share_card_failed">Opslaan mislukt</string>
+    <string name="share_card_analysis_title">Analyseresultaat</string>
+    <string name="share_card_history_title">Geschiedenis</string>
+    <string name="share_card_key_findings">Belangrijkste bevindingen</string>
+    <string name="share_card_key_workouts">Belangrijkste trainingen</string>
+    <string name="share_card_weekly_km">%1$d km/week</string>
+    <string name="share_card_run_days">%1$d loopdagen</string>
+
+    <!-- ── RunSession Replay (RF-1000) ─────────────────────────────────── -->
+    <string name="replay_session_history">Loopsessies</string>
+    <string name="replay_loading_sessions">Sessies laden…</string>
+    <string name="replay_tap_to_retry">Tik om opnieuw te proberen</string>
+    <string name="replay_no_sessions">Nog geen sessies</string>
+    <string name="replay_no_sessions_hint">Voltooi een live run om deze hier te zien</string>
+    <string name="replay_duration_min">%1$d min</string>
+    <string name="replay_distance_km">%1$.2f km</string>
+    <string name="replay_cadence_short">Cadans</string>
+    <string name="replay_amplitude_short">Amplitude</string>
+    <string name="replay_gct_short">GCT</string>
+    <string name="replay_trunk_lean_short">Hoek</string>
+    <string name="replay_prompt_count">%1$d coach aanwijzingen</string>
+    <string name="replay_tap_to_view">Tik voor herhaling →</string>
+    <string name="replay_title">Sessie Herhaling</string>
+    <string name="replay_back_to_list">Terug naar lijst</string>
+    <string name="replay_loading_detail">Sessiedetails laden…</string>
+    <string name="replay_duration_label">Duur</string>
+    <string name="replay_distance_label">Afstand</string>
+    <string name="replay_avg_cadence_label">Gem. Cadans</string>
+    <string name="replay_avg_amplitude_label">Gem. Osc.</string>
+    <string name="replay_min_label">%1$d min</string>
+    <string name="replay_km_label">%1$.2f km</string>
+    <string name="replay_spm_format">%1$.0f spm</string>
+    <string name="replay_cm_format">%1$.1f cm</string>
+    <string name="replay_ms_format">%1$.0f ms</string>
+    <string name="replay_deg_format">%1$.1f°</string>
+    <string name="replay_route_map">Routekaart</string>
+    <string name="replay_start">Start</string>
+    <string name="replay_end">Einde</string>
+    <string name="replay_you_are_here">Jij</string>
+    <string name="replay_timer_format">%1$02d:%2$02d / %3$02d:%4$02d</string>
+    <string name="replay_stop">Stop</string>
+    <string name="replay_pause">Pauze</string>
+    <string name="replay_play">Afspelen</string>
+    <string name="replay_timeline_chart">Tijdlijn</string>
+    <string name="replay_coach_prompts">Coach Aanwijzingen</string>
+    <string name="replay_time_min_sec">%1$d:%2$02d</string>
 </resources>

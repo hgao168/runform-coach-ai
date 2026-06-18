@@ -1,0 +1,96 @@
+<!-- pages/invite/invite.wxml -->
+<!-- RF-600: 邀请码分享海报 -->
+<view class="invite-page">
+  <!-- Header -->
+  <view class="invite-header">
+    <text class="invite-title">{{i.inviteTitle || '邀请好友'}}</text>
+    <text class="invite-desc">{{i.inviteTip || '邀请好友加入 RunForm，一起改善跑步姿态'}}</text>
+  </view>
+
+  <!-- Invite Code Card -->
+  <view class="code-card">
+    <view class="code-label">{{i.myInviteCode || '我的邀请码'}}</view>
+    <view class="code-display">
+      <text class="code-text">{{inviteCode}}</text>
+    </view>
+    <view class="code-actions">
+      <button class="btn-copy" bindtap="copyInviteCode">
+        {{i.copyCode || '复制邀请码'}}
+      </button>
+      <button class="btn-share" open-type="share" bindtap="shareInvite">
+        {{i.shareInvite || '分享邀请'}}
+      </button>
+    </view>
+  </view>
+
+  <!-- Generate Poster Button -->
+  <view class="poster-trigger">
+    <button class="btn-poster" bindtap="generatePoster" loading="{{posterGenerating}}">
+      <text class="btn-poster-icon">🖼️</text>
+      {{posterGenerating ? (i.posterGenerating || '生成中...') : (i.generatePoster || '生成邀请海报')}}
+    </button>
+  </view>
+
+  <!-- Rewards hint -->
+  <view class="reward-hint">
+    <text class="reward-icon">🎁</text>
+    <text class="reward-text">{{i.inviteReward || '每成功邀请一位好友，双方各得7天Pro体验'}}</text>
+  </view>
+
+  <!-- Invited Friends List -->
+  <view class="invited-section">
+    <view class="section-header">
+      <text class="section-title">{{i.invitedFriends || '已邀请好友'}} ({{inviteCount}})</text>
+    </view>
+
+    <block wx:if="{{invitedList.length > 0}}">
+      <view class="invited-list">
+        <view class="invitee-item" wx:for="{{invitedList}}" wx:key="index">
+          <view class="invitee-avatar">{{item.avatarText}}</view>
+          <view class="invitee-info">
+            <text class="invitee-name">{{item.displayName}}</text>
+            <text class="invitee-date">{{item.joinedAt || ''}}</text>
+          </view>
+          <view class="invitee-status">✓</view>
+        </view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="empty-state">
+        <text class="empty-icon">👋</text>
+        <text class="empty-title">{{i.noInviteesYet || '还没有好友加入'}}</text>
+        <text class="empty-sub">{{i.noInviteesSub || '分享你的邀请码，邀请跑友一起加入'}}</text>
+      </view>
+    </block>
+  </view>
+
+  <!-- Hidden Canvas for poster generation -->
+  <canvas
+    type="2d"
+    id="posterCanvas"
+    class="poster-canvas"
+    style="width: 750rpx; height: 1334rpx;"
+  ></canvas>
+
+  <!-- Poster Preview Modal -->
+  <view class="poster-overlay {{showPosterPreview ? 'visible' : ''}}" catchtap="closePosterPreview">
+    <view class="poster-modal" catchtap="">
+      <view class="poster-modal-header">
+        <text class="poster-modal-title">{{i.previewPoster || '海报预览'}}</text>
+        <text class="poster-modal-close" bindtap="closePosterPreview">✕</text>
+      </view>
+      <view class="poster-preview-wrap">
+        <image class="poster-preview-img" src="{{posterPath}}" mode="widthFix"></image>
+      </view>
+      <view class="poster-modal-actions">
+        <button class="btn-poster-save" bindtap="savePoster">
+          {{i.savePoster || '保存到相册'}}
+        </button>
+        <button class="btn-poster-share" open-type="share" bindtap="sharePosterFile">
+          {{i.sharePoster || '分享海报'}}
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

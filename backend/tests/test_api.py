@@ -5,7 +5,13 @@ Covers the public endpoints: health, athletes, analyze-metrics, compare.
 Tests are written to work without a database or external API key.
 """
 
+from datetime import datetime, timezone
+
 import pytest
+
+from app import main as main_mod
+from app import strava_sync
+from app import strava_oauth
 
 # ---------------------------------------------------------------------------
 # Health endpoint
@@ -126,3 +132,101 @@ async def test_analyze_video_requires_video_file(client):
     # Sending multipart without the required 'video' field
     response = await client.post("/analyze")
     assert response.status_code == 422, response.text
+
+
+def test_transactional_email_uses_movenova_sender_by_default(monkeypatch):
+    """Resend payload should use the production sender when no override is set."""
+    captured_payload = {}
+
+    class DummyResponse:
+        def raise_for_status(self):
+            return None
+
+    def fake_post(url, headers, json, timeout):
+        captured_payload.update(json)
+        return DummyResponse()
+
+    monkeypatch.setattr(main_mod, "RESEND_API_KEY", "test-resend-api-key")
+    monkeypatch.setattr(main_mod, "RESEND_FROM_EMAIL", "")
+    monkeypatch.setattr(main_mod.httpx, "post", fake_post)
+
+    main_mod._send_transactional_email(
+        recipient_email="runner@example.com",
+        subject="Reset",
+        html_body="<p>Reset</p>",
+        text_body="Reset",
+    )
+
+    assert captured_payload["from"] == "noreply@movenova.ai"
+
+
+def test_strava_app_callback_url_normalizes_bare_scheme(monkeypatch):
+    monkeypatch.setenv("STRAVA_APP_CALLBACK_URL", "runformcoachai")
+
+    assert strava_oauth.app_callback_url() == "runformcoachai://strava/callback"
+
+
+def test_strava_app_callback_url_defaults_to_none(monkeypatch):
+    monkeypatch.delenv("STRAVA_APP_CALLBACK_URL", raising=False)
+
+    assert strava_oauth.app_callback_url() is None
+
+
+def test_strava_state_preserves_requested_app_callback(monkeypatch):
+    monkeypatch.setenv("STRAVA_CLIENT_SECRET", "test-strava-client-secret")
+
+    state = strava_oauth.make_state(
+        "test-user-001",
+        app_callback_url="runformcoachai://strava/callback",
+    )
+
+    payload = strava_oauth.verify_state_payload(state)
+    assert payload["uid"] == "test-user-001"
+    assert payload["cb"] == "runformcoachai://strava/callback"
+
+
+def test_strava_sync_defaults_to_eight_weeks_for_plan_history():
+    assert strava_sync.STRAVA_LOOKBACK_DAYS == 56
+
+
+def test_strava_week_window_returns_four_calendar_weeks():
+    reference = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+
+    week_starts = strava_sync._week_starts_for_window(reference, 4)
+
+    assert [item.date().isoformat() for item in week_starts] == [
+        "2026-05-25",
+        "2026-06-01",
+        "2026-06-08",
+        "2026-06-15",
+    ]
+
+
+def test_strava_empty_week_summary_keeps_zero_week_in_status():
+    week_start = datetime(2026, 6, 15, tzinfo=timezone.utc)
+
+    summary = strava_sync._empty_week_summary(week_start)
+
+    assert summary == {
+        "week_start": week_start,
+        "total_distance_m": 0.0,
+        "run_count": 0,
+        "longest_run_m": 0.0,
+        "avg_pace_s_per_km": None,
+        "intensity_score": 0.0,
+    }
+
+
+def test_strava_run_filter_accepts_strava_run_variants():
+    base_activity = {"distance": 5000.0, "moving_time": 1500}
+
+    assert strava_sync._is_run_activity({**base_activity, "sport_type": "Run", "type": "Workout"})
+    assert strava_sync._is_run_activity({**base_activity, "sport_type": "TrailRun"})
+    assert strava_sync._is_run_activity({**base_activity, "sport_type": "VirtualRun"})
+    assert strava_sync._is_run_activity({**base_activity, "type": "Run"})
+
+
+def test_strava_run_filter_rejects_non_run_or_empty_activity():
+    assert not strava_sync._is_run_activity({"sport_type": "Ride", "distance": 5000.0, "moving_time": 1500})
+    assert not strava_sync._is_run_activity({"sport_type": "Run", "distance": 0.0, "moving_time": 1500})
+    assert not strava_sync._is_run_activity({"sport_type": "Run", "distance": 5000.0, "moving_time": 0})

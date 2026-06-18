@@ -11,6 +11,7 @@ import com.runformcoach.runformcoachai.RunFormApi
 import com.runformcoach.runformcoachai.TesterProfile
 import com.runformcoach.runformcoachai.data.AnalysisDao
 import com.runformcoach.runformcoachai.data.AnalysisHistoryEntity
+import com.runformcoach.runformcoachai.data.PlanDao
 import com.runformcoach.runformcoachai.data.ProfileDao
 import com.runformcoach.runformcoachai.data.RunFormDatabase
 import com.runformcoach.runformcoachai.data.RunnerProfileEntity
@@ -43,7 +44,10 @@ class AppViewModelTest {
     private val testDispatcher: TestDispatcher = StandardTestDispatcher()
 
     // Mocks
-    private val appContext: Context = mockk(relaxed = true)
+    private val appContext: Context = mockk(relaxed = true) {
+        every { cacheDir } returns java.io.File(System.getProperty("java.io.tmpdir"))
+        every { contentResolver.openInputStream(any()) } returns java.io.ByteArrayInputStream("mock-video".toByteArray())
+    }
     private val api: RunFormApi = mockk()
     private val database: RunFormDatabase = mockk()
     private val analysisDao: AnalysisDao = mockk()
@@ -81,12 +85,10 @@ class AppViewModelTest {
         val uri: Uri = mockk(relaxed = true)
         viewModel.selectedVideoUri = uri
 
-        // Mock the content resolver + temp file creation
-        mockkStatic("com.runformcoach.runformcoachai.AppViewModelKt")
-        // We can't easily mock the private copyUriToTempFile, so just verify
-        // the state transition to Loading happens immediately (before coroutine)
+        // Act
         viewModel.analyzeVideo()
 
+        // Assert: state transitions to Loading immediately (before coroutine executes)
         assertEquals(AnalysisState.Loading::class, viewModel.analysisState::class)
     }
 

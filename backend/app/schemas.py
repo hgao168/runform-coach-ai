@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 
 
@@ -274,7 +274,7 @@ class ProfileSaveRequest(BaseModel):
         ...,
         min_length=3,
         max_length=128,
-        pattern=r'^[a-zA-Z0-9._\-]+$',
+        pattern=r'^[a-zA-Z0-9.@_\-]+$',
         description="iOS user identifier",
     )
     first_name: Optional[str] = None
@@ -293,6 +293,7 @@ class ProfileSaveRequest(BaseModel):
     leg_length_cm: Optional[float] = None
     date_of_birth: Optional[str] = None
     weekly_exercise_hours: Optional[float] = None
+    email: Optional[EmailStr] = None
 
 
 class ProfileSaveResponse(BaseModel):
@@ -455,3 +456,261 @@ class WeeklyInsightResponse(BaseModel):
     metrics: List[WeeklyInsightMetric]   # cadence, oscillation, gct, distance, sessions
     ai_coach_advice: str                 # AI-generated coaching narrative
     badges: List[WeeklyInsightBadge] = []
+
+
+# ── RF-600: Invite code schemas ───────────────────────────────────────────
+
+class InviteCodeGenerateRequest(BaseModel):
+    user_id: Optional[str] = Field(
+        None, min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\\-]+$'
+    )
+    ios_user_id: Optional[str] = Field(
+        None, min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\\-]+$'
+    )
+
+
+class InviteCodeGenerateResponse(BaseModel):
+    code: str
+    created_at: str
+    remaining: int
+
+
+class InviteRedeemRequest(BaseModel):
+    user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
+    code: str = Field(..., min_length=8, max_length=8)
+
+
+class InviteRedeemResponse(BaseModel):
+    success: bool
+    message: str
+
+
+class InviteStatusRedeemedUser(BaseModel):
+    nickname: Optional[str] = None
+    joined_at: str
+
+
+class InviteStatusCodeItem(BaseModel):
+    code: str
+    created_at: str
+    redeemed_count: int
+    redeemed_users: List[InviteStatusRedeemedUser] = []
+
+
+class InviteStatusResponse(BaseModel):
+    codes: List[InviteStatusCodeItem] = []
+    total_invited: int = 0
+
+
+# ── RF-601: Challenge schemas ─────────────────────────────────────────────
+
+class ChallengeInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    start_date: str
+    end_date: str
+    days: int  # duration of challenge in days
+    participant_count: int
+    status: str  # "active" | "ended"
+    # N3: Personal participation state (only set when ios_user_id is provided)
+    joined: Optional[bool] = None
+    completed_days: Optional[int] = None
+    today_completed: Optional[bool] = None
+
+
+class ChallengeJoinRequest(BaseModel):
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
+
+
+class ChallengeJoinResponse(BaseModel):
+    joined: bool
+    challenge_id: str
+    message: str
+
+
+class ChallengeLeaderboardEntry(BaseModel):
+    ios_user_id: str
+    cadence_improvement_pct: Optional[float] = None
+    oscillation_improvement_pct: Optional[float] = None
+    overall_score_change: Optional[float] = None
+    rank: int
+    # N4: Rendering fields for WeChat/Web frontend display
+    display_name: Optional[str] = None
+    name: Optional[str] = None           # WeChat expects item.name
+    nickname: Optional[str] = None       # WeChat expects item.nickname
+    days: Optional[int] = None           # challenge duration in days (WeChat expects item.days)
+    completed_days: Optional[int] = None
+    is_me: bool = False
+
+
+# ── C5: Challenge check-in schemas ────────────────────────────────────────
+
+class ChallengeCheckInRequest(BaseModel):
+    user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\\-]+$'
+    )
+
+
+class ChallengeCheckInResponse(BaseModel):
+    status: str
+    check_in_count: int
+    streak_days: int
+    today_metrics: dict = {}
+
+
+# ── C4: Club leaderboard schemas ──────────────────────────────────────────
+
+class ClubLeaderboardEntry(BaseModel):
+    rank: int
+    nickname: Optional[str] = None
+    avatar_url: Optional[str] = None
+    cadence: Optional[float] = None
+    form_score: Optional[float] = None
+    score_change: str = "→"  # "+" | "-" | "→"
+    is_me: bool = False
+
+
+class ClubLeaderboardResponse(BaseModel):
+    members: list[ClubLeaderboardEntry] = []
+    # entries is a deprecated alias for backwards compatibility with older WeChat/WASM frontends
+    entries: list[ClubLeaderboardEntry] = []
+    coming_soon: bool = False
+
+
+# ── RF-602: Coach panel schemas ────────────────────────────────────────────
+
+
+class CoachCodeGenerateRequest(BaseModel):
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
+
+
+class CoachCodeResponse(BaseModel):
+    code: str
+    student_limit: int
+    created_at: str
+    is_active: bool
+
+
+class CoachJoinRequest(BaseModel):
+    ios_user_id: str = Field(
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+    )
+    code: str = Field(..., min_length=8, max_length=8)
+
+
+class CoachJoinResponse(BaseModel):
+    joined: bool
+    coach_ios_user_id: str
+    message: str
+
+
+class CoachStudentResponse(BaseModel):
+    ios_user_id: str
+    nickname: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    joined_at: str
+    student_note: Optional[str] = None
+
+
+class CoachStudentFormSummary(BaseModel):
+    """Latest run session form metrics for a student."""
+    session_count: int
+    latest_session_at: Optional[str] = None
+    avg_cadence: Optional[float] = None
+    avg_vertical_oscillation: Optional[float] = None
+    avg_gct: Optional[float] = None
+    overall_score: Optional[float] = None
+
+
+class CoachDashboardResponse(BaseModel):
+    coach_ios_user_id: str
+    student_count: int
+    students: List[CoachStudentResponse]
+    form_summaries: List[CoachStudentFormSummary]
+
+
+# ── RF-606: Challenge notification schemas ─────────────────────────────────
+
+class NotificationItem(BaseModel):
+    user_id: str                     # ios_user_id
+    template_id: str                 # WeChat subscribe message template ID
+    data: dict = {}                  # { thing1: {value: "..."}, ... }
+
+
+class ChallengeNotifyRequest(BaseModel):
+    trigger_type: str = Field(
+        ..., description="rank_change | overtaken | deadline | weekly_digest"
+    )
+
+
+class ChallengeNotifyResponse(BaseModel):
+    challenge_id: str
+    trigger_type: str
+    notifications: List[NotificationItem] = []
+
+
+# ── RF-607: Share image schemas ────────────────────────────────────────────
+
+class ShareImageRequest(BaseModel):
+    type: str = Field(..., description="challenge_progress | invite | milestone")
+    user_id: str = Field(..., min_length=3, max_length=128)
+    challenge_id: str | None = None
+
+# ── Auth schemas ──────────────────────────────────────────────────────────
+
+class GoogleAuthRequest(BaseModel):
+    access_token: str
+
+class GoogleCallbackRequest(BaseModel):
+    code: str
+    redirect_uri: str
+
+class RegisterRequest(BaseModel):
+    email: str = Field(..., max_length=255)
+    password: str = Field(..., min_length=6, max_length=128)
+    name: str | None = None
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., max_length=255)
+    password: str
+
+class ResendVerificationRequest(BaseModel):
+    email: str = Field(..., max_length=255)
+
+class ResendVerificationResponse(BaseModel):
+    sent: bool
+    message: str
+
+class PasswordResetRequest(BaseModel):
+    email: str = Field(..., max_length=255)
+
+class PasswordResetRequestResponse(BaseModel):
+    sent: bool
+    message: str
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = Field(..., min_length=16, max_length=4096)
+    new_password: str = Field(..., min_length=6, max_length=128)
+
+class PasswordResetConfirmResponse(BaseModel):
+    reset: bool
+    message: str
+
+class UserResponse(BaseModel):
+    id: str
+    email: str | None = None
+    name: str | None = None
+    google_sub: str | None = None
+    email_verified: bool = False
+
+class AuthResponse(BaseModel):
+    access_token: str
+    user: UserResponse

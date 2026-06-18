@@ -153,7 +153,7 @@ final class RunSessionReplayViewModel: ObservableObject {
     }
 
     deinit {
-        stopTimer()
+        timer?.invalidate()
     }
 }
 

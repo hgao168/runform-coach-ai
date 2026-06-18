@@ -1,7 +1,8 @@
 // utils/i18n.js
+// WeChat mini-program defaults to Chinese; all users are in China
+const isZh = true
 const sysInfo = wx.getSystemInfoSync()
 const sysLang = sysInfo.language || 'zh_CN'
-const isZh = sysLang.toLowerCase().startsWith('zh')
 
 const strings = {
   zh: {
@@ -14,6 +15,7 @@ const strings = {
     // Analyze page
     analyzeTitle: '跑步姿态分析',
     analyzeSubtitle: '上传跑步视频，AI 分析你的跑步姿态',
+    injuryPreventionBanner: '别让错误跑姿毁了你的跑步热情',
     pickVideo: '选择视频',
     recordVideo: '录制视频',
     analyzeBtn: '开始分析',
@@ -34,7 +36,7 @@ const strings = {
 
     // Result page
     resultTitle: '分析结果',
-    confidence: '置信度',
+    confidence: '姿态评分',
     metrics: '动作评估',
     insightsTitle: '姿态分析',
     strengthFocus: '强化重点',
@@ -74,6 +76,30 @@ const strings = {
     catRecovery: '恢复跑',
     catStrength: '力量训练',
     catMobility: '灵活性训练',
+
+    // Marathon plan
+    planMode: '计划模式',
+    modeWeekly: '周计划',
+    modeMarathon: '马拉松',
+    modeRace: '比赛',
+    marathonRace: '马拉松赛事',
+    marathonCustom: '自定义赛事',
+    marathonWeeks: '训练周期',
+    marathonWeeksSuffix: ' 周',
+    marathonGenerate: '生成马拉松计划',
+    raceGenerate: '生成比赛计划',
+    marathonPhase: '阶段',
+    phaseBase: '基础期',
+    phaseBuild: '建设期',
+    phasePeak: '巅峰期',
+    phaseTaper: '减量期',
+    marathonTargetKm: '周目标',
+    marathonLongRun: '长跑',
+    marathonKeyWorkout: '关键训练',
+    marathonWorkouts: '每日训练',
+    marathonRaceWeek: '(比赛周)',
+    marathonPlanTitle: '马拉松训练计划',
+    racePlanTitle: '比赛训练计划',
 
     // Day labels
     days: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
@@ -119,6 +145,15 @@ const strings = {
     genderUnspecified: '不透露',
     saveProfile: '保存',
     profileSaved: '已保存',
+    authTitle: '登录/注册',
+    authSubtitle: '使用微信登录，绑定你的训练数据和邀请、挑战、教练功能。',
+    authLoggedIn: '已登录',
+    authNotLoggedIn: '未登录',
+    useWechatLogin: '使用微信登录',
+    wechatLoginSuccess: '微信登录成功',
+    wechatLoginFailed: '微信登录失败，请确认已开通云开发并部署 login 云函数。',
+    chooseAvatar: '选择微信头像',
+    linkedAccount: '已绑定账号',
 
     // Compare page
     compareTitle: '精英对比',
@@ -141,6 +176,23 @@ const strings = {
     noCompareData: '暂无可对比指标',
     trainingParams: '训练参数',
     startFirstAnalysis: '开始第一次分析',
+
+    // Compare result view
+    similarityLabel: '相似度',
+    aiCoachCommentTitle: 'AI 教练点评',
+    topGapsTitle: '最大差距',
+    gapArea: '差距领域',
+    gapSuggestion: '改善建议',
+    yourValueShort: '你',
+    eliteValueShort: '精英',
+    gapValue: '差距',
+    aiPoweredBadge: 'AI',
+    coachQuote: '“',
+    progressTarget: '目标',
+    higherBetter: '(越高越好)',
+    lowerBetter: '(越低越好)',
+    closeToElite: '接近精英水平',
+    needsWork: '需要改善',
 
     // Common
     loading: '加载中...',
@@ -172,6 +224,17 @@ const strings = {
     // RF-913: Save share image
     saveToAlbum: '保存到相册',
 
+    // RF-1011: Share card generation
+    shareGenSuccess: '分享图已生成',
+    shareGenFail: '生成分享图失败',
+    shareGenNoImage: '图片未生成',
+    shareImageSaved: '已保存到相册',
+    albumPermTitle: '需要相册权限',
+    albumPermDesc: '请在设置中开启相册权限',
+    albumPermGoSettings: '去设置',
+    saveFailed: '保存失败',
+    shareInsightBtn: '分享洞察',
+
     // RF-963: Rewarded video ad
     adWatchTitle: '观看广告支持我们',
     adWatchDesc: '观看一段短视频广告，帮助我们持续优化教练服务 🙏',
@@ -180,8 +243,27 @@ const strings = {
     // Feedback submitting state
     feedbackSubmitting: '提交中...',
 
-    // RF-305: Voice Coach
-    voiceCoach: '语音教练',
+   // RF-305: Voice Coach
+   voiceCoach: '语音教练',
+
+    // RF-1010: Weekly Insight
+    insightTitle: '周训练洞察',
+    insightLoading: '加载洞察报告...',
+    insightError: '洞察加载失败',
+    insightRetry: '重试',
+    insightCompareTitle: '本周 vs 上周',
+    insightTrendTitle: '4周趋势',
+    insightAiAdviceTitle: 'AI 教练建议',
+    insightBadgesTitle: '本周成就',
+    insightCadence: '步频',
+    insightOscillation: '垂直振幅',
+    insightGCT: '触地时间',
+    insightDistance: '距离',
+    insightSessions: '训练次数',
+    insightSpacing: '间距',
+    insightNoData: '暂无足够数据生成洞察报告',
+    insightNoDataSub: '完成至少两周的训练记录后\\n每周洞察将在这里显示',
+
     voiceCoachPlay: '播放语音播报',
     voiceCoachStop: '停止播报',
     voiceCoachMute: '静音',
@@ -192,6 +274,143 @@ const strings = {
     voiceCoachPaused: '已暂停',
     voiceCoachStopped: '播报完毕',
     voiceCoachNoAudio: '语音文件未生成，请运行 tools/generate-voice-prompts.py',
+
+    // Invite page
+    inviteTitle: '邀请好友',
+    myInviteCode: '我的邀请码',
+    shareInvite: '分享邀请',
+    invitedFriends: '已邀请好友',
+    noInviteesYet: '还没有好友加入',
+    noInviteesSub: '分享你的邀请码，邀请跑友一起加入',
+    copyCode: '复制邀请码',
+    codeCopied: '已复制',
+    inviteTip: '邀请好友加入 RunForm，一起改善跑步姿态',
+    inviteReward: '每成功邀请一位好友，双方各得7天Pro体验',
+
+    // Challenge page
+    challengeTitle: '14天跑姿改善挑战',
+    challengeSub: '每天改善一点，14天后遇见更好的跑姿',
+    challengeDesc: '加入14天跑姿改善挑战，每天完成一项跑姿改善任务，与跑友一起进步！',
+    joinChallenge: '立即加入挑战',
+    joinedLabel: '已加入挑战！',
+    progressLabel: '我的进度',
+    leaderboardLabel: '排行榜',
+    todayTask: '今日任务',
+    checkIn: '打卡签到',
+    checkedIn: '打卡成功！',
+    dayLabel: '天',
+    daysCompleted: '天已完成',
+    rank: '我的排名',
+    noRank: '暂未上榜',
+
+    // Invite poster (RF-600)
+    generatePoster: '生成邀请海报',
+    previewPoster: '海报预览',
+    savePoster: '保存到相册',
+    sharePoster: '分享海报',
+    posterSaved: '海报已保存到相册',
+    posterSlogan: '无痛跑步，从正确跑姿开始',
+    posterSloganSub: '别让错误跑姿毁了你的跑步热情',
+    posterJoinCTA: '扫码加入 RunForm，AI 分析你的跑姿',
+    posterPoweredBy: 'MoveNova · RunForm',
+    posterGenerating: '生成中...',
+    posterGenFailed: '海报生成失败',
+
+    // Club leaderboard (RF-603)
+    clubLeaderboardTitle: '跑团排行榜',
+    clubCodeLabel: '跑团码',
+    clubComingSoon: '跑团功能即将开放',
+    clubComingSoonSub: '跑团专属排行榜正在开发中，敬请期待！',
+    clubMembers: '跑团成员排名',
+    cadenceSpm: '步频 (spm)',
+    formScoreLabel: '跑姿评分',
+    rankChange: '排名变化',
+    rankUp: '↑',
+    rankDown: '↓',
+    noClubCode: '未提供跑团码',
+    clubNotExist: '跑团不存在或暂无数据',
+
+    // RF-604: UGC Content Submission
+    ugcSubmitTitle: '投稿分享',
+    ugcSubmitBtn: '📤 投稿你的跑步视频',
+    ugcModalTitle: '投稿跑步视频',
+    ugcPlatformLabel: '发布平台',
+    ugcLinkLabel: '视频链接',
+    ugcLinkPlaceholder: '粘贴你的跑步视频链接',
+    ugcNoteLabel: '备注（可选）',
+    ugcNotePlaceholder: '简单描述你的跑步体验...',
+    ugcSubmitAction: '提交投稿',
+    ugcSubmitting: '提交中...',
+    ugcSubmitted: '已收到投稿，审核后将展示',
+    ugcNoLink: '请填写视频链接',
+    ugcPlatformDouyin: '抖音',
+    ugcPlatformBilibili: 'B站',
+    ugcPlatformXiaohongshu: '小红书',
+    ugcPlatformPengyouquan: '朋友圈',
+    ugcListTitle: '我的投稿',
+    ugcListEmpty: '暂无投稿记录',
+    ugcListEmptySub: '在分析结果页点击「投稿」分享你的跑步视频',
+    ugcStatusPending: '审核中',
+    ugcStatusApproved: '已展示',
+    ugcStatusRejected: '未通过',
+
+    // RF-602: Coach Panel
+    coachTitle: '教练面板',
+    coachMode: '教练模式',
+    studentMode: '学员模式',
+    myCoachCode: '我的教练码',
+    coachCodePlaceholder: '输入教练码加入',
+    joinCoachBtn: '加入教练',
+    joinCoachSuccess: '加入成功！',
+    joinCoachFail: '加入失败，请检查教练码',
+    coachCodeEmpty: '请输入教练码',
+    coachStudents: '学员管理',
+    coachDashboard: '数据概览',
+    totalStudents: '学员总数',
+    avgScore: '平均评分',
+    activeStudents: '最近活跃',
+    noStudentsYet: '暂无学员',
+    noStudentsYetSub: '分享你的教练码，邀请学员加入',
+    copyCoachCode: '复制教练码',
+    coachCodeCopied: '已复制',
+    shareCoachCode: '分享教练码',
+    coachJoinedList: '已加入的教练',
+    noCoachJoined: '暂未加入任何教练',
+    noCoachJoinedSub: '输入教练码加入教练，查看你的跑姿数据',
+    studentCadence: '步频',
+    studentFormScore: '跑姿评分',
+    studentJoinedDate: '加入日期',
+    refreshBtn: '刷新',
+    generatingCode: '生成教练码中...',
+
+    // RF-605: Milestone Celebration
+    milestoneTitle: '🎉 里程碑达成！',
+    milestoneSubtitle: '你的跑姿取得了显著进步',
+    milestoneCadence: '步频提升',
+    milestoneGCT: '触地时间缩短',
+    milestoneScore: '跑姿评分提升',
+    milestoneSpm: 'SPM',
+    milestoneMs: 'ms',
+    milestoneShareTitle: '我的跑姿改善里程碑',
+    milestoneShareDesc: '分享我的进步',
+    milestoneShareBtn: '分享我的进步',
+    milestoneSaveBtn: '保存到相册',
+    milestoneGenFailed: '生成庆祝图失败',
+    milestoneEarlyRecord: '最早记录',
+    milestoneLatestRecord: '最新记录',
+    milestoneTrendUp: '趋势向好 ↑',
+
+    // Replay page
+    replayTitle: '跑步回放',
+    replayDuration: '时长',
+    replayDistance: '距离',
+    replayAvgCadence: '平均步频',
+    replayAvgOscillation: '平均振幅',
+    replayGCT: '触地时间',
+    replayPostureScore: '姿态评分',
+    replayPathTitle: '跑步路线',
+    replayPathNoData: '暂无 GPS 轨迹数据',
+    replayViewDetail: '查看详细分析',
   },
 
   en: {
@@ -201,6 +420,7 @@ const strings = {
     profile: 'Profile',
     analyzeTitle: 'Running Analysis',
     analyzeSubtitle: 'Upload a running video for AI biomechanics coaching',
+    injuryPreventionBanner: 'Don\'t let bad running form ruin your passion',
     pickVideo: 'Pick Video',
     recordVideo: 'Record',
     analyzeBtn: 'Analyze',
@@ -219,7 +439,7 @@ const strings = {
     angleRearDesc: 'Rear view — stride width & pelvis',
     angleFrontDesc: 'Front view — knees & foot strike',
     resultTitle: 'Analysis Result',
-    confidence: 'Confidence',
+    confidence: 'Form Report',
     metrics: 'Form Metrics',
     insightsTitle: 'Posture Analysis',
     strengthFocus: 'Strength Focus',
@@ -253,6 +473,30 @@ const strings = {
     catRecovery: 'Recovery',
     catStrength: 'Strength',
     catMobility: 'Mobility',
+
+    // Marathon plan
+    planMode: 'Plan Mode',
+    modeWeekly: 'Weekly',
+    modeMarathon: 'Marathon',
+    modeRace: 'Race',
+    marathonRace: 'Marathon Race',
+    marathonCustom: 'Custom Race',
+    marathonWeeks: 'Training Weeks',
+    marathonWeeksSuffix: ' weeks',
+    marathonGenerate: 'Generate Marathon Plan',
+    raceGenerate: 'Generate Race Plan',
+    marathonPhase: 'Phase',
+    phaseBase: 'Base Phase',
+    phaseBuild: 'Build Phase',
+    phasePeak: 'Peak Phase',
+    phaseTaper: 'Taper Phase',
+    marathonTargetKm: 'Weekly Target',
+    marathonLongRun: 'Long Run',
+    marathonKeyWorkout: 'Key Workout',
+    marathonWorkouts: 'Daily Workouts',
+    marathonRaceWeek: '(Race Week)',
+    marathonPlanTitle: 'Marathon Training Plan',
+    racePlanTitle: 'Race Training Plan',
     days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     dayShort: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     historyTitle: 'History',
@@ -292,6 +536,15 @@ const strings = {
     genderUnspecified: 'Prefer not to say',
     saveProfile: 'Save',
     profileSaved: 'Saved',
+    authTitle: 'Login / Registration',
+    authSubtitle: 'Use WeChat login to link your training data, invites, challenges, and coach features.',
+    authLoggedIn: 'Logged in',
+    authNotLoggedIn: 'Not logged in',
+    useWechatLogin: 'Use WeChat login',
+    wechatLoginSuccess: 'WeChat login successful',
+    wechatLoginFailed: 'WeChat login failed. Check CloudBase and deploy the login cloud function.',
+    chooseAvatar: 'Choose WeChat avatar',
+    linkedAccount: 'Linked account',
     compareTitle: 'Elite Compare',
     compareSubtitle: 'Browse world-class elite athlete profiles',
     compareNote: 'Full comparison requires completing an analysis in the iOS app',
@@ -312,6 +565,23 @@ const strings = {
     noCompareData: 'No comparable metrics',
     trainingParams: 'Training Params',
     startFirstAnalysis: 'Start First Analysis',
+
+    // Compare result view
+    similarityLabel: 'Similarity',
+    aiCoachCommentTitle: 'AI Coach Commentary',
+    topGapsTitle: 'Top Gaps',
+    gapArea: 'Gap Area',
+    gapSuggestion: 'Improvement Suggestion',
+    yourValueShort: 'You',
+    eliteValueShort: 'Elite',
+    gapValue: 'Gap',
+    aiPoweredBadge: 'AI',
+    coachQuote: '"',
+    progressTarget: 'Target',
+    higherBetter: '(higher is better)',
+    lowerBetter: '(lower is better)',
+    closeToElite: 'Close to elite',
+    needsWork: 'Needs work',
     loading: 'Loading...',
     error: 'Error',
     retry: 'Retry',
@@ -341,6 +611,17 @@ const strings = {
     // RF-913: Save share image
     saveToAlbum: 'Save to Album',
 
+    // RF-1011: Share card generation
+    shareGenSuccess: 'Share image ready',
+    shareGenFail: 'Share image failed',
+    shareGenNoImage: 'Image not ready',
+    shareImageSaved: 'Saved to album',
+    albumPermTitle: 'Album permission needed',
+    albumPermDesc: 'Please enable album permission in settings',
+    albumPermGoSettings: 'Settings',
+    saveFailed: 'Save failed',
+    shareInsightBtn: 'Share Insight',
+
     // RF-963: Rewarded video ad
     adWatchTitle: 'Watch ad to support us',
     adWatchDesc: 'Watch a short video ad to help us improve coaching 🙏',
@@ -351,6 +632,25 @@ const strings = {
 
     // RF-305: Voice Coach
     voiceCoach: 'Voice Coach',
+
+    // RF-1010: Weekly Insight
+    insightTitle: 'Weekly Insight',
+    insightLoading: 'Loading insight...',
+    insightError: 'Failed to load insight',
+    insightRetry: 'Retry',
+    insightCompareTitle: 'This Week vs Last Week',
+    insightTrendTitle: '4-Week Trend',
+    insightAiAdviceTitle: 'AI Coach Advice',
+    insightBadgesTitle: 'This Week Achievements',
+    insightCadence: 'Cadence',
+    insightOscillation: 'Vert. Osc.',
+    insightGCT: 'GCT',
+    insightDistance: 'Distance',
+    insightSessions: 'Sessions',
+    insightSpacing: 'Spacing',
+    insightNoData: 'Not enough data for weekly insight',
+    insightNoDataSub: 'Complete at least two weeks of\\ntraining for insights to appear',
+
     voiceCoachPlay: 'Play Voice Feedback',
     voiceCoachStop: 'Stop',
     voiceCoachMute: 'Mute',
@@ -361,6 +661,143 @@ const strings = {
     voiceCoachPaused: 'Paused',
     voiceCoachStopped: 'Finished',
     voiceCoachNoAudio: 'Voice files not generated. Run tools/generate-voice-prompts.py',
+
+    // Invite page
+    inviteTitle: 'Invite Friends',
+    myInviteCode: 'My Invite Code',
+    shareInvite: 'Share Invite',
+    invitedFriends: 'Invited Friends',
+    noInviteesYet: 'No friends yet',
+    noInviteesSub: 'Share your invite code with running buddies',
+    copyCode: 'Copy Code',
+    codeCopied: 'Copied!',
+    inviteTip: 'Invite friends to RunForm and improve together',
+    inviteReward: 'Both get 7-day Pro trial for each successful invite',
+
+    // Challenge page
+    challengeTitle: '14-Day Form Challenge',
+    challengeSub: 'Improve a little each day, meet a better runner in 14 days',
+    challengeDesc: 'Join the 14-day running form challenge. Complete one task daily and progress with the community!',
+    joinChallenge: 'Join Challenge',
+    joinedLabel: 'Joined!',
+    progressLabel: 'My Progress',
+    leaderboardLabel: 'Leaderboard',
+    todayTask: 'Today\'s Task',
+    checkIn: 'Check In',
+    checkedIn: 'Checked In!',
+    dayLabel: 'days',
+    daysCompleted: 'days completed',
+    rank: 'My Rank',
+    noRank: 'Not ranked',
+
+    // Invite poster (RF-600)
+    generatePoster: 'Generate Poster',
+    previewPoster: 'Preview Poster',
+    savePoster: 'Save to Album',
+    sharePoster: 'Share Poster',
+    posterSaved: 'Poster saved to album',
+    posterSlogan: 'Pain-free running starts with proper form',
+    posterSloganSub: 'Don\'t let bad form ruin your running passion',
+    posterJoinCTA: 'Scan to join RunForm, AI analyze your run',
+    posterPoweredBy: 'MoveNova · RunForm',
+    posterGenerating: 'Generating...',
+    posterGenFailed: 'Poster generation failed',
+
+    // Club leaderboard (RF-603)
+    clubLeaderboardTitle: 'Club Leaderboard',
+    clubCodeLabel: 'Club Code',
+    clubComingSoon: 'Club Feature Coming Soon',
+    clubComingSoonSub: 'Club leaderboard is under development. Stay tuned!',
+    clubMembers: 'Club Member Rankings',
+    cadenceSpm: 'Cadence (spm)',
+    formScoreLabel: 'Form Score',
+    rankChange: 'Rank Change',
+    rankUp: '↑',
+    rankDown: '↓',
+    noClubCode: 'No club code provided',
+    clubNotExist: 'Club not found or no data',
+
+    // RF-604: UGC Content Submission
+    ugcSubmitTitle: 'Share Your Run',
+    ugcSubmitBtn: '📤 Submit Your Run Video',
+    ugcModalTitle: 'Submit Run Video',
+    ugcPlatformLabel: 'Platform',
+    ugcLinkLabel: 'Video Link',
+    ugcLinkPlaceholder: 'Paste your run video link',
+    ugcNoteLabel: 'Note (optional)',
+    ugcNotePlaceholder: 'Briefly describe your run...',
+    ugcSubmitAction: 'Submit',
+    ugcSubmitting: 'Submitting...',
+    ugcSubmitted: 'Submitted! Will be displayed after review',
+    ugcNoLink: 'Please enter a video link',
+    ugcPlatformDouyin: 'TikTok',
+    ugcPlatformBilibili: 'Bilibili',
+    ugcPlatformXiaohongshu: 'RED',
+    ugcPlatformPengyouquan: 'Moments',
+    ugcListTitle: 'My Submissions',
+    ugcListEmpty: 'No submissions yet',
+    ugcListEmptySub: 'Tap "Submit" on the result page to share your run video',
+    ugcStatusPending: 'Under Review',
+    ugcStatusApproved: 'Approved',
+    ugcStatusRejected: 'Rejected',
+
+    // RF-602: Coach Panel
+    coachTitle: 'Coach Panel',
+    coachMode: 'Coach Mode',
+    studentMode: 'Student Mode',
+    myCoachCode: 'My Coach Code',
+    coachCodePlaceholder: 'Enter coach code to join',
+    joinCoachBtn: 'Join Coach',
+    joinCoachSuccess: 'Joined successfully!',
+    joinCoachFail: 'Join failed, check code',
+    coachCodeEmpty: 'Please enter a coach code',
+    coachStudents: 'Students',
+    coachDashboard: 'Dashboard',
+    totalStudents: 'Total Students',
+    avgScore: 'Avg Score',
+    activeStudents: 'Recently Active',
+    noStudentsYet: 'No students yet',
+    noStudentsYetSub: 'Share your coach code to invite students',
+    copyCoachCode: 'Copy Code',
+    coachCodeCopied: 'Copied!',
+    shareCoachCode: 'Share Code',
+    coachJoinedList: 'Joined Coaches',
+    noCoachJoined: 'No coach joined',
+    noCoachJoinedSub: 'Enter a coach code to join and view your data',
+    studentCadence: 'Cadence',
+    studentFormScore: 'Form Score',
+    studentJoinedDate: 'Joined',
+    refreshBtn: 'Refresh',
+    generatingCode: 'Generating coach code...',
+
+    // RF-605: Milestone Celebration
+    milestoneTitle: '🎉 Milestone Achieved!',
+    milestoneSubtitle: 'Your running form has improved significantly',
+    milestoneCadence: 'Cadence Gain',
+    milestoneGCT: 'GCT Reduction',
+    milestoneScore: 'Form Score Gain',
+    milestoneSpm: 'SPM',
+    milestoneMs: 'ms',
+    milestoneShareTitle: 'My Running Form Milestone',
+    milestoneShareDesc: 'Share My Progress',
+    milestoneShareBtn: 'Share Progress',
+    milestoneSaveBtn: 'Save to Album',
+    milestoneGenFailed: 'Failed to generate celebration card',
+    milestoneEarlyRecord: 'Earliest',
+    milestoneLatestRecord: 'Latest',
+    milestoneTrendUp: 'Trending Up ↑',
+
+    // Replay page
+    replayTitle: 'Run Replay',
+    replayDuration: 'Duration',
+    replayDistance: 'Distance',
+    replayAvgCadence: 'Avg Cadence',
+    replayAvgOscillation: 'Avg Osc.',
+    replayGCT: 'GCT',
+    replayPostureScore: 'Form Score',
+    replayPathTitle: 'Running Route',
+    replayPathNoData: 'No GPS track data',
+    replayViewDetail: 'View Detailed Analysis',
   },
 }
 
@@ -369,16 +806,18 @@ const t = (key) => {
   return dict[key] !== undefined ? dict[key] : key
 }
 
-// Detect China region for video platform links
+// Detect China mainland for video platform links
 const isChina = () => {
-  const region = sysInfo.region || ''
-  return isZh && !region.toLowerCase().includes('taiwan') && !region.toLowerCase().includes('hong kong')
+  const region = (sysInfo.region || '').toLowerCase()
+  // China mainland regions (CN), exclude TW, HK, MO
+  return region === 'cn' || (!region.includes('taiwan') && !region.includes('hong kong') && !region.includes('macau') && isZh)
 }
 
 const getVideoSearchUrl = (exerciseName) => {
-  const query = encodeURIComponent(`${exerciseName} 跑步训练`)
   if (isChina()) {
-    return `https://search.bilibili.com/all?keyword=${query}`
+    // B站: use cleaner query without "跑步训练" suffix for better match
+    const query = encodeURIComponent(`${exerciseName} 动作教学`)
+    return `https://search.bilibili.com/all?keyword=${query}&order=click`
   }
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(exerciseName + ' running exercise form')}`
 }

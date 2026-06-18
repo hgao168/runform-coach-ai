@@ -13,6 +13,7 @@ import com.runformcoach.runformcoachai.RunFormApi
 import com.runformcoach.runformcoachai.data.AnalysisDao
 import com.runformcoach.runformcoachai.data.AnalysisHistoryEntity
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -109,7 +110,7 @@ class CompareViewModelTest {
         // Call loadAthletes again — should not re-fetch
         viewModel.loadAthletes()
 
-        coEvery { api.fetchAthletes() } wasNot Called  // verify no second API call
+        coVerify(exactly = 0) { api.fetchAthletes() }
     }
 
     // ── Compare request state tests ────────────────────────────────────────────

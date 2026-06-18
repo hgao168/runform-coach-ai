@@ -2,6 +2,8 @@
 <resources>
     <!-- ── App name ──────────────────────────────────────────────────────── -->
     <string name="app_name">RunForm</string>
+    <!-- ── Onboarding injury-prevention copy (Marketing alignment) ─────────── -->
+    <string name="app_tagline">AI Injury Prevention Coach</string>
 
     <!-- ── Tab bar ───────────────────────────────────────────────────────── -->
     <string name="tab_analyze">Analyze</string>
@@ -10,8 +12,8 @@
     <string name="tab_profile">Profile</string>
 
     <!-- ── Analyze tab - hero ─────────────────────────────────────────────── -->
-    <string name="analyze_title">RunForm Coach AI</string>
-    <string name="analyze_subtitle">Upload or record a video to get AI coaching feedback</string>
+    <string name="analyze_title">RunForm Injury Prevention Coach</string>
+    <string name="analyze_subtitle">Upload or record a video — AI checks your form for injury risks</string>
 
     <!-- ── Analyze tab - camera angle ─────────────────────────────────────── -->
     <string name="camera_angle">Camera Angle</string>
@@ -58,6 +60,15 @@
     <string name="exercises">Exercises</string>
     <string name="analyze_new_video">Analyze New Video</string>
 
+    <!-- ── Injury risk hints per metric (Marketing alignment) ──────────────── -->
+    <string name="injury_risk_cadence_low">Low cadence may increase knee impact</string>
+    <string name="injury_risk_overstride">Overstriding increases shin &amp; knee stress</string>
+    <string name="injury_risk_trunk_lean">Excessive forward lean risks lower back strain</string>
+    <string name="injury_risk_hip_drop">Hip drop adds lateral knee stress</string>
+    <string name="injury_risk_knee_valgus">Knee valgus increases ACL strain risk</string>
+    <string name="injury_risk_gct_long">Long ground contact reduces efficiency, increases joint load</string>
+    <string name="injury_risk_amplitude_high">High vertical oscillation wastes energy, adds impact</string>
+
     <!-- ── Analysis result - exercise card ───────────────────────────────── -->
     <string name="sets_reps_freq">%1$d sets × %2$s — %3$dx/week</string>
 
@@ -75,6 +86,17 @@
     <!-- ── Plan tab ──────────────────────────────────────────────────────── -->
     <string name="training_plan">Training Plan</string>
     <string name="plan_subtitle">Get an AI-generated weekly plan</string>
+
+    <!-- ── Weekly form recheck card (Marketing alignment) ──────────────────── -->
+    <string name="form_recheck_title">Weekly Form Recheck</string>
+    <string name="form_recheck_subtitle">It\'s Monday — time to check if your form has drifted</string>
+    <string name="form_recheck_cta">Recheck My Form</string>
+    <string name="form_recheck_last_score">Last week: %1$d%%</string>
+    <string name="form_recheck_this_score">This week: %1$d%%</string>
+    <string name="form_recheck_improved">↑ Improved by %1$d%%</string>
+    <string name="form_recheck_declined">↓ Declined by %1$d%%</string>
+    <string name="form_recheck_no_data">No recent analysis — tap to start</string>
+
     <string name="plan_settings">Plan Settings</string>
     <string name="current_weekly_km">Current weekly km</string>
     <string name="training_goal">Training Goal</string>
@@ -286,10 +308,14 @@
     <!-- ── Share (RF-207) ────────────────────────────────────────────────── -->
     <string name="share">Share</string>
     <string name="share_analysis_subject">RunForm analysis result — %1$d%% score</string>
-    <string name="share_analysis_body">My RunForm Coach AI analysis:\n• Score: %1$d%%\n• Summary: %2$s\n\nGet RunForm: https://runform.coach</string>
+    <string name="share_analysis_body">My RunForm injury prevention analysis:\n• Score: %1$d%%\n• Summary: %2$s\n\nGet RunForm: https://runform.coach</string>
     <string name="share_compare_subject">RunForm comparison — %1$s vs %2$s</string>
     <string name="share_compare_body">My RunForm comparison:\n• I matched %1$s at %2$d%%\n• Top gap: %3$s\n\nGet RunForm: https://runform.coach</string>
     <string name="share_download_link">https://runform.coach</string>
+
+    <!-- ── Share archaeology template (Marketing alignment) ────────────────── -->
+    <string name="share_archaeology_subject">My running form got AI-archaeologized — %1$d issues found</string>
+    <string name="share_archaeology_body">My RunForm analysis uncovered %1$d form issues.\nCan your running form survive AI archaeology? Upload a video and let AI give you a form checkup.\n\nGet RunForm: https://runform.coach</string>
 
     <!-- ── Profile Extended Fields (RF-208) ───────────────────────────────── -->
     <string name="gear_fit">Gear &amp; Fit</string>
@@ -350,7 +376,7 @@
     <string name="weekly_insights_sessions">Sessions</string>
     <string name="weekly_insights_duration">Duration</string>
     <string name="weekly_insights_badges">Badges Earned This Week</string>
-    <string name="weekly_insights_ai_coach">AI Coach Says</string>
+    <string name="weekly_insights_ai_coach">Injury Prevention Coach Says</string>
     <string name="weekly_insights_4week_trends">4-Week Trends</string>
     <string name="weekly_insights_improving">Improving</string>
     <string name="weekly_insights_declining">Declining</string>
@@ -383,4 +409,55 @@
     <string name="guidance_ready">Ready!</string>
     <string name="guidance_in_frame">In frame</string>
     <string name="guidance_stop_recording">Stop Recording</string>
+
+    <!-- ── Share Card (RF-1001) ────────────────────────────────────────── -->
+    <string name="share_card">Share Card</string>
+    <string name="share_card_saving">Saving card…</string>
+    <string name="share_card_saved">Card saved to gallery</string>
+    <string name="share_card_failed">Failed to save card</string>
+    <string name="share_card_analysis_title">Analysis Result</string>
+    <string name="share_card_history_title">History</string>
+    <string name="share_card_key_findings">Key Findings</string>
+    <string name="share_card_key_workouts">Key Workouts</string>
+    <string name="share_card_weekly_km">%1$d km/week</string>
+    <string name="share_card_run_days">%1$d run days</string>
+
+    <!-- ── RunSession Replay (RF-1000) ─────────────────────────────────── -->
+    <string name="replay_session_history">Run Sessions</string>
+    <string name="replay_loading_sessions">Loading sessions…</string>
+    <string name="replay_tap_to_retry">Tap to retry</string>
+    <string name="replay_no_sessions">No sessions yet</string>
+    <string name="replay_no_sessions_hint">Complete a live run to see it here</string>
+    <string name="replay_duration_min">%1$d min</string>
+    <string name="replay_distance_km">%1$.2f km</string>
+    <string name="replay_cadence_short">Cadence</string>
+    <string name="replay_amplitude_short">Amplitude</string>
+    <string name="replay_gct_short">GCT</string>
+    <string name="replay_trunk_lean_short">Lean</string>
+    <string name="replay_prompt_count">%1$d coach prompts</string>
+    <string name="replay_tap_to_view">Tap to view replay →</string>
+    <string name="replay_title">Session Replay</string>
+    <string name="replay_back_to_list">Back to list</string>
+    <string name="replay_loading_detail">Loading session detail…</string>
+    <string name="replay_duration_label">Duration</string>
+    <string name="replay_distance_label">Distance</string>
+    <string name="replay_avg_cadence_label">Avg Cadence</string>
+    <string name="replay_avg_amplitude_label">Avg Osc.</string>
+    <string name="replay_min_label">%1$d min</string>
+    <string name="replay_km_label">%1$.2f km</string>
+    <string name="replay_spm_format">%1$.0f spm</string>
+    <string name="replay_cm_format">%1$.1f cm</string>
+    <string name="replay_ms_format">%1$.0f ms</string>
+    <string name="replay_deg_format">%1$.1f°</string>
+    <string name="replay_route_map">Route Map</string>
+    <string name="replay_start">Start</string>
+    <string name="replay_end">End</string>
+    <string name="replay_you_are_here">You</string>
+    <string name="replay_timer_format">%1$02d:%2$02d / %3$02d:%4$02d</string>
+    <string name="replay_stop">Stop</string>
+    <string name="replay_pause">Pause</string>
+    <string name="replay_play">Play</string>
+    <string name="replay_timeline_chart">Timeline</string>
+    <string name="replay_coach_prompts">Coach Prompts</string>
+    <string name="replay_time_min_sec">%1$d:%2$02d</string>
 </resources>

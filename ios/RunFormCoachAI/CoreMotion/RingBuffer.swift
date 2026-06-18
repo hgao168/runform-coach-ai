@@ -120,7 +120,7 @@ public struct RingBuffer<Element>: @unchecked Sendable {
     /// - Complexity: O(n).
     public func last(_ n: Int) -> [Element] {
         storage.synchronized {
-            let limit = min(n, storage.count)
+            let limit = Swift.min(n, storage.count)
             guard limit > 0 else { return [] }
             var result: [Element] = []
             result.reserveCapacity(limit)

@@ -85,7 +85,7 @@
     </view>
     <view class="result-row">
       <text class="result-key">{{i.confidenceLabel}}</text>
-      <text class="result-val">{{(finalResult.confidence * 100).toFixed(0)}}%</text>
+      <text class="result-val">{{confidencePercent}}%</text>
     </view>
   </view>
 

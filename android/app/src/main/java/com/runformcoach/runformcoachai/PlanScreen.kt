@@ -1,5 +1,7 @@
 package com.runformcoach.runformcoachai
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,6 +33,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
@@ -45,11 +49,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 private val DAYS = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -186,6 +194,7 @@ private fun WeeklyPlanContent(
     onDaysChange: (Set<String>) -> Unit,
     onInjuryChange: (Boolean) -> Unit
 ) {
+    val context = LocalContext.current
     var targetDropdownOpen by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -198,6 +207,20 @@ private fun WeeklyPlanContent(
                 Text(stringResource(R.string.training_plan), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(stringResource(R.string.plan_subtitle), color = AppColors.TextSecondary, fontSize = 14.sp)
             }
+        }
+
+        // ── P1: Weekly Form Recheck card (Marketing alignment) ───────────────
+        item {
+            val today = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
+            val isMonday = today == java.util.Calendar.MONDAY
+            // For demo/minimal: always show
+            FormRecheckCard(
+                lastScore = null,      // TODO: wire to actual history data
+                thisScore = null,
+                onRecheck = {
+                    Toast.makeText(context, context.getString(R.string.form_recheck_no_data), Toast.LENGTH_SHORT).show()
+                }
+            )
         }
 
         // ── Form card ─────────────────────────────────────────────────────────
@@ -443,11 +466,46 @@ private fun WeeklyPlanContent(
             }
 
             item {
-                Button(
-                    onClick = { vm.resetPlan() },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Card, contentColor = AppColors.TextSecondary)
-                ) { Text("New Plan") }
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = { vm.resetPlan() },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.Card, contentColor = AppColors.TextSecondary)
+                    ) { Text("New Plan") }
+                    // RF-1001: Share plan as image card
+                    IconButton(onClick = {
+                        Toast.makeText(context, context.getString(R.string.share_card_saving), Toast.LENGTH_SHORT).show()
+                        CoroutineScope(Dispatchers.IO).launch {
+                            val planType = context.getString(R.string.plan_type_weekly_label)
+                            val bitmap = ShareCardRenderer.renderPlanCard(context, plan, planType)
+                            val uri = ShareCardRenderer.saveToGallery(context, bitmap, "runform_plan")
+                            bitmap.recycle()
+                            CoroutineScope(Dispatchers.Main).launch {
+                                if (uri != null) {
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "image/png"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    Toast.makeText(context, context.getString(R.string.share_card_saved), Toast.LENGTH_SHORT).show()
+                                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
+                                } else {
+                                    Toast.makeText(context, context.getString(R.string.share_card_failed), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = stringResource(R.string.share_card),
+                            tint = AppColors.Cyan,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -526,5 +584,96 @@ internal fun IntensityPill(intensity: String) {
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(intensity, color = color, fontSize = 11.sp)
+    }
+}
+
+// ── P1: Form Recheck Card (Marketing alignment) ────────────────────────────
+
+@Composable
+internal fun FormRecheckCard(
+    lastScore: Int?,
+    thisScore: Int?,
+    onRecheck: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.Violet.copy(alpha = 0.12f))
+            .border(1.dp, AppColors.Violet.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+            .clickable { onRecheck() }
+            .padding(16.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.form_recheck_title),
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.form_recheck_subtitle),
+                        color = AppColors.TextSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.DirectionsRun,
+                    contentDescription = null,
+                    tint = AppColors.Violet,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            // Score comparison row
+            if (lastScore != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.form_recheck_last_score, lastScore),
+                        color = AppColors.TextMuted,
+                        fontSize = 13.sp
+                    )
+                    if (thisScore != null) {
+                        val diff = thisScore - lastScore
+                        val diffText = if (diff >= 0)
+                            stringResource(R.string.form_recheck_improved, diff)
+                        else
+                            stringResource(R.string.form_recheck_declined, -diff)
+                        Text(
+                            diffText,
+                            color = if (diff >= 0) AppColors.Mint else AppColors.Red,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
+            // CTA
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(AppColors.Violet.copy(alpha = 0.25f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    stringResource(R.string.form_recheck_cta),
+                    color = AppColors.Violet,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
     }
 }

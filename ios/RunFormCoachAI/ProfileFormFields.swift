@@ -9,6 +9,7 @@ struct ProfileLabeledTextField: View {
     @Binding var text: String
     var autocapitalization: TextInputAutocapitalization = .words
     var keyboardType: UIKeyboardType = .default
+    var isSecure: Bool = false
     var multiline: Bool = false
     var multilineRange: ClosedRange<Int> = 3...6
 
@@ -41,11 +42,20 @@ struct ProfileLabeledTextField: View {
                 tf
             }
         } else {
-            let tf = TextField(placeholder, text: $text)
-            if let focus {
-                tf.focused(focus)
+            if isSecure {
+                let secure = SecureField(placeholder, text: $text)
+                if let focus {
+                    secure.focused(focus)
+                } else {
+                    secure
+                }
             } else {
-                tf
+                let tf = TextField(placeholder, text: $text)
+                if let focus {
+                    tf.focused(focus)
+                } else {
+                    tf
+                }
             }
         }
     }

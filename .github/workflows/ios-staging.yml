@@ -30,11 +30,11 @@ jobs:
 
       - name: Patch display name for staging
         run: |
-          python3 - <<'EOF'
-          content = open('project.yml').read()
-          content = content.replace('CFBundleDisplayName: RunForm', 'CFBundleDisplayName: "RunForm (Staging)"')
-          open('project.yml', 'w').write(content)
-          EOF
+          path=project.yml
+          [ -f "$path" ] || path=ios/project.yml
+          perl -0pi -e 's/(^\s*CFBundleDisplayName:\s*).*$/$1RunForm (Staging)/m' "$path"
+          grep -q '^\s*CFBundleDisplayName: RunForm (Staging)$' "$path"
+          echo "Patched $path: CFBundleDisplayName = RunForm (Staging)"
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -86,7 +86,10 @@ jobs:
       # ── Generate & Archive (DEBUG = staging backend) ────────────────────────
 
       - name: Generate Xcode project
-        run: xcodegen generate
+        run: |
+          SPEC=project.yml
+          [ -f "$SPEC" ] || SPEC=ios/project.yml
+          xcodegen generate --spec "$SPEC"
 
       - name: Archive app (Debug configuration → staging backend)
         run: |
@@ -96,14 +99,10 @@ jobs:
             -configuration Debug \
             -archivePath "$RUNNER_TEMP/RunFormCoachAI-Staging.xcarchive" \
             -destination 'generic/platform=iOS' \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=39CYNW3CYT \
-            CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="RunFormCoachAI-Prod" \
+            BACKEND_BASE_URL="https://runform-coach-ai-staging.up.railway.app" \
             CURRENT_PROJECT_VERSION="2.${{ github.run_number }}" \
-            MARKETING_VERSION="1.1"
-          # Note: BACKEND_BASE_URL is NOT overridden here.
-          # The Debug config in project.yml embeds the staging backend URL automatically.
+            MARKETING_VERSION="1.2"
+          # Note: BACKEND_BASE_URL is now explicitly overridden to staging URL.
 
       # ── Export IPA ──────────────────────────────────────────────────────────
 

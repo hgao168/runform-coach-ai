@@ -97,13 +97,13 @@ fun AnalyzeScreen(vm: AppViewModel) {
         item {
             Column {
                 Text(
-                    text = "RunForm Coach AI",
+                    text = "RunForm Injury Prevention Coach",
                     color = Color.White,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Upload or record a video to get AI coaching feedback",
+                    text = "Upload or record a video — AI checks your form for injury risks",
                     color = AppColors.TextSecondary,
                     fontSize = 14.sp
                 )

@@ -1,5 +1,23 @@
 /* pages/analyze/analyze.wxss */
 
+/* Injury Prevention Banner */
+.injury-prevention-banner {
+  background: linear-gradient(135deg, rgba(255, 71, 87, 0.12), rgba(255, 159, 48, 0.1));
+  border: 2rpx solid rgba(255, 71, 87, 0.25);
+  border-radius: 20rpx;
+  padding: 20rpx 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.injury-banner-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #ff9f30;
+  line-height: 1.5;
+  display: block;
+  text-align: center;
+}
+
 .header-row {
   display: flex;
   flex-direction: row;

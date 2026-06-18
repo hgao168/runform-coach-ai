@@ -245,3 +245,100 @@ data class FeedbackResponse(
     @SerializedName("received") val received: Boolean,
     @SerializedName("message") val message: String = ""
 )
+
+// ── RunSession History & Replay (RF-1000) ─────────────────────────────────────
+
+/**
+ * Lightweight session summary returned by GET /sessions.
+ */
+data class RunSessionSummary(
+    val id: String,
+    @SerializedName("created_at") val createdAt: Long,    // epoch millis
+    @SerializedName("duration_seconds") val durationSeconds: Double,
+    @SerializedName("distance_km") val distanceKm: Double,
+    @SerializedName("avg_cadence_spm") val avgCadenceSPM: Double,
+    @SerializedName("avg_amplitude_cm") val avgAmplitudeCm: Double,
+    @SerializedName("avg_gct_ms") val avgGCTMs: Double,
+    @SerializedName("avg_trunk_lean_deg") val avgTrunkLeanDeg: Double = 0.0,
+    @SerializedName("prompt_count") val promptCount: Int = 0
+)
+
+/**
+ * A single data point in the session time series.
+ * Arrays in RunSessionDetail are parallel-indexed.
+ */
+data class ReplayDataPoint(
+    val elapsedSeconds: Double,
+    val cadenceSPM: Double,
+    val amplitudeCm: Double,
+    val gctMs: Double,
+    val trunkLeanDeg: Double
+)
+
+/**
+ * A GPS / path coordinate for the map trace.
+ */
+data class PathCoordinate(
+    val lat: Double,
+    val lng: Double
+)
+
+/**
+ * A coach prompt that occurred during the session, with its timestamp
+ * for overlay on the timeline chart.
+ */
+data class SessionCoachPrompt(
+    @SerializedName("elapsed_seconds") val elapsedSeconds: Double,
+    val text: String,
+    val category: String,    // "cadence", "verticalOscillation", "groundContactTime", "trunkLean", "general"
+    val priority: Int
+)
+
+/**
+ * Full session detail returned by GET /sessions/{id}.
+ * Contains time-series arrays and path coordinates for replay.
+ */
+data class RunSessionDetail(
+    val id: String,
+    @SerializedName("created_at") val createdAt: Long,
+    @SerializedName("duration_seconds") val durationSeconds: Double,
+    @SerializedName("distance_km") val distanceKm: Double,
+    @SerializedName("avg_cadence_spm") val avgCadenceSPM: Double,
+    @SerializedName("avg_amplitude_cm") val avgAmplitudeCm: Double,
+    @SerializedName("avg_gct_ms") val avgGCTMs: Double,
+    @SerializedName("avg_trunk_lean_deg") val avgTrunkLeanDeg: Double = 0.0,
+    // ── Time-series arrays (parallel, same length) ──
+    @SerializedName("elapsed_seconds_array") val elapsedSecondsArray: List<Double> = emptyList(),
+    @SerializedName("cadence_array") val cadenceArray: List<Double> = emptyList(),
+    @SerializedName("amplitude_array") val amplitudeArray: List<Double> = emptyList(),
+    @SerializedName("gct_array") val gctArray: List<Double> = emptyList(),
+    @SerializedName("trunk_lean_array") val trunkLeanArray: List<Double> = emptyList(),
+    // ── Path / map data ──
+    @SerializedName("path_coordinates") val pathCoordinates: List<PathCoordinate> = emptyList(),
+    // ── Coach prompts during session ──
+    @SerializedName("coach_prompts") val coachPrompts: List<SessionCoachPrompt> = emptyList()
+) {
+    /** Build a list of [ReplayDataPoint]s from the parallel arrays. */
+    val dataPoints: List<ReplayDataPoint>
+        get() {
+            val n = minOf(
+                elapsedSecondsArray.size,
+                cadenceArray.size,
+                amplitudeArray.size,
+                gctArray.size,
+                trunkLeanArray.size
+            )
+            return (0 until n).map { i ->
+                ReplayDataPoint(
+                    elapsedSeconds = elapsedSecondsArray[i],
+                    cadenceSPM = cadenceArray[i],
+                    amplitudeCm = amplitudeArray[i],
+                    gctMs = gctArray[i],
+                    trunkLeanDeg = trunkLeanArray[i]
+                )
+            }
+        }
+
+    /** Total number of data points. */
+    val dataPointCount: Int get() = dataPoints.size
+}

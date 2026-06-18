@@ -2,6 +2,7 @@
 
 struct PlanBuilderView: View {
     @EnvironmentObject private var appStore: AppStore
+    @Binding var selectedTab: Int
     @State private var currentWeeklyKmText = "20"
     @State private var weeklyKmEditedByUser = false
     @State private var suppressWeeklyKmTracking = false
@@ -45,6 +46,7 @@ struct PlanBuilderView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
                         introCard
+                        weeklyRecheckCard
                         if appStore.manualNextWeekPlan != nil {
                             manualWeekPreviewCard
                         }
@@ -338,6 +340,43 @@ struct PlanBuilderView: View {
         let delta = target - current
         let sign = delta >= 0 ? "+" : ""
         return String(format: "%@%.1f km", sign, delta)
+    }
+
+    // MARK: - Adjustment 4: Weekly form recheck card (shows on Mondays)
+    private var isMonday: Bool {
+        Calendar.current.component(.weekday, from: Date()) == 2 // Sunday=1, Monday=2
+    }
+
+    private var weeklyRecheckCard: some View {
+        Group {
+            if isMonday {
+                DarkCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 12) {
+                            IconBubble(systemImage: "figure.run.circle.fill", gradient: AppTheme.warmGradient, size: 44)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("plan.recheck.title")
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                Text("plan.recheck.body")
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.68))
+                            }
+                        }
+                        Button {
+                            selectedTab = 0 // Navigate to Analyze tab
+                        } label: {
+                            HStack {
+                                Label(String(localized: "plan.recheck.button"), systemImage: "arrow.right.circle.fill")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                            }
+                        }
+                        .buttonStyle(SecondaryButtonStyle())
+                    }
+                }
+            }
+        }
     }
 
     private var introCard: some View {

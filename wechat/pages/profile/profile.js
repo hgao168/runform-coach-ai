@@ -1,5 +1,7 @@
 // pages/profile/profile.js
 const storage = require('../../utils/storage')
+const auth = require('../../utils/auth')
+const api = require('../../utils/api')
 const { t, isZh } = require('../../utils/i18n')
 
 const LEVEL_OPTIONS = [
@@ -45,6 +47,15 @@ Page({
       legLengthLabel: t('legLengthLabel'),
       shoeBrandModelLabel: t('shoeBrandModelLabel'),
       saveProfile: t('saveProfile'),
+      authTitle: t('authTitle'),
+      authSubtitle: t('authSubtitle'),
+      authLoggedIn: t('authLoggedIn'),
+      authNotLoggedIn: t('authNotLoggedIn'),
+      useWechatLogin: t('useWechatLogin'),
+      wechatLoginSuccess: t('wechatLoginSuccess'),
+      wechatLoginFailed: t('wechatLoginFailed'),
+      chooseAvatar: t('chooseAvatar'),
+      linkedAccount: t('linkedAccount'),
     },
 
     form: {
@@ -60,11 +71,19 @@ Page({
       shoeSize: '',
       legLengthCm: '',
       shoeBrandModel: '',
+      avatarUrl: '',
+      wechatOpenId: '',
+      wechatUnionId: '',
+      isWechatRegistered: false,
     },
 
     avatarInitial: '?',
     displayName: '跑步者',
     levelLabel: LEVEL_LABELS['intermediate'],
+    isZh,
+    authLoggedIn: false,
+    authLoading: false,
+    maskedOpenId: '',
 
     levelOptions: LEVEL_OPTIONS,
     goalOptions: GOAL_OPTIONS,
@@ -76,7 +95,12 @@ Page({
     if (saved) {
       this.setData({ form: { ...this.data.form, ...saved } })
     }
+    this._syncAuthState()
     this._updateDisplay()
+  },
+
+  onShow() {
+    this._syncAuthState()
   },
 
   onInput(e) {
@@ -84,6 +108,12 @@ Page({
     const form = { ...this.data.form, [key]: e.detail.value }
     this.setData({ form })
     this._updateDisplay()
+  },
+
+  onChooseAvatar(e) {
+    const avatarUrl = e.detail && e.detail.avatarUrl
+    if (!avatarUrl) return
+    this.setData({ 'form.avatarUrl': avatarUrl })
   },
 
   onKmChange(e) {
@@ -125,8 +155,70 @@ Page({
     })
   },
 
+  _syncAuthState() {
+    const currentAuth = auth.getAuth()
+    this.setData({
+      authLoggedIn: !!(currentAuth && currentAuth.openid),
+      maskedOpenId: currentAuth && currentAuth.openid ? auth.maskOpenId(currentAuth.openid) : '',
+    })
+  },
+
+  useWechatLogin() {
+    if (this.data.authLoading) return
+    this.setData({ authLoading: true })
+
+    auth.loginWithWeChat(true)
+      .then((wechatAuth) => {
+        const form = {
+          ...this.data.form,
+          wechatOpenId: wechatAuth.openid || '',
+          wechatUnionId: wechatAuth.unionid || '',
+          isWechatRegistered: true,
+        }
+        this.setData({
+          form,
+          authLoggedIn: true,
+          authLoading: false,
+          maskedOpenId: auth.maskOpenId(wechatAuth.openid),
+        })
+        storage.saveProfile(form)
+        this._syncProfileToBackend(form, wechatAuth.userId)
+        wx.showToast({ title: t('wechatLoginSuccess'), icon: 'success' })
+      })
+      .catch((err) => {
+        console.error('[profile] WeChat login failed:', err)
+        this.setData({ authLoading: false })
+        wx.showModal({
+          title: t('error'),
+          content: t('wechatLoginFailed'),
+          showCancel: false,
+        })
+      })
+  },
+
   saveProfile() {
-    storage.saveProfile(this.data.form)
+    const currentAuth = auth.getAuth()
+    const form = {
+      ...this.data.form,
+      wechatOpenId: currentAuth?.openid || this.data.form.wechatOpenId || '',
+      wechatUnionId: currentAuth?.unionid || this.data.form.wechatUnionId || '',
+      isWechatRegistered: !!(currentAuth?.openid || this.data.form.wechatOpenId),
+    }
+    this.setData({ form })
+    storage.saveProfile(form)
+    this._syncProfileToBackend(form, currentAuth?.userId)
     wx.showToast({ title: t('profileSaved'), icon: 'success' })
+  },
+
+  _syncProfileToBackend(form, userId) {
+    api.saveProfile(form, userId)
+      .catch((err) => {
+        console.warn('[profile] Backend profile sync failed:', err.message)
+      })
+  },
+
+  // RF-604: Navigate to UGC submissions
+  goUgc() {
+    wx.navigateTo({ url: '/pages/ugc/ugc' })
   },
 })

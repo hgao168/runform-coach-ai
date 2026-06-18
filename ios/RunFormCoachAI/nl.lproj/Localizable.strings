@@ -10,10 +10,11 @@
 "Manual Week Plan" = "Handmatig weekplan";
 "Saved Plans" = "Opgeslagen plannen";
 
-/* Analyze tab - hero */
-"AI Running Form Coach" = "AI Loopvorm Coach";
-"Unlock Your Speed with a Better Form" = "Verbeter je looptechniek en verhoog je snelheid";
-"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "Upload een korte clip voor nauwkeurige feedback, efficiëntiemetrieken en gerichte training.";
+/* Analyze tab - hero (Adjustment 5: injury-prevention messaging) */
+"AI Running Form Coach" = "AI Blessurepreventie Loopcoach";
+"Unlock Your Speed with a Better Form" = "Hardlopen is geen zelfbeschadiging — voorkom eerst blessures";
+"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "Upload een korte clip voor blessurerisicofeedback, techniekmetrieken en preventiegerichte training.";
+"injury.tagline" = "Hardlopen is geen zelfbeschadiging — je AI-blessurecoach ziet elke stap.";
 
 /* Analyze tab - video card */
 "Running clip" = "Loopvideo";
@@ -159,9 +160,31 @@
 "Injury note" = "Blessureopmerking";
 "Optional" = "Optioneel";
 "Save Profile" = "Profiel opslaan";
+"profile.email.required" = "E-mailadres is verplicht om je profiel op te slaan.";
+"profile.email.invalid" = "Voer een geldig e-mailadres in.";
+"profile.save.failed %@" = "Profiel opslaan mislukt: %@";
 "Why this matters" = "Waarom dit belangrijk is";
 "Better coaching needs context" = "Betere coaching heeft context nodig";
 "RunForm stores this locally and uses it to understand tester feedback. Future versions can use it to personalize running plans and strength recommendations." = "RunForm slaat dit lokaal op en gebruikt het om testerfeedback te begrijpen. Toekomstige versies kunnen het gebruiken om loopplannen en krachtaanbevelingen te personaliseren.";
+"Login" = "Inloggen";
+"Register" = "Registreren";
+"auth.card.title" = "Account";
+"auth.card.subtitle" = "Log in met RunForm of Google";
+"auth.password" = "Wachtwoord";
+"auth.password.required" = "Wachtwoord is verplicht.";
+"auth.runform_login" = "Inloggen met RunForm";
+"auth.runform_register" = "RunForm-account aanmaken";
+"auth.google.sign_in" = "Inloggen met Google";
+"auth.google.signing_in" = "Bezig met inloggen...";
+"auth.google.no_presenter" = "Kan Google-login niet tonen.";
+"auth.google.client_id_missing" = "Google iOS-client-ID ontbreekt in buildinstellingen.";
+"auth.google.missing_token" = "Google-login gaf geen access token terug.";
+"auth.login.success" = "Succesvol ingelogd.";
+"auth.email_verification.pending" = "Ingelogd. Controleer je e-mail en tik op de verificatielink om je account te bevestigen.";
+"auth.login.failed %@" = "Inloggen mislukt: %@";
+"auth.sign_off" = "Afmelden";
+"auth.signed_off" = "Afgemeld.";
+"auth.signed_in_as %@" = "Ingelogd als %@";
 
 /* Feedback view */
 "Tester Feedback" = "Testerfeedback";
@@ -251,3 +274,61 @@
 "Best" = "Beste";
 "Good" = "Goed";
 "Limited" = "Beperkt";
+
+/* Adjustment 2: Share card "旧片考古" template */
+"share.archaeology.button" = "Deel je loopanalyse";
+"share.archaeology.title_default" = "Mijn loopvorm is net geanalyseerd door AI-archeologie — %lld problemen gevonden";
+"share.archaeology.subtitle_default" = "Kan jouw loopvorm de AI-archeologie doorstaan?";
+"share.archaeology.title_race %@" = "Mijn %@ loopvorm is net geanalyseerd door AI-archeologie";
+"share.archaeology.subtitle_race %lld" = "%lld vormproblemen gevonden — Is jouw vorm klaar voor AI-archeologie?";
+
+/* Share card: full report sections */
+"share.report.score" = "Vorm Score:";
+"share.report.metrics" = "Bewegingsindicatoren:";
+"share.report.issues" = "Kracht Focus";
+"share.report.download" = "Download RunForm AI in de App Store:";
+
+/* Adjustment 3: Injury-prevention narratives */
+"injury.cadence_low %@" = "%@ → Lage cadans kan knie-impact vergroten. Voeg een cadansdrill-dag toe aan je training.";
+"injury.gct_high %@" = "%@ → Lange grondcontacttijd verhoogt remkrachten en blessurerisico. Focus op korter contact.";
+"injury.knee_risk %@" = "%@ → Knie-instabiliteit kan leiden tot IT-band of patellaire problemen. Doe heupversterkende oefeningen.";
+"injury.trunk_lean %@" = "%@ → Overmatig voorover leunen belast onderrug en hamstrings. Werk aan rechte houding.";
+"injury.overstride %@" = "%@ → Overstap vergroot impact op knieën en schenen. Verkort je pas en land onder je heupen.";
+"injury.hip_drop %@" = "%@ → Heupdaling kan IT-band syndroom en kniepijn veroorzaken. Versterk gluteus medius.";
+
+/* Strava profile card */
+"strava.card.title" = "Verbind Strava";
+"strava.card.subtitle" = "Neem wekelijkse trainingsbelasting mee in toekomstige plannen";
+"strava.auth_required" = "Log eerst in om Strava te koppelen en te synchroniseren.";
+"strava.card.privacy" = "Strava-gegevens worden alleen gebruikt voor coaching en planopbouw. Ze worden niet gebruikt om AI-modellen te trainen.";
+"strava.card.checking" = "Strava-verbinding controleren...";
+"strava.badge.connected" = "Verbonden";
+"strava.connected.title" = "Verbonden met Strava";
+"strava.athlete.id %@" = "Atleet-ID: %@";
+"strava.scopes %@" = "Scopes: %@";
+"strava.last_sync %@" = "Laatst gesynchroniseerd: %@";
+"strava.last_refresh %@" = "Laatst vernieuwd: %@";
+"strava.last_refresh.unavailable" = "Laatst vernieuwd: nog niet beschikbaar";
+"strava.button.sync" = "Runs synchroniseren vanuit Strava";
+"strava.button.syncing" = "Runs worden gesynchroniseerd...";
+"strava.button.disconnect" = "Strava ontkoppelen";
+"strava.disconnected.body" = "Verbind Strava om je wekelijkse trainingsbelasting mee te nemen in toekomstige plansuggesties.";
+"strava.button.connect" = "Verbind Strava";
+"strava.button.connecting" = "Verbinden...";
+"strava.status.connected" = "Strava verbonden.";
+"strava.status.cancelled" = "Strava-aanmelding geannuleerd.";
+"strava.sync.success %lld" = "%lld run(s) gesynchroniseerd vanuit Strava.";
+"strava.sync.success %lld %lld" = "%lld run(s) gesynchroniseerd en %lld weken Strava-status bijgewerkt.";
+"strava.error.status %@" = "Kan Strava-status niet controleren. %@";
+"strava.error.start" = "Kan Strava-aanmelding niet starten. Probeer opnieuw.";
+"strava.error.open %@" = "Kan Strava-aanmelding niet openen. %@";
+"strava.error.signin %@" = "Strava-aanmelding mislukt. %@";
+"strava.error.callback_missing" = "Strava-aanmelding gaf geen callback-URL terug.";
+"strava.error.oauth %@" = "Strava-aanmelding mislukt: %@";
+"strava.error.disconnect %@" = "Strava ontkoppelen mislukt. %@";
+"strava.error.sync %@" = "Strava-runs synchroniseren mislukt. %@";
+
+/* Adjustment 4: Weekly form recheck card */
+"plan.recheck.title" = "Wekelijkse looptechniek-check";
+"plan.recheck.body" = "Het is maandag — tijd om je loopvorm opnieuw te analyseren. Upload een nieuwe video om te vergelijken met vorige week.";
+"plan.recheck.button" = "Ga naar Analyse-tab";

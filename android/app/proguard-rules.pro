@@ -1,4 +1,4 @@
-# ── RF-214: R8 / ProGuard rules for RunForm Coach AI ────────────────────────
+# ── RF-214: R8 / ProGuard rules for RunForm Injury Prevention Coach ────────
 
 # ── Retrofit / OkHttp ─────────────────────────────────────────────────────────
 -keepattributes Signature

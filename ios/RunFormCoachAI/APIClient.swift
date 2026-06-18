@@ -3,6 +3,7 @@ import Foundation
 final class APIClient {
     static let shared = APIClient()
     private static let defaultStravaBackendBaseURL = "https://runform-coach-ai-production.up.railway.app"
+    private static let defaultAuthFallbackBaseURL = "https://runform-coach-ai-staging.up.railway.app"
     private static let maxRetries = 2
     private static let baseRetryDelay: TimeInterval = 0.5
 
@@ -23,15 +24,25 @@ final class APIClient {
            let url = URL(string: urlString) {
             return url
         }
-        if let defaultURL = URL(string: defaultStravaBackendBaseURL) {
-            return defaultURL
-        }
         if let fallback = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
            !fallback.isEmpty,
            let fallbackURL = URL(string: fallback) {
             return fallbackURL
         }
+        if let defaultURL = URL(string: defaultStravaBackendBaseURL) {
+            return defaultURL
+        }
         throw APIError.configuration("BACKEND_BASE_URL is not configured. Check project.yml build settings.")
+    }
+
+    /// Resolved auth base URL with optional explicit override.
+    private static func resolvedAuthBaseURL() throws -> URL {
+        if let urlString = Bundle.main.object(forInfoDictionaryKey: "AUTH_BACKEND_BASE_URL") as? String,
+           !urlString.isEmpty,
+           let url = URL(string: urlString) {
+            return url
+        }
+        return try resolvedBaseURL()
     }
 
     // MARK: - Retry policy
@@ -62,7 +73,7 @@ final class APIClient {
     func analyzeMetrics(_ metrics: PoseMetrics) async throws -> AnalysisResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("analyze-metrics")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -78,11 +89,13 @@ final class APIClient {
         }
     }
 
-    func fetchStravaConnectResponse(iosUserID: String) async throws -> StravaConnectResponse {
-        try await requestStrava(
+    func fetchStravaConnectResponse(iosUserID: String, appCallbackURL: String? = nil) async throws -> StravaConnectResponse {
+        let queryItems = appCallbackURL.map { [URLQueryItem(name: "app_callback_url", value: $0)] } ?? []
+        return try await requestStrava(
             path: "connect",
             method: "GET",
             iosUserID: iosUserID,
+            queryItems: queryItems,
             notFoundMessage: "Strava connect route not found",
             exhaustedMessage: "Unable to load Strava connect URL from available backends."
         )
@@ -132,7 +145,7 @@ final class APIClient {
             throw APIError.configuration("Failed to build Strava summary URL.")
         }
 
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "GET"
             request.timeoutInterval = 20
@@ -150,7 +163,7 @@ final class APIClient {
     func analyzeVideo(fileURL: URL) async throws -> AnalysisResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("analyze")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.timeoutInterval = 60
@@ -162,7 +175,7 @@ final class APIClient {
             let filename = fileURL.lastPathComponent.isEmpty ? "running-video.mov" : fileURL.lastPathComponent
             let mimeType = filename.lowercased().hasSuffix(".mp4") ? "video/mp4" : "video/quicktime"
 
-            request.httpBody = makeMultipartBody(
+            request.httpBody = self.makeMultipartBody(
                 fieldName: "video",
                 filename: filename,
                 mimeType: mimeType,
@@ -182,7 +195,7 @@ final class APIClient {
     func generateTrainingPlan(input: TrainingPlanInput) async throws -> TrainingPlanResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("training-plan")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -202,7 +215,7 @@ final class APIClient {
     func fetchAthletes() async throws -> [AthleteListItem] {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("athletes")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "GET"
             request.timeoutInterval = 20
@@ -218,8 +231,8 @@ final class APIClient {
 
     func compareWithAthlete(athleteId: String, metrics: PoseMetrics) async throws -> CompareResponse {
         let baseURL = try Self.resolvedBaseURL()
-        let endpoint = baseURL.appendingPathComponent("compare")
-        return try await Self.withRetry {
+        let endpoint = baseURL.appendingPathComponent("api/v1/compare")
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -240,8 +253,8 @@ final class APIClient {
 
     func fetchSessions() async throws -> [RunSessionResponse] {
         let baseURL = try Self.resolvedBaseURL()
-        let endpoint = baseURL.appendingPathComponent("sessions")
-        return try await Self.withRetry {
+        let endpoint = baseURL.appendingPathComponent("api/v1/sessions")
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "GET"
             request.timeoutInterval = 20
@@ -260,7 +273,7 @@ final class APIClient {
     func saveProfile(iosUserID: String, profile: TesterProfile) async throws -> ProfileSaveResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("profile")
-        return try await Self.withRetry {
+        return try await Self.withRetry { [self] in
             var request = URLRequest(url: endpoint)
             request.httpMethod = "PUT"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -286,7 +299,8 @@ final class APIClient {
                 shoeBrandModel: profile.shoeBrandModel.isEmpty ? nil : profile.shoeBrandModel,
                 legLengthCm: profile.legLengthCm,
                 dateOfBirth: profile.dateOfBirth.map { dateFormatter.string(from: $0) },
-                weeklyExerciseHours: profile.weeklyExerciseHours
+                weeklyExerciseHours: profile.weeklyExerciseHours,
+                email: profile.email.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             request.httpBody = try JSONEncoder().encode(payload)
 
@@ -297,6 +311,50 @@ final class APIClient {
             }
             return try JSONDecoder().decode(ProfileSaveResponse.self, from: data)
         }
+    }
+
+    func register(email: String, password: String, name: String?) async throws -> AuthResponse {
+        let payload = RegisterRequest(
+            email: email,
+            password: password,
+            name: name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : name
+        )
+        return try await requestAuth(
+            path: "register",
+            payload: payload,
+            notFoundMessage: "Auth register route not found",
+            exhaustedMessage: "Unable to reach auth service from available backends."
+        )
+    }
+
+    func login(email: String, password: String) async throws -> AuthResponse {
+        let payload = LoginRequest(email: email, password: password)
+        return try await requestAuth(
+            path: "login",
+            payload: payload,
+            notFoundMessage: "Auth login route not found",
+            exhaustedMessage: "Unable to reach auth service from available backends."
+        )
+    }
+
+    func googleAuth(accessToken: String) async throws -> AuthResponse {
+        let payload = GoogleAuthRequest(accessToken: accessToken)
+        return try await requestAuth(
+            path: "google",
+            payload: payload,
+            notFoundMessage: "Auth google route not found",
+            exhaustedMessage: "Unable to reach auth service from available backends."
+        )
+    }
+
+    func requestPasswordReset(email: String) async throws -> PasswordResetRequestResponse {
+        let payload = PasswordResetRequest(email: email)
+        return try await requestAuth(
+            path: "forgot-password",
+            payload: payload,
+            notFoundMessage: "Auth forgot-password route not found",
+            exhaustedMessage: "Unable to reach auth service from available backends."
+        )
     }
 
     // MARK: - Private helpers
@@ -317,10 +375,15 @@ final class APIClient {
         return body
     }
 
-    private func stravaEndpoint(path: String, iosUserID: String, baseURL: URL? = nil) throws -> URL {
+    private func stravaEndpoint(
+        path: String,
+        iosUserID: String,
+        baseURL: URL? = nil,
+        queryItems: [URLQueryItem] = []
+    ) throws -> URL {
         let resolvedBaseURL = try baseURL ?? Self.resolvedStravaBaseURL()
         var components = URLComponents(url: resolvedBaseURL.appendingPathComponent("integrations/strava").appendingPathComponent(path), resolvingAgainstBaseURL: false)
-        components?.queryItems = [URLQueryItem(name: "ios_user_id", value: iosUserID)]
+        components?.queryItems = [URLQueryItem(name: "ios_user_id", value: iosUserID)] + queryItems
         guard let url = components?.url else {
             throw APIError.configuration("Failed to build Strava API URL for path: \(path)")
         }
@@ -329,10 +392,28 @@ final class APIClient {
 
     private func stravaBaseURLCandidates() throws -> [URL] {
         var candidates: [URL] = [try Self.resolvedStravaBaseURL()]
+        candidates.append(try Self.resolvedBaseURL())
         if let productionURL = URL(string: Self.defaultStravaBackendBaseURL) {
             candidates.append(productionURL)
         }
+
+        var seen = Set<String>()
+        return candidates.filter { candidate in
+            let key = candidate.absoluteString.lowercased()
+            if seen.contains(key) {
+                return false
+            }
+            seen.insert(key)
+            return true
+        }
+    }
+
+    private func authBaseURLCandidates() throws -> [URL] {
+        var candidates: [URL] = [try Self.resolvedAuthBaseURL()]
         candidates.append(try Self.resolvedBaseURL())
+        if let stagingURL = URL(string: Self.defaultAuthFallbackBaseURL) {
+            candidates.append(stagingURL)
+        }
 
         var seen = Set<String>()
         return candidates.filter { candidate in
@@ -352,6 +433,7 @@ final class APIClient {
         path: String,
         method: String,
         iosUserID: String,
+        queryItems: [URLQueryItem] = [],
         body: [String: Any]? = nil,
         timeout: TimeInterval = 20,
         notFoundMessage: String,
@@ -360,7 +442,12 @@ final class APIClient {
         var lastError: APIError?
         let candidates = try stravaBaseURLCandidates()
         for candidateBaseURL in candidates {
-            let endpoint = try stravaEndpoint(path: path, iosUserID: iosUserID, baseURL: candidateBaseURL)
+            let endpoint = try stravaEndpoint(
+                path: path,
+                iosUserID: iosUserID,
+                baseURL: candidateBaseURL,
+                queryItems: queryItems
+            )
             var request = URLRequest(url: endpoint)
             request.httpMethod = method
             request.timeoutInterval = timeout
@@ -383,6 +470,74 @@ final class APIClient {
             lastError = .server(String(data: data, encoding: .utf8) ?? notFoundMessage)
         }
         throw lastError ?? APIError.server(exhaustedMessage)
+    }
+
+    /// Generic auth request with backend-URL fallback. Falls through on 404 so
+    /// auth can still function if the primary backend is temporarily missing auth routes.
+    private func requestAuth<T: Decodable, P: Encodable>(
+        path: String,
+        payload: P,
+        notFoundMessage: String,
+        exhaustedMessage: String
+    ) async throws -> T {
+        var lastError: APIError?
+        let candidates = try authBaseURLCandidates()
+        for candidateBaseURL in candidates {
+            let endpoint = candidateBaseURL.appendingPathComponent("api/v1/auth").appendingPathComponent(path)
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 20
+            request.httpBody = try JSONEncoder().encode(payload)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                continue
+            }
+            if (200..<300).contains(http.statusCode) {
+                return try JSONDecoder().decode(T.self, from: data)
+            }
+
+            let message = Self.extractServerMessage(from: data, fallback: "Bad server response")
+            // For auth, user/action errors should surface immediately. Route-not-found
+            // and backend outages should fall through to the next candidate backend.
+            if http.statusCode == 400 || http.statusCode == 401 || http.statusCode == 403 || http.statusCode == 409 {
+                throw APIError.server(message)
+            }
+            if http.statusCode != 404 && !(500...599).contains(http.statusCode) {
+                throw APIError.server(message)
+            }
+            lastError = .server(message.isEmpty ? notFoundMessage : message)
+        }
+        throw lastError ?? APIError.server(exhaustedMessage)
+    }
+
+    private static func extractServerMessage(from data: Data, fallback: String) -> String {
+        guard !data.isEmpty else { return fallback }
+
+        struct ErrorBody: Decodable {
+            let detail: String?
+            let message: String?
+            let error: String?
+        }
+
+        if let parsed = try? JSONDecoder().decode(ErrorBody.self, from: data) {
+            if let detail = parsed.detail?.trimmingCharacters(in: .whitespacesAndNewlines), !detail.isEmpty {
+                return detail
+            }
+            if let message = parsed.message?.trimmingCharacters(in: .whitespacesAndNewlines), !message.isEmpty {
+                return message
+            }
+            if let error = parsed.error?.trimmingCharacters(in: .whitespacesAndNewlines), !error.isEmpty {
+                return error
+            }
+        }
+
+        let raw = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let raw, !raw.isEmpty {
+            return raw
+        }
+        return fallback
     }
 }
 

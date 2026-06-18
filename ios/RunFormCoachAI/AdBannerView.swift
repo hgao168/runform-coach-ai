@@ -1,4 +1,5 @@
 import SwiftUI
+#if canImport(GoogleMobileAds)
 import GoogleMobileAds
 
 /// SwiftUI wrapper for GADBannerView using UIViewRepresentable.
@@ -23,7 +24,6 @@ struct AdBannerView: UIViewRepresentable {
         let rootViewController: UIViewController
 
         override init() {
-            // Acquire the topmost presented view controller as root for the banner
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let root = windowScene.windows.first?.rootViewController {
                 self.rootViewController = root
@@ -37,9 +37,7 @@ struct AdBannerView: UIViewRepresentable {
 // MARK: - Ad Unit IDs
 
 extension AdBannerView {
-    /// Google-provided test banner ad unit ID (safe for development / TestFlight testing).
     static let testAdUnitID = "ca-app-pub-3940256099942544/2934735716"
-
-    /// Production banner ad unit ID — replace with real ID from AdMob dashboard before release.
     static let productionAdUnitID = "ca-app-pub-XXXXXXXX/XXXXXXXX"
 }
+#endif

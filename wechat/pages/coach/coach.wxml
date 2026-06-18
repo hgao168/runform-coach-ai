@@ -1,0 +1,149 @@
+<!-- pages/coach/coach.wxml -->
+<!-- RF-602: WeChat 教练面板 MVP -->
+<view class="coach-page">
+
+  <!-- Mode Switch -->
+  <view class="mode-switch">
+    <view
+      class="mode-tab {{mode === 'coach' ? 'active' : ''}}"
+      data-mode="coach"
+      bindtap="switchMode"
+    >{{i.coachMode || '教练模式'}}</view>
+    <view
+      class="mode-tab {{mode === 'student' ? 'active' : ''}}"
+      data-mode="student"
+      bindtap="switchMode"
+    >{{i.studentMode || '学员模式'}}</view>
+  </view>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- COACH MODE -->
+  <!-- ════════════════════════════════════════ -->
+  <block wx:if="{{mode === 'coach'}}">
+
+    <!-- Coach Code Card -->
+    <view class="card coach-code-card">
+      <view class="code-label">{{i.myCoachCode || '我的教练码'}}</view>
+      <view class="code-display">
+        <text wx:if="{{coachCode}}" class="code-text">{{coachCode}}</text>
+        <text wx:else class="code-text code-placeholder">--------</text>
+      </view>
+      <view class="code-actions">
+        <button class="btn-copy" bindtap="copyCoachCode" loading="{{coachCodeLoading}}">
+          {{coachCodeLoading ? (i.generatingCode || '...') : (coachCode ? (i.copyCoachCode || '复制教练码') : '生成教练码')}}
+        </button>
+        <button wx:if="{{coachCode}}" class="btn-share" open-type="share" bindtap="shareCoachCode">
+          {{i.shareCoachCode || '分享教练码'}}
+        </button>
+      </view>
+    </view>
+
+    <!-- Dashboard Overview -->
+    <view wx:if="{{dashboard || students.length > 0}}" class="card dashboard-card">
+      <view class="section-title">{{i.coachDashboard || '数据概览'}}</view>
+      <view class="dashboard-grid">
+        <view class="dash-item">
+          <text class="dash-value">{{dashboard ? (dashboard.total_students || dashboard.totalStudents || students.length) : students.length}}</text>
+          <text class="dash-label">{{i.totalStudents || '学员总数'}}</text>
+        </view>
+        <view class="dash-item">
+          <text class="dash-value accent">{{dashboard ? ((dashboard.avg_score || dashboard.avgScore) | 0) || '--' : '--'}}</text>
+          <text class="dash-label">{{i.avgScore || '平均评分'}}</text>
+        </view>
+        <view class="dash-item">
+          <text class="dash-value">{{dashboard ? (dashboard.active_count || dashboard.activeCount || 0) : 0}}</text>
+          <text class="dash-label">{{i.activeStudents || '最近活跃'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Students List -->
+    <view class="section-header">
+      <text class="section-title">{{i.coachStudents || '学员管理'}} ({{students.length}})</text>
+      <text class="refresh-link" bindtap="refresh">{{i.refreshBtn || '刷新'}}</text>
+    </view>
+
+    <block wx:if="{{students.length > 0}}">
+      <view class="student-list">
+        <view class="student-item" wx:for="{{students}}" wx:key="index">
+          <view class="student-avatar">{{item.avatarText}}</view>
+          <view class="student-info">
+            <text class="student-name">{{item.displayName}}</text>
+            <view class="student-meta">
+              <text class="student-stat">
+                <text class="meta-label">{{i.studentCadence || '步频'}}: </text>
+                <text class="meta-value">{{item.cadence > 0 ? item.cadence + ' spm' : '--'}}</text>
+              </text>
+              <text class="student-stat">
+                <text class="meta-label">{{i.studentFormScore || '评分'}}: </text>
+                <text class="meta-value accent">{{item.formScore > 0 ? item.formScore : '--'}}</text>
+              </text>
+            </view>
+          </view>
+          <text class="student-date">{{item.joinedAt || ''}}</text>
+        </view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="empty-state">
+        <text class="empty-icon">🏃</text>
+        <text class="empty-title">{{i.noStudentsYet || '暂无学员'}}</text>
+        <text class="empty-sub">{{i.noStudentsYetSub || '分享你的教练码，邀请学员加入'}}</text>
+      </view>
+    </block>
+
+  </block>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- STUDENT MODE -->
+  <!-- ════════════════════════════════════════ -->
+  <block wx:if="{{mode === 'student'}}">
+
+    <!-- Join Coach Card -->
+    <view class="card join-card">
+      <view class="join-row">
+        <input
+          class="join-input"
+          placeholder="{{i.coachCodePlaceholder || '输入教练码加入'}}"
+          value="{{joinCodeInput}}"
+          bindinput="onJoinCodeInput"
+          maxlength="20"
+        />
+        <button class="btn-join" bindtap="joinCoachByCode" loading="{{joinLoading}}">
+          {{i.joinCoachBtn || '加入教练'}}
+        </button>
+      </view>
+    </view>
+
+    <!-- Joined Coaches List -->
+    <view class="section-header">
+      <text class="section-title">{{i.coachJoinedList || '已加入的教练'}}</text>
+    </view>
+
+    <block wx:if="{{joinedCoaches.length > 0}}">
+      <view class="coach-joined-list">
+        <view class="joined-item" wx:for="{{joinedCoaches}}" wx:key="code">
+          <view class="joined-icon">🧑‍🏫</view>
+          <view class="joined-info">
+            <text class="joined-code">{{item.code}}</text>
+            <text class="joined-date">{{i.studentJoinedDate || '加入日期'}}: {{item.joinedAt || ''}}</text>
+          </view>
+          <view class="joined-arrow">›</view>
+        </view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="empty-state">
+        <text class="empty-icon">🔍</text>
+        <text class="empty-title">{{i.noCoachJoined || '暂未加入任何教练'}}</text>
+        <text class="empty-sub">{{i.noCoachJoinedSub || '输入教练码加入教练，查看你的跑姿数据'}}</text>
+      </view>
+    </block>
+
+  </block>
+
+  <!-- Bottom spacer -->
+  <view style="height: 60rpx;"></view>
+</view>

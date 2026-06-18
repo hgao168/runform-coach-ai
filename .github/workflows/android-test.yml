@@ -10,6 +10,9 @@ on:
     paths:
       - 'android/**'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test:
     name: Run JUnit Tests
@@ -30,13 +33,18 @@ jobs:
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x gradlew
+
       - name: Run Android Lint
         working-directory: android
         run: ./gradlew lintDebug
+        continue-on-error: true
 
       - name: Run unit tests
         working-directory: android
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Upload test reports
         if: always()

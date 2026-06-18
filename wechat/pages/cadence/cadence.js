@@ -91,6 +91,7 @@ Page({
     if (!this.data.isRunning) return
 
     const result = cadence.stopCadenceDetection()
+    const confidencePercent = result ? Math.round(result.confidence * 100) : 0
     this.setData({
       isRunning: false,
       cadence: result ? result.cadence : this.data.cadence,
@@ -98,6 +99,7 @@ Page({
       totalSteps: result ? result.totalSteps : this.data.totalSteps,
       elapsedSec: result ? result.elapsedSec : this.data.elapsedSec,
       finalResult: result,
+      confidencePercent,
     })
   },
 })

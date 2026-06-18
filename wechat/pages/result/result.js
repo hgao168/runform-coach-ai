@@ -1,6 +1,7 @@
 // pages/result/result.js
 const api = require('../../utils/api')
-const { t, isZh, backendLang, getVideoSearchUrl } = require('../../utils/i18n')
+const { t, isZh, backendLang, getVideoSearchUrl, isChina } = require('../../utils/i18n')
+const { getBestVideoUrl } = require('../../utils/exercise-video-map')
 const voiceCoach = require('../../utils/voice-coach')
 const ShareCard = require('../../utils/share-card')
 
@@ -13,9 +14,11 @@ Page({
       metrics: t('metrics'),
       insightsTitle: t('insightsTitle'),
       strengthFocus: t('strengthFocus'),
+      strengthFocusDesc: isZh ? '针对你的跑姿弱点，推荐以下强化训练动作' : 'Targeted strengthening exercises for your form issues',
+      watchTutorial: t('watchTutorial'),
+      tutorialCopied: t('tutorialCopied'),
       noIssues: t('noIssues'),
       compareWithElite: t('compareWithElite'),
-      tutorialCopied: t('tutorialCopied'),
       shareResult: t('shareResult'),
       saveToAlbum: t('saveToAlbum'),
       adWatchTitle: t('adWatchTitle'),
@@ -28,6 +31,10 @@ Page({
       feedbackSubmitted: t('feedbackSubmitted'),
       feedbackSavedOffline: t('feedbackSavedOffline'),
       feedbackSubmitting: t('feedbackSubmitting'),
+      setLabel: t('sets'),
+      repLabel: t('times'),
+      perWeek: t('perWeek'),
+      targetsIssue: isZh ? '针对问题' : 'Targets',
     },
 
     confidenceDisplay: '–',
@@ -37,6 +44,7 @@ Page({
     metrics: [],
     insights: [],
     exercises: [],
+    strengthFocusItems: [],  // merged issues+exercises for iOS-style section
 
     rawResult: null,
 
@@ -69,6 +77,19 @@ Page({
 
     // RF-963: Rewarded video ad
     rewardedAdAvailable: false,
+
+    // RF-604: UGC Content Submission
+    ugcModalVisible: false,
+    ugcPlatform: '',
+    ugcLink: '',
+    ugcNote: '',
+    ugcSubmitting: false,
+    ugcPlatforms: [
+      { key: 'douyin', label: t('ugcPlatformDouyin') },
+      { key: 'bilibili', label: t('ugcPlatformBilibili') },
+      { key: 'xiaohongshu', label: t('ugcPlatformXiaohongshu') },
+      { key: 'pengyouquan', label: t('ugcPlatformPengyouquan') },
+    ],
   },
 
   onLoad() {
@@ -107,7 +128,7 @@ Page({
     const raw = r
 
     // Confidence / overall score
-    const conf = r.confidence_score ?? r.overall_score ?? 0
+    const conf = r.confidence ?? r.confidence_score ?? r.overall_score ?? 0
     const confPct = Math.round(conf * 100)
     let scoreColor = '#00f5a0'
     if (confPct < 40) scoreColor = '#ff4757'
@@ -117,22 +138,52 @@ Page({
     const analysisId = r.id || r.analysis_id || ''
 
     // Form metrics — normalise various backend field shapes
-    const metricNames = r.form_metrics || r.metrics || {}
-    const metrics = Object.entries(metricNames).map(([key, val]) => {
-      const numVal = typeof val === 'number' ? val : (val?.score ?? 0)
-      const pct = Math.round(Math.min(Math.max(numVal, 0), 1) * 100)
-      let color = '#00f5a0'
-      if (pct < 40) color = '#ff4757'
-      else if (pct < 65) color = '#ff9f30'
-      return {
-        label: key.replace(/_/g, ' '),
-        pct,
-        valueText: `${pct}%`,
-        color,
-      }
-    })
+    const rawMetrics = r.form_metrics || r.metrics || {}
+    const isMetricArray = Array.isArray(rawMetrics)
+    const metrics = isMetricArray
+      ? rawMetrics.map((item, i) => {
+          const numVal = typeof item.score === 'number' ? item.score : 0
+          const pct = Math.round(Math.min(Math.max(numVal, 0), 1) * 100)
+          let color = '#00f5a0'
+          if (pct < 40) color = '#ff4757'
+          else if (pct < 65) color = '#ff9f30'
+          return {
+            label: item.name || `#${i + 1}`,
+            pct,
+            valueText: `${pct}%`,
+            color,
+          }
+        })
+      : Object.entries(rawMetrics).map(([key, val]) => {
+          const numVal = typeof val === 'number' ? val : (val?.score ?? 0)
+          const pct = Math.round(Math.min(Math.max(numVal, 0), 1) * 100)
+          let color = '#00f5a0'
+          if (pct < 40) color = '#ff4757'
+          else if (pct < 65) color = '#ff9f30'
+          return {
+            label: key.replace(/_/g, ' '),
+            pct,
+            valueText: `${pct}%`,
+            color,
+          }
+        })
 
-    // Issues / insights
+    // Exercise icon lookup
+    const exerciseIcons = {
+      squat: '🏋️', lunge: '🦵', plank: '🧘', bridge: '🌉', deadlift: '💪',
+      calf: '🦶', hip: '🦿', core: '🎯', balance: '⚖️', stretch: '🤸',
+      mobility: '🔄', strength: '💪', knee: '🦿', ankle: '🦶', shoulder: '💪',
+      default: '🏋️',
+    }
+    const getExerciseIcon = (name) => {
+      const n = (name || '').toLowerCase()
+      for (const [k, v] of Object.entries(exerciseIcons)) {
+        if (n.includes(k)) return v
+      }
+      return exerciseIcons.default
+    }
+
+    // Issues / insights (keep for backward compat: voice coach, share, etc.)
     const issues = r.issues || r.insights || []
     const insights = issues.map((iss) => {
       const sev = (iss.severity || 'low').toLowerCase()
@@ -142,22 +193,74 @@ Page({
       else if (sev === 'medium') { color = '#ff9f30'; severityText = '中' }
       return {
         title: iss.title || iss.name || '',
-        description: iss.description || iss.detail || '',
+        description: iss.explanation || iss.description || iss.detail || '',
         color,
         severityText,
       }
     })
 
-    // Exercises
-    const exercises = (r.strength_focus || r.exercises || []).map((ex) => ({
-      name: ex.name || ex.exercise_name || '',
-      description: ex.description || ex.detail || '',
-      sets: ex.sets,
-      reps: ex.reps,
-      duration: ex.duration,
-      frequency_per_week: ex.frequency_per_week,
-      searchUrl: getVideoSearchUrl(ex.name || ex.exercise_name || ''),
-    }))
+    // Build strengthFocusItems: each issue with its exercises extracted from recommended_exercises
+    const chinaUser = isChina()
+    const strengthFocusItems = issues.map((iss) => {
+      const sev = (iss.severity || 'low').toLowerCase()
+      let color = '#00f5a0'
+      let severityText = '轻'
+      if (sev === 'high' || sev === 'critical') { color = '#ff4757'; severityText = '高' }
+      else if (sev === 'medium') { color = '#ff9f30'; severityText = '中' }
+
+      const exs = (iss.recommended_exercises || []).map((ex) => {
+        const rawName = ex.name || ex.exercise_name || ''
+        return {
+          name: rawName,
+          icon: getExerciseIcon(rawName),
+          description: ex.reason || ex.description || ex.detail || ex.explanation || '',
+          sets: ex.sets,
+          reps: ex.reps,
+          duration: ex.duration,
+          frequency_per_week: ex.frequency_per_week,
+          category: ex.category || '',
+          searchUrl: getBestVideoUrl(rawName, chinaUser),
+          bilibiliUrl: chinaUser ? getBestVideoUrl(rawName, true) : getBestVideoUrl(rawName, true),
+        }
+      })
+
+      return {
+        title: iss.title || iss.name || '',
+        description: iss.explanation || iss.description || iss.detail || '',
+        color,
+        severityText,
+        exercises: exs,
+      }
+    })
+
+    // Flatten all exercises from issues for backward compat
+    const exercises = []
+    issues.forEach((iss) => {
+      const exs = iss.recommended_exercises || []
+      exs.forEach((ex) => {
+        const rawName = ex.name || ex.exercise_name || ''
+        exercises.push({
+          name: rawName,
+          icon: getExerciseIcon(rawName),
+          description: ex.reason || ex.description || ex.detail || '',
+          sets: ex.sets,
+          reps: ex.reps,
+          duration: ex.duration,
+          frequency_per_week: ex.frequency_per_week,
+          category: ex.category || '',
+          searchUrl: getBestVideoUrl(rawName, chinaUser),
+          bilibiliUrl: chinaUser ? getBestVideoUrl(rawName, true) : getBestVideoUrl(rawName, true),
+          targetIssue: iss.title || iss.name || '',
+        })
+      })
+    })
+
+    // Check if feedback was already submitted for this analysis
+    const submittedKey = `rf_feedback_done_${analysisId}`
+    let alreadySubmitted = false
+    try {
+      alreadySubmitted = !!wx.getStorageSync(submittedKey)
+    } catch (e) { /* ignore */ }
 
     // Check if feedback was already submitted for this analysis
     const submittedKey = `rf_feedback_done_${analysisId}`
@@ -175,6 +278,7 @@ Page({
       metrics,
       insights,
       exercises,
+      strengthFocusItems,
       analysisId,
       feedbackSubmitted: alreadySubmitted,
     })
@@ -276,20 +380,31 @@ Page({
   // ──────────── Original handlers ────────────
 
   openExercise(e) {
-    const idx = e.currentTarget.dataset.index
-    const ex = this.data.exercises[idx]
-    if (!ex) return
-    const url = ex.searchUrl
-    wx.setClipboardData({
-      data: url,
-      success: () => {
-        wx.showToast({ title: this.data.i.tutorialCopied, icon: 'none', duration: 2500 })
+    const { url: searchUrl, bilibili: bilibiliUrl } = e.currentTarget.dataset
+    const finalUrl = isZh ? (bilibiliUrl || searchUrl) : searchUrl
+    if (!finalUrl) return
+
+    // Try webview navigation first; fall back to clipboard on failure
+    wx.navigateTo({
+      url: `/pages/webview/webview?url=${encodeURIComponent(finalUrl)}&title=${encodeURIComponent(isZh ? '训练视频' : 'Exercise Video')}`,
+      fail: () => {
+        wx.setClipboardData({
+          data: finalUrl,
+          success: () => {
+            wx.showToast({ title: this.data.i.tutorialCopied, icon: 'none', duration: 2500 })
+          },
+        })
       },
     })
   },
 
   goCompare() {
     wx.navigateTo({ url: '/pages/compare/compare' })
+  },
+
+  // RF-1010: Navigate to weekly insight
+  goInsight() {
+    wx.navigateTo({ url: '/pages/insight/insight' })
   },
 
   // ──────────── RF-304: Share ────────────
@@ -327,7 +442,7 @@ Page({
 
     let title = ''
     if (lang) {
-      // Chinese — three scenario templates
+      // Chinese — four scenario templates
       switch (scenario) {
         case 'analysis':
           title = cadence
@@ -344,13 +459,20 @@ Page({
             ? `⚡ 我的步频 ${cadence} SPM，Kipchoge 是 180 SPM。来对比你的跑姿？`
             : `⚡ 我的跑姿 vs Kipchoge：评分 ${score} 分。你也来对比一下？`
           break
+        case 'archaeology': {
+          const issueCount = (this.data.insights && this.data.insights.length) || 0
+          title = issueCount > 0
+            ? `🔍 我的跑姿被AI考古了——发现了${issueCount}个跑姿问题`
+            : `🔍 我的跑姿被AI考古了——你的跑姿经得起考古吗？`
+          break
+        }
         default:
           title = cadence
             ? `🏃 RunForm：步频 ${cadence} SPM，跑姿评分 ${score} 分`
             : `🏃 RunForm 跑步姿态分析 — ${score}%`
       }
     } else {
-      // English — three scenario templates
+      // English — four scenario templates
       switch (scenario) {
         case 'analysis':
           title = cadence
@@ -367,6 +489,13 @@ Page({
             ? `⚡ My cadence ${cadence} SPM vs Kipchoge 180 SPM. Compare yours?`
             : `⚡ My form vs Kipchoge: scored ${score}%. Compare your run?`
           break
+        case 'archaeology': {
+          const issueCount = (this.data.insights && this.data.insights.length) || 0
+          title = issueCount > 0
+            ? `🔍 AI "dug up" my running form — found ${issueCount} issues. Can yours survive the dig?`
+            : `🔍 My running form got AI-archaeologized. Can yours stand the test?`
+          break
+        }
         default:
           title = cadence
             ? `🏃 RunForm: cadence ${cadence} SPM, form score ${score}%`
@@ -388,9 +517,10 @@ Page({
 
   /**
    * RF-941: Detect the share scenario to pick the right template.
-   * - 'analysis':  just completed an analysis (confidence > 0)
-   * - 'weekly':    viewing historical / weekly report
-   * - 'kipchoge':  coming from compare page (Kipchoge comparison)
+   * - 'analysis':    just completed an analysis (confidence > 0)
+   * - 'weekly':      viewing historical / weekly report
+   * - 'kipchoge':    coming from compare page (Kipchoge comparison)
+   * - 'archaeology': viewing archived / historical analysis with detected issues
    */
   _detectShareScenario() {
     // Check if user came from compare page (Kipchoge scenario)
@@ -406,6 +536,15 @@ Page({
     const { analysisId } = this.data
     if (analysisId && analysisId.startsWith('weekly_')) {
       return 'weekly'
+    }
+
+    // RF-new: Archaeology — historical analysis with detected issues
+    // Triggered when user views an old result from history (not fresh)
+    if (analysisId && pages.length >= 2) {
+      const prevRoute = pages[pages.length - 2].route || ''
+      if (prevRoute.includes('history')) {
+        return 'archaeology'
+      }
     }
 
     // Default: fresh analysis
@@ -427,11 +566,11 @@ Page({
       pageInstance: this,
       onSuccess: (tempFilePath) => {
         this._shareImagePath = tempFilePath
-        wx.showToast({ title: isZh ? '分享图已生成' : 'Share image ready', icon: 'success' })
+        wx.showToast({ title: t('shareGenSuccess'), icon: 'success' })
       },
       onFail: (err) => {
         console.error('[result] ShareCard generate failed:', err)
-        wx.showToast({ title: isZh ? '生成分享图失败' : 'Share image failed', icon: 'none' })
+        wx.showToast({ title: t('shareGenFail'), icon: 'none' })
       },
     })
   },
@@ -455,7 +594,7 @@ Page({
           ShareCard.saveToAlbum(tempFilePath)
         },
         onFail: () => {
-          wx.showToast({ title: isZh ? '生成分享图失败' : 'Share image failed', icon: 'none' })
+          wx.showToast({ title: t('shareGenFail'), icon: 'none' })
         },
       })
     }
@@ -634,6 +773,126 @@ Page({
     }
     if (current) lines.push(current)
     return lines.slice(0, 4) // Max 4 lines
+  },
+
+  // ──────────── RF-604: UGC Content Submission ────────────
+
+  /**
+   * Open the UGC submission modal.
+   */
+  onUgcSubmitBtn() {
+    this.setData({
+      ugcModalVisible: true,
+      ugcPlatform: '',
+      ugcLink: '',
+      ugcNote: '',
+      ugcSubmitting: false,
+    })
+  },
+
+  /**
+   * Close the UGC modal.
+   */
+  onUgcModalClose() {
+    this.setData({ ugcModalVisible: false })
+  },
+
+  /**
+   * Prevent tap-through on modal backdrop.
+   */
+  onUgcModalPrevent() {
+    // no-op, prevents bubbling
+  },
+
+  /**
+   * Select a platform.
+   */
+  onUgcPlatformSelect(e) {
+    const platform = e.currentTarget.dataset.key
+    this.setData({ ugcPlatform: platform })
+  },
+
+  /**
+   * Handle link input.
+   */
+  onUgcLinkInput(e) {
+    this.setData({ ugcLink: e.detail.value })
+  },
+
+  /**
+   * Handle note input.
+   */
+  onUgcNoteInput(e) {
+    this.setData({ ugcNote: e.detail.value })
+  },
+
+  /**
+   * Submit UGC content.
+   * Tries POST /api/v1/ugc/submit first, falls back to local storage.
+   */
+  submitUgc() {
+    const { ugcPlatform, ugcLink, ugcSubmitting } = this.data
+    if (ugcSubmitting) return
+
+    if (!ugcPlatform) {
+      wx.showToast({ title: isZh ? '请选择发布平台' : 'Please select a platform', icon: 'none' })
+      return
+    }
+    if (!ugcLink || !ugcLink.trim()) {
+      wx.showToast({ title: t('ugcNoLink'), icon: 'none' })
+      return
+    }
+
+    const submission = {
+      id: 'ugc_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+      platform: ugcPlatform,
+      link: ugcLink.trim(),
+      note: this.data.ugcNote.trim() || '',
+      analysisId: this.data.analysisId || '',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    }
+
+    this.setData({ ugcSubmitting: true })
+
+    // Try backend API first
+    const api = require('../../utils/api')
+    api.ugcSubmit ? api.ugcSubmit(submission)
+      .then(() => {
+        this._onUgcSubmitSuccess(submission)
+      })
+      .catch(() => {
+        this._saveUgcLocal(submission)
+      })
+      : (() => {
+        // API method doesn't exist — save locally
+        this._saveUgcLocal(submission)
+      })()
+  },
+
+  /**
+   * Save UGC submission to local storage.
+   */
+  _saveUgcLocal(submission) {
+    try {
+      let list = wx.getStorageSync('rf_ugc_submissions') || []
+      list.push(submission)
+      wx.setStorageSync('rf_ugc_submissions', list)
+    } catch (e) {
+      console.error('[result] Failed to save UGC submission:', e)
+    }
+    this._onUgcSubmitSuccess(submission)
+  },
+
+  /**
+   * Handle successful UGC submission (API or local).
+   */
+  _onUgcSubmitSuccess(submission) {
+    this.setData({
+      ugcModalVisible: false,
+      ugcSubmitting: false,
+    })
+    wx.showToast({ title: t('ugcSubmitted'), icon: 'success', duration: 2500 })
   },
 })
 

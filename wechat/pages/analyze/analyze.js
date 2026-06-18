@@ -9,6 +9,7 @@ Page({
     i: {
       analyzeTitle: t('analyzeTitle'),
       analyzeSubtitle: t('analyzeSubtitle'),
+      injuryPreventionBanner: t('injuryPreventionBanner'),
       videoGuide: t('videoGuide'),
       videoGuideBody: t('videoGuideBody'),
       pickVideo: t('pickVideo'),
@@ -133,6 +134,7 @@ Page({
         wx.navigateTo({ url: '/pages/result/result' })
       })
       .catch((err) => {
+        console.error('[analyze] 分析失败:', err)
         this.setData({ analyzing: false, compressing: false, uploadProgress: 0, compressResult: null })
         wx.showModal({
           title: t('error'),

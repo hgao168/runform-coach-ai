@@ -96,8 +96,8 @@
         <text class="caption" style="margin-top: 16rpx;">{{i.comparing}}</text>
       </view>
 
-      <!-- Comparison table -->
-      <view wx:elif="{{comparisonRows.length > 0}}" class="comparison-table">
+      <!-- Comparison table (simple fallback when no rich result) -->
+      <view wx:elif="{{comparisonRows.length > 0 && !showResultView}}" class="comparison-table">
         <!-- Header row -->
         <view class="comp-header-row">
           <text class="comp-header-label"></text>
@@ -117,6 +117,97 @@
         <text class="comp-unit-hint" wx:if="{{comparisonRows.length > 0}}">
           {{comparisonRows[0].unit}}
         </text>
+      </view>
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- Rich Compare Result View (iOS CompareResultView) -->
+      <!-- ═══════════════════════════════════════ -->
+      <view wx:elif="{{showResultView}}" class="result-view">
+
+        <!-- ── 1. Similarity Ring Chart ── -->
+        <view class="similarity-section">
+          <view class="ring-wrapper">
+            <canvas type="2d" id="similarityRingCanvas" class="ring-canvas"></canvas>
+            <view class="ring-center">
+              <text class="ring-score-text">{{similarityScore}}%</text>
+              <text class="ring-label-text">{{i.similarityLabel}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- ── 2. AI Coach Narrative ── -->
+        <view wx:if="{{coachingNarrative}}" class="coach-card">
+          <view class="coach-card-header">
+            <text class="coach-quote-icon">{{i.coachQuote}}</text>
+            <text class="coach-title">{{i.aiCoachCommentTitle}}</text>
+            <view class="ai-badge">
+              <text class="ai-badge-text">{{i.aiPoweredBadge}}</text>
+            </view>
+          </view>
+          <text class="coach-narrative-text">{{coachingNarrative}}</text>
+        </view>
+
+        <!-- ── 3. Top Gaps List ── -->
+        <view wx:if="{{topGaps.length > 0}}" class="gaps-section">
+          <text class="gaps-title">⚠️ {{i.topGapsTitle}}</text>
+          <view wx:for="{{topGaps}}" wx:key="id" class="gap-card">
+            <view class="gap-header-row">
+              <view class="gap-metric-tag">
+                <text class="gap-metric-text">{{item.metric}}</text>
+              </view>
+              <text class="gap-value-text">{{item.gap}}</text>
+            </view>
+            <text wx:if="{{item.suggestion}}" class="gap-suggestion-text">💡 {{item.suggestion}}</text>
+          </view>
+        </view>
+
+        <!-- ── 4. Metric Comparison Grid with Progress Bars ── -->
+        <view wx:if="{{metricGrid.length > 0}}" class="metric-grid-section">
+          <text class="gaps-title">📊 {{i.compareResult}}</text>
+          <view wx:for="{{metricGrid}}" wx:key="label" class="metric-grid-row">
+            <!-- Label row -->
+            <view class="metric-label-row">
+              <text class="metric-label-name">{{item.label}}</text>
+              <text wx:if="{{item.unit}}" class="metric-label-unit">{{item.unit}}</text>
+              <text class="metric-direction" style="color: {{item.higherIsBetter ? '#00d4ff' : '#ff9f30'}};">
+                {{item.higherIsBetter ? i.higherBetter : i.lowerBetter}}
+              </text>
+            </view>
+
+            <!-- Values row -->
+            <view class="metric-values-row">
+              <view class="metric-user-col">
+                <text class="metric-col-label">{{i.yourValueShort}}</text>
+                <text class="metric-col-value" style="color: {{item.isGood ? '#00f5a0' : '#ff4757'}};">{{item.userDisplay}}</text>
+              </view>
+              <view class="metric-elite-col">
+                <text class="metric-col-label">{{i.eliteValueShort}}</text>
+                <text class="metric-col-value text-orange">{{item.eliteDisplay}}</text>
+              </view>
+              <view class="metric-gap-col">
+                <text class="metric-col-label">{{i.gapValue}}</text>
+                <text class="metric-col-value" style="color: {{item.isGood ? '#00f5a0' : '#ff4757'}};">{{item.diffDisplay}}</text>
+              </view>
+            </view>
+
+            <!-- Progress bars -->
+            <view class="metric-progress-section">
+              <view class="metric-progress-track" style="background: {{item.trackColor}};">
+                <!-- User bar -->
+                <view class="metric-progress-user" style="width: {{item.userPct}}%; background: {{item.progressColor}};"></view>
+                <!-- Elite marker line -->
+                <view class="metric-progress-elite-marker" style="left: {{item.elitePct}}%;"></view>
+              </view>
+              <view class="metric-progress-labels">
+                <text class="metric-progress-status" style="color: {{item.isGood ? '#00f5a0' : '#ff4757'}};">
+                  {{item.isGood ? i.closeToElite : i.needsWork}}
+                </text>
+                <text class="metric-progress-target-hint">{{i.progressTarget}}: {{item.eliteDisplay}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
       </view>
 
       <!-- Comparison error fallback -->

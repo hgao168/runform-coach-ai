@@ -134,7 +134,7 @@ class SensorService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("RunForm Coach AI")
+            .setContentTitle("RunForm Injury Prevention Coach")
             .setContentText("正在采集跑步姿态数据…")
             .setSmallIcon(android.R.drawable.ic_menu_compass)  // 占位图标
             .setContentIntent(pendingIntent)

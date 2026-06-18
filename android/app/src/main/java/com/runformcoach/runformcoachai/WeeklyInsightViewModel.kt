@@ -213,7 +213,7 @@ class WeeklyInsightViewModel @Inject constructor(
             textSize = 22f
             isAntiAlias = true
         }
-        canvas.drawText("RunForm Coach AI", 60f, height - 80f, footerPaint)
+        canvas.drawText("RunForm Injury Prevention Coach", 60f, height - 80f, footerPaint)
         canvas.drawText(
             "Generated ${SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date())}",
             60f, height - 50f, footerPaint

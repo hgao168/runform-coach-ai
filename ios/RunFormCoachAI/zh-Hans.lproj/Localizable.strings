@@ -10,10 +10,11 @@
 "Manual Week Plan" = "手动周计划";
 "Saved Plans" = "已保存的计划";
 
-/* Analyze tab - hero */
-"AI Running Form Coach" = "AI 跑步姿态教练";
-"Unlock Your Speed with a Better Form" = "改善跑姿，提升速度";
-"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "上传短视频，获取精准反馈、效率指标和针对性训练建议。";
+/* Analyze tab - hero (Adjustment 5: injury-prevention messaging) */
+"AI Running Form Coach" = "AI 防伤跑步教练";
+"Unlock Your Speed with a Better Form" = "跑步不是自残——先防伤，再提速";
+"Upload a short clip and get precision feedback, efficiency metrics, and targeted training." = "上传短视频，获取伤病风险反馈、跑姿指标和防伤训练建议。";
+"injury.tagline" = "跑步不是自残——你的AI防伤教练关注每一步";
 
 /* Analyze tab - video card */
 "Running clip" = "跑步视频";
@@ -159,9 +160,31 @@
 "Injury note" = "伤病备注";
 "Optional" = "可选";
 "Save Profile" = "保存资料";
+"profile.email.required" = "保存资料前必须填写邮箱。";
+"profile.email.invalid" = "请输入有效的邮箱地址。";
+"profile.save.failed %@" = "资料保存失败：%@";
 "Why this matters" = "为什么这很重要";
 "Better coaching needs context" = "更好的指导需要背景信息";
 "RunForm stores this locally and uses it to understand tester feedback. Future versions can use it to personalize running plans and strength recommendations." = "RunForm将这些信息本地存储，用于理解测试反馈。未来版本可用于个性化训练计划和力量建议。";
+"Login" = "登录";
+"Register" = "注册";
+"auth.card.title" = "账号";
+"auth.card.subtitle" = "使用 RunForm 或 Google 登录";
+"auth.password" = "密码";
+"auth.password.required" = "必须填写密码。";
+"auth.runform_login" = "使用 RunForm 登录";
+"auth.runform_register" = "创建 RunForm 账号";
+"auth.google.sign_in" = "使用 Google 登录";
+"auth.google.signing_in" = "登录中...";
+"auth.google.no_presenter" = "无法显示 Google 登录窗口。";
+"auth.google.client_id_missing" = "构建设置中缺少 Google iOS 客户端 ID。";
+"auth.google.missing_token" = "Google 登录未返回访问令牌。";
+"auth.login.success" = "登录成功。";
+"auth.email_verification.pending" = "已登录。请检查邮箱并点击验证链接完成邮箱验证。";
+"auth.login.failed %@" = "登录失败：%@";
+"auth.sign_off" = "退出登录";
+"auth.signed_off" = "已退出登录。";
+"auth.signed_in_as %@" = "当前登录账号：%@";
 
 /* Feedback view */
 "Tester Feedback" = "测试者反馈";
@@ -251,3 +274,61 @@
 "Best" = "最佳";
 "Good" = "良好";
 "Limited" = "有限";
+
+/* Adjustment 2: Share card "旧片考古" template */
+"share.archaeology.button" = "分享你的跑姿分析";
+"share.archaeology.title_default" = "我的跑姿被AI考古了——发现了%lld个问题";
+"share.archaeology.subtitle_default" = "你的跑姿经得起AI考古吗？";
+"share.archaeology.title_race %@" = "我在%@的跑姿被AI考古了";
+"share.archaeology.subtitle_race %lld" = "发现了%lld个跑姿问题——你的跑姿经得起考古吗？";
+
+/* Share card: full report sections */
+"share.report.score" = "跑姿评分：";
+"share.report.metrics" = "运动指标：";
+"share.report.issues" = "强化重点";
+"share.report.download" = "下载 RunForm AI（App Store）：";
+
+/* Adjustment 3: Injury-prevention narratives */
+"injury.cadence_low %@" = "%@ → 步频偏低可能增加膝盖冲击力。建议在训练中加入步频练习日。";
+"injury.gct_high %@" = "%@ → 触地时间偏长会增加刹车效应和受伤风险。专注缩短着地时间。";
+"injury.knee_risk %@" = "%@ → 膝关节不稳可能导致髂胫束或髌骨问题。加入髋部强化练习。";
+"injury.trunk_lean %@" = "%@ → 躯干过度前倾会增加下背部和腘绳肌压力。练习保持直立姿态。";
+"injury.overstride %@" = "%@ → 步幅过大会增加膝盖和胫骨的冲击力。缩短步幅，落脚在髋部下方。";
+"injury.hip_drop %@" = "%@ → 髋下沉可能导致髂胫束综合征和膝盖疼痛。强化臀中肌。";
+
+/* Strava profile card */
+"strava.card.title" = "连接 Strava";
+"strava.card.subtitle" = "将每周训练负荷带入后续计划";
+"strava.auth_required" = "请先登录，再连接并同步 Strava。";
+"strava.card.privacy" = "Strava 数据仅用于你的教练建议和训练计划生成，不会用于训练 AI 模型。";
+"strava.card.checking" = "正在检查 Strava 连接...";
+"strava.badge.connected" = "已连接";
+"strava.connected.title" = "已连接 Strava";
+"strava.athlete.id %@" = "运动员 ID：%@";
+"strava.scopes %@" = "权限：%@";
+"strava.last_sync %@" = "上次同步：%@";
+"strava.last_refresh %@" = "上次刷新：%@";
+"strava.last_refresh.unavailable" = "上次刷新：暂无";
+"strava.button.sync" = "从 Strava 同步跑步记录";
+"strava.button.syncing" = "正在同步跑步记录...";
+"strava.button.disconnect" = "断开 Strava";
+"strava.disconnected.body" = "连接 Strava，将你的每周训练负荷用于后续训练计划建议。";
+"strava.button.connect" = "连接 Strava";
+"strava.button.connecting" = "连接中...";
+"strava.status.connected" = "Strava 已连接。";
+"strava.status.cancelled" = "已取消 Strava 登录。";
+"strava.sync.success %lld" = "已从 Strava 同步 %lld 条跑步记录。";
+"strava.sync.success %lld %lld" = "已从 Strava 同步 %lld 条跑步记录，并刷新 %lld 周训练状态。";
+"strava.error.status %@" = "无法检查 Strava 状态。%@";
+"strava.error.start" = "无法启动 Strava 登录，请重试。";
+"strava.error.open %@" = "无法打开 Strava 登录。%@";
+"strava.error.signin %@" = "Strava 登录失败。%@";
+"strava.error.callback_missing" = "Strava 登录未返回回调地址。";
+"strava.error.oauth %@" = "Strava 登录失败：%@";
+"strava.error.disconnect %@" = "断开 Strava 失败。%@";
+"strava.error.sync %@" = "同步 Strava 跑步记录失败。%@";
+
+/* Adjustment 4: Weekly form recheck card */
+"plan.recheck.title" = "本周跑姿复检";
+"plan.recheck.body" = "周一到了——是时候重新分析你的跑步姿态了。上传新视频与上周对比。";
+"plan.recheck.button" = "前往分析页面";

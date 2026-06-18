@@ -10,6 +10,14 @@
     <array>
         <dict>
             <key>CFBundleURLName</key>
+            <string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleURLName</key>
             <string>runformcoachai.strava.callback</string>
             <key>CFBundleURLSchemes</key>
             <array>
@@ -19,6 +27,8 @@
     </array>
     <key>BACKEND_BASE_URL</key>
     <string>$(BACKEND_BASE_URL)</string>
+    <key>GOOGLE_IOS_CLIENT_ID</key>
+    <string>$(GOOGLE_IOS_CLIENT_ID)</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>NSMotionUsageDescription</key>
@@ -27,9 +37,5 @@
     <string>Sync your running workouts, cadence, heart rate, and distance data with Apple Health.</string>
     <key>NSHealthUpdateUsageDescription</key>
     <string>Save your completed runs and running form metrics to Apple Health for a complete picture of your fitness.</string>
-    <!-- GADApplicationIdentifier: Replace with production AdMob App ID from Firebase Console -->
-    <!-- Test ID (development): ca-app-pub-3940256099942544~1458002511 -->
-    <key>GADApplicationIdentifier</key>
-    <string>ca-app-pub-XXXXXXXX~XXXXXXXX</string>
 </dict>
 </plist>

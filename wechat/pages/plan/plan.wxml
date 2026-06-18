@@ -15,6 +15,19 @@
   <!-- Form card -->
   <view class="card">
 
+    <!-- Plan mode picker -->
+    <view class="form-section">
+      <text class="label">{{i.planMode}}</text>
+      <view class="chip-row">
+        <view
+          wx:for="{{planModes}}" wx:key="index"
+          class="chip mode-chip {{planMode === item.key ? 'chip-active' : ''}}"
+          bindtap="selectPlanMode"
+          data-key="{{item.key}}"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
     <!-- Weekly km -->
     <view class="form-section">
       <text class="label">{{i.weeklyKm}}</text>
@@ -44,6 +57,38 @@
           bindtap="selectGoal"
           data-key="{{item.key}}"
         >{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- Marathon major selector (only when marathon mode) -->
+    <view wx:if="{{planMode === 'marathon'}}" class="form-section">
+      <text class="label">{{i.marathonRace}}</text>
+      <view class="chip-row">
+        <view
+          wx:for="{{marathonMajors}}" wx:key="index"
+          class="chip {{marathonMajor === item.key ? 'chip-active' : ''}}"
+          bindtap="selectMarathonMajor"
+          data-key="{{item.key}}"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- Marathon weeks slider (only when marathon mode) -->
+    <view wx:if="{{planMode === 'marathon'}}" class="form-section">
+      <text class="label">{{i.marathonWeeks}}</text>
+      <view class="km-row">
+        <slider
+          class="km-slider"
+          min="8" max="20" step="2"
+          value="{{marathonWeeks}}"
+          activeColor="#00f5a0"
+          backgroundColor="rgba(255,255,255,0.12)"
+          bindchange="onMarathonWeeksChange"
+        />
+        <view class="km-badge">
+          <text class="text-mint km-num">{{marathonWeeks}}</text>
+          <text class="km-unit">{{i.marathonWeeksSuffix}}</text>
+        </view>
       </view>
     </view>
 
@@ -85,12 +130,16 @@
           <text style="margin-left: 12rpx;">{{i.generating}}</text>
         </view>
       </block>
-      <block wx:else>{{i.generatePlan}}</block>
+      <block wx:else>
+        <block wx:if="{{planMode === 'marathon'}}">{{i.marathonGenerate}}</block>
+        <block wx:elif="{{planMode === 'race'}}">{{i.raceGenerate}}</block>
+        <block wx:else>{{i.generatePlan}}</block>
+      </block>
     </button>
 
   </view>
 
-  <!-- Result section -->
+  <!-- ===== WEEKLY PLAN RESULT (always shows when plan exists) ===== -->
   <view wx:if="{{plan}}">
 
     <!-- Summary row -->
@@ -123,6 +172,124 @@
       </view>
     </view>
 
+  </view>
+
+  <!-- ===== MARATHON PLAN RESULT ===== -->
+  <view wx:if="{{marathonPlan}}" class="marathon-plan-section">
+
+    <!-- Marathon header card -->
+    <view class="card-dark">
+      <text class="section-title">🏃 {{i.marathonPlanTitle}}</text>
+      <view class="marathon-meta">
+        <text class="marathon-meta-text">{{marathonPlan.race}} · {{marathonPlan.planProfile}} · {{marathonPlan.totalWeeks}}周</text>
+      </view>
+      <text wx:if="{{marathonPlan.courseProfile}}" class="marathon-sub-text">{{marathonPlan.courseProfile}}</text>
+      <text wx:if="{{marathonPlan.elevationNote}}" class="marathon-sub-text">{{marathonPlan.elevationNote}}</text>
+    </view>
+
+    <!-- Phase groups -->
+    <view wx:for="{{marathonPlan.phaseGroups}}" wx:key="phase" wx:for-item="group" class="phase-block">
+      <!-- Phase header -->
+      <view class="phase-header">
+        <text class="phase-title">{{group.phaseLabel}}</text>
+        <text class="phase-range">W{{group.startWeek}} - W{{group.endWeek}}</text>
+      </view>
+
+      <!-- Week cards within this phase -->
+      <view wx:for="{{group.weeks}}" wx:key="week" wx:for-item="week" class="marathon-week-card">
+        <view class="marathon-week-header">
+          <text class="marathon-week-num">Week {{week.week}}</text>
+          <view class="marathon-week-stats">
+            <view class="marathon-stat">
+              <text class="marathon-stat-label">{{i.marathonTargetKm}}</text>
+              <text class="marathon-stat-value text-mint">{{week.targetKm}} km</text>
+            </view>
+            <view wx:if="{{week.longRunKm > 0}}" class="marathon-stat">
+              <text class="marathon-stat-label">{{i.marathonLongRun}}</text>
+              <text class="marathon-stat-value text-cyan">{{week.longRunKm}} km</text>
+            </view>
+          </view>
+          <text wx:if="{{week.isRaceWeek}}" class="race-week-badge">{{i.marathonRaceWeek}}</text>
+        </view>
+
+        <!-- Key workout -->
+        <view wx:if="{{week.keyWorkout}}" class="key-workout-row">
+          <text class="key-workout-label">{{i.marathonKeyWorkout}}:</text>
+          <text class="key-workout-text">{{week.keyWorkout}}</text>
+        </view>
+
+        <!-- Daily workouts -->
+        <view wx:if="{{week.workouts.length > 0}}" class="marathon-workouts">
+          <text class="workouts-section-title">{{i.marathonWorkouts}}</text>
+          <view wx:for="{{week.workouts}}" wx:key="index" wx:for-item="wo" class="workout-item">
+            <view class="workout-day-tag">{{wo.day}}</view>
+            <view class="workout-body">
+              <text class="workout-title">{{wo.title}}</text>
+              <text wx:if="{{wo.distanceKm > 0}}" class="workout-km">{{wo.distanceKm}} km</text>
+              <text wx:if="{{wo.details}}" class="workout-details">{{wo.details}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ===== RACE PLAN RESULT ===== -->
+  <view wx:if="{{racePlan}}" class="marathon-plan-section">
+
+    <!-- Race header card -->
+    <view class="card-dark">
+      <text class="section-title">🏁 {{i.racePlanTitle}}</text>
+      <view class="marathon-meta">
+        <text class="marathon-meta-text">{{racePlan.target}} · {{racePlan.level}} · {{racePlan.totalWeeks}}周</text>
+      </view>
+    </view>
+
+    <!-- Phase groups -->
+    <view wx:for="{{racePlan.phaseGroups}}" wx:key="phase" wx:for-item="group" class="phase-block">
+      <!-- Phase header -->
+      <view class="phase-header">
+        <text class="phase-title">{{group.phaseLabel}}</text>
+        <text class="phase-range">W{{group.startWeek}} - W{{group.endWeek}}</text>
+      </view>
+
+      <!-- Week cards within this phase -->
+      <view wx:for="{{group.weeks}}" wx:key="week" wx:for-item="week" class="marathon-week-card">
+        <view class="marathon-week-header">
+          <text class="marathon-week-num">Week {{week.week}}</text>
+          <view class="marathon-week-stats">
+            <view class="marathon-stat">
+              <text class="marathon-stat-label">{{i.marathonTargetKm}}</text>
+              <text class="marathon-stat-value text-mint">{{week.targetKm}} km</text>
+            </view>
+            <view wx:if="{{week.longRunKm > 0}}" class="marathon-stat">
+              <text class="marathon-stat-label">{{i.marathonLongRun}}</text>
+              <text class="marathon-stat-value text-cyan">{{week.longRunKm}} km</text>
+            </view>
+          </view>
+          <text wx:if="{{week.isRaceWeek}}" class="race-week-badge">{{i.marathonRaceWeek}}</text>
+        </view>
+
+        <!-- Key workout -->
+        <view wx:if="{{week.keyWorkout}}" class="key-workout-row">
+          <text class="key-workout-label">{{i.marathonKeyWorkout}}:</text>
+          <text class="key-workout-text">{{week.keyWorkout}}</text>
+        </view>
+
+        <!-- Daily workouts -->
+        <view wx:if="{{week.workouts.length > 0}}" class="marathon-workouts">
+          <text class="workouts-section-title">{{i.marathonWorkouts}}</text>
+          <view wx:for="{{week.workouts}}" wx:key="index" wx:for-item="wo" class="workout-item">
+            <view class="workout-day-tag">{{wo.day}}</view>
+            <view class="workout-body">
+              <text class="workout-title">{{wo.title}}</text>
+              <text wx:if="{{wo.distanceKm > 0}}" class="workout-km">{{wo.distanceKm}} km</text>
+              <text wx:if="{{wo.details}}" class="workout-details">{{wo.details}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 
 </view>

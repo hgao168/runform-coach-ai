@@ -6,7 +6,7 @@ import json
 import os
 import time
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -82,15 +82,38 @@ def _b64url_decode(value: str) -> bytes:
     return base64.urlsafe_b64decode((value + padding).encode("utf-8"))
 
 
-def make_state(ios_user_id: str) -> str:
+def normalize_app_callback_url(raw_url: str | None) -> str | None:
+    raw_url = (raw_url or "").strip()
+    if not raw_url:
+        return None
+
+    parsed = urlparse(raw_url)
+    if parsed.scheme == "runformcoachai":
+        if parsed.netloc:
+            path = parsed.path or "/callback"
+            return f"runformcoachai://{parsed.netloc}{path}"
+        path_parts = parsed.path.strip("/").split("/", 1)
+        host = path_parts[0] if path_parts and path_parts[0] else "strava"
+        path = f"/{path_parts[1]}" if len(path_parts) > 1 else "/callback"
+        return f"runformcoachai://{host}{path}"
+
+    if raw_url == "runformcoachai":
+        return "runformcoachai://strava/callback"
+
+    return None
+
+
+def make_state(ios_user_id: str, app_callback_url: str | None = None) -> str:
     payload = {"uid": ios_user_id, "ts": int(time.time())}
+    if callback_url := normalize_app_callback_url(app_callback_url):
+        payload["cb"] = callback_url
     payload_raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
     payload_part = _b64url(payload_raw)
     sig = hmac.new(_state_secret().encode("utf-8"), payload_part.encode("utf-8"), hashlib.sha256).digest()
     return f"{payload_part}.{_b64url(sig)}"
 
 
-def verify_state(state: str, max_age_seconds: int = 900) -> str:
+def verify_state_payload(state: str, max_age_seconds: int = 900) -> dict[str, Any]:
     try:
         payload_part, sig_part = state.split(".", 1)
     except ValueError as exc:
@@ -110,11 +133,15 @@ def verify_state(state: str, max_age_seconds: int = 900) -> str:
     if int(time.time()) - timestamp > max_age_seconds:
         raise StravaOAuthError("OAuth state expired.")
 
-    return user_id
+    return payload
 
 
-def build_authorize_url(ios_user_id: str) -> dict[str, str]:
-    state = make_state(ios_user_id)
+def verify_state(state: str, max_age_seconds: int = 900) -> str:
+    return verify_state_payload(state, max_age_seconds=max_age_seconds)["uid"]
+
+
+def build_authorize_url(ios_user_id: str, app_callback_url: str | None = None) -> dict[str, str]:
+    state = make_state(ios_user_id, app_callback_url=app_callback_url)
     scope = os.getenv("STRAVA_SCOPES", "read,activity:read_all")
     query = urlencode(
         {
@@ -315,4 +342,4 @@ def time_to_utc_datetime(epoch_seconds: int):
 
 
 def app_callback_url() -> str | None:
-    return os.getenv("STRAVA_APP_CALLBACK_URL")
+    return normalize_app_callback_url(os.getenv("STRAVA_APP_CALLBACK_URL"))
