@@ -69,3 +69,27 @@ def check_database() -> dict[str, Any]:
         return {"configured": True, "status": "ok"}
     except SQLAlchemyError as exc:
         return {"configured": True, "status": "error", "detail": str(exc)}
+
+
+def ensure_auth_columns() -> None:
+    """Idempotent: add auth columns to users table if they don't exist.
+
+    Production DB was stamped with Alembic migration 20260612_0008 without
+    the columns actually being created. This runs on every startup to
+    guarantee the columns exist regardless of migration state.
+    """
+    engine = get_engine()
+    if engine is None:
+        return
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255)"))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email)"))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_sub ON users (google_sub)"))
+            conn.commit()
+    except SQLAlchemyError:
+        # Non-fatal: tables may not exist yet (first deploy). Alembic migrations
+        # will create them, and this will succeed on the next restart.
+        pass
