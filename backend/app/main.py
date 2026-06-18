@@ -1499,7 +1499,7 @@ async def strava_callback(code: str | None = None, state: str | None = None, err
 
     state_payload = verify_state_payload(state)
     ios_user_id = state_payload["uid"]
-    callback_url = state_payload.get("cb")
+    callback_url = state_payload.get("cb") or app_callback_url()
     token_payload = await exchange_code_for_token(code)
     provider_athlete_id = None
     with get_db_session() as session:
@@ -3204,3 +3204,4 @@ def share_image(
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to generate share image: {exc}") from exc
+

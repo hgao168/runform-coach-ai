@@ -94,6 +94,9 @@ def normalize_app_callback_url(raw_url: str | None) -> str | None:
         return None
 
     parsed = urlparse(raw_url)
+    if parsed.scheme in {"http", "https"}:
+        return raw_url
+
     if parsed.scheme == "runformcoachai":
         if parsed.netloc:
             path = parsed.path or "/callback"
@@ -103,10 +106,17 @@ def normalize_app_callback_url(raw_url: str | None) -> str | None:
         path = f"/{path_parts[1]}" if len(path_parts) > 1 else "/callback"
         return f"runformcoachai://{host}{path}"
 
+    if "://" in raw_url:
+        return raw_url
+
     if raw_url == "runformcoachai":
         return "runformcoachai://strava/callback"
 
-    return None
+    if parsed.scheme:
+        path = parsed.path.lstrip("/") or "strava/callback"
+        return f"{parsed.scheme}://{path}"
+
+    return f"{raw_url}://strava/callback"
 
 
 def make_state(ios_user_id: str, app_callback_url: str | None = None) -> str:
@@ -353,3 +363,4 @@ def time_to_utc_datetime(epoch_seconds: int):
 
 def app_callback_url() -> str | None:
     return normalize_app_callback_url(os.getenv("STRAVA_APP_CALLBACK_URL"))
+
