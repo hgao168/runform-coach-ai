@@ -161,3 +161,9 @@ def test_strava_app_callback_url_normalizes_bare_scheme(monkeypatch):
     monkeypatch.setenv("STRAVA_APP_CALLBACK_URL", "runformcoachai")
 
     assert strava_oauth.app_callback_url() == "runformcoachai://strava/callback"
+
+
+def test_strava_app_callback_url_defaults_to_ios_scheme(monkeypatch):
+    monkeypatch.delenv("STRAVA_APP_CALLBACK_URL", raising=False)
+
+    assert strava_oauth.app_callback_url() == "runformcoachai://strava/callback"

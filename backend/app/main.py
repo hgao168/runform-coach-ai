@@ -13,11 +13,12 @@ import html
 from email.message import EmailMessage
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -100,6 +101,7 @@ from .strava_summary import build_strava_summary
 from .strava_oauth import (
     StravaOAuthConfigError,
     StravaOAuthError,
+    app_callback_url,
     build_authorize_url,
     decrypt_secret,
     deauthorize_access_token,
@@ -1500,6 +1502,15 @@ async def strava_callback(code: str | None = None, state: str | None = None, err
         connection = upsert_strava_connection(session, ios_user_id=ios_user_id, token_payload=token_payload)
         session.commit()
         provider_athlete_id = connection.provider_athlete_id
+
+    if app_url := app_callback_url():
+        query = urlencode({
+            "status": "connected",
+            "ios_user_id": ios_user_id,
+            "provider": "strava",
+            "provider_athlete_id": provider_athlete_id,
+        })
+        return RedirectResponse(url=f"{app_url}?{query}")
 
     escaped_athlete_id = html.escape(provider_athlete_id or "")
     return HTMLResponse(
