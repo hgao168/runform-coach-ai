@@ -6,7 +6,7 @@ import json
 import os
 import time
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -318,6 +318,20 @@ def app_callback_url() -> str | None:
     raw_url = os.getenv("STRAVA_APP_CALLBACK_URL", "").strip()
     if not raw_url:
         return "runformcoachai://strava/callback"
+
+    parsed = urlparse(raw_url)
+    if parsed.scheme in {"http", "https"}:
+        return raw_url
+
     if "://" in raw_url:
         return raw_url
+
+    # Normalize malformed custom schemes like "runformcoachai:/strava/callback"
+    # into a valid deep link format.
+    if parsed.scheme:
+        path = parsed.path.lstrip("/")
+        if not path:
+            path = "strava/callback"
+        return f"{parsed.scheme}://{path}"
+
     return f"{raw_url}://strava/callback"
