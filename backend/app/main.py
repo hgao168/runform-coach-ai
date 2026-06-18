@@ -26,7 +26,7 @@ from sqlalchemy import delete, func, select
 
 from .analyzer import analyze_from_metrics, analyze_running_video, generate_plan
 from .athletes import compare_with_athlete, get_all_athletes
-from .db import check_database, get_db_session
+from .db import check_database, ensure_auth_columns, get_db_session
 from .db_models import InviteCode, ChallengeParticipant, CoachCode, CoachStudent, OAuthConnection, RunSession, StravaRun, StravaWeeklyStat, User, _MAX_INVITE_CODES_PER_USER, _FOURTEEN_DAY_CHALLENGE_ID
 from .schemas import (
     AnalyzeProfileContext,
@@ -194,6 +194,12 @@ def _strava_endpoint(action: str):
     return decorator
 
 app = FastAPI(title="RunForm Coach AI API", version="0.5.0")
+
+
+@app.on_event("startup")
+def _startup_ensure_db_columns():
+    """Ensure critical DB columns exist before any request is served."""
+    ensure_auth_columns()
 
 # ── CORS ──────────────────────────────────────────────────────────────────
 # Whitelist origins from env; dev includes localhost.  allow_credentials=True
