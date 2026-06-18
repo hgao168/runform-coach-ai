@@ -5,9 +5,12 @@ Covers the public endpoints: health, athletes, analyze-metrics, compare.
 Tests are written to work without a database or external API key.
 """
 
+from datetime import datetime, timezone
+
 import pytest
 
 from app import main as main_mod
+from app import strava_sync
 from app import strava_oauth
 
 # ---------------------------------------------------------------------------
@@ -180,3 +183,35 @@ def test_strava_state_preserves_requested_app_callback(monkeypatch):
     payload = strava_oauth.verify_state_payload(state)
     assert payload["uid"] == "test-user-001"
     assert payload["cb"] == "runformcoachai://strava/callback"
+
+
+def test_strava_sync_defaults_to_eight_weeks_for_plan_history():
+    assert strava_sync.STRAVA_LOOKBACK_DAYS == 56
+
+
+def test_strava_week_window_returns_four_calendar_weeks():
+    reference = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+
+    week_starts = strava_sync._week_starts_for_window(reference, 4)
+
+    assert [item.date().isoformat() for item in week_starts] == [
+        "2026-05-25",
+        "2026-06-01",
+        "2026-06-08",
+        "2026-06-15",
+    ]
+
+
+def test_strava_empty_week_summary_keeps_zero_week_in_status():
+    week_start = datetime(2026, 6, 15, tzinfo=timezone.utc)
+
+    summary = strava_sync._empty_week_summary(week_start)
+
+    assert summary == {
+        "week_start": week_start,
+        "total_distance_m": 0.0,
+        "run_count": 0,
+        "longest_run_m": 0.0,
+        "avg_pace_s_per_km": None,
+        "intensity_score": 0.0,
+    }

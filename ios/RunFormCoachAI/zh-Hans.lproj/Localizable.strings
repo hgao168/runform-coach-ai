@@ -318,6 +318,7 @@
 "strava.status.connected" = "Strava 已连接。";
 "strava.status.cancelled" = "已取消 Strava 登录。";
 "strava.sync.success %lld" = "已从 Strava 同步 %lld 条跑步记录。";
+"strava.sync.success %lld %lld" = "已从 Strava 同步 %lld 条跑步记录，并刷新 %lld 周训练状态。";
 "strava.error.status %@" = "无法检查 Strava 状态。%@";
 "strava.error.start" = "无法启动 Strava 登录，请重试。";
 "strava.error.open %@" = "无法打开 Strava 登录。%@";

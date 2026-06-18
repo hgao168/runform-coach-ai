@@ -1583,7 +1583,7 @@ async def strava_sync(payload: StravaSyncRequest) -> StravaSyncResponse:
 @_strava_endpoint("Failed to get Strava summary")
 def strava_summary(
     ios_user_id: str = Query(..., min_length=3),
-    weeks: int = Query(8, ge=1, le=12),
+    weeks: int = Query(4, ge=1, le=12),
 ) -> StravaSummaryResponse:
     """Return the Strava training summary used by the plan page."""
     with get_db_session() as session:

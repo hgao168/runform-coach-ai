@@ -321,6 +321,7 @@
 "strava.status.connected" = "Strava connected.";
 "strava.status.cancelled" = "Strava sign in cancelled.";
 "strava.sync.success %lld" = "Synced %lld run(s) from Strava.";
+"strava.sync.success %lld %lld" = "Synced %lld run(s) and refreshed %lld weeks of Strava status.";
 "strava.error.status %@" = "Unable to check Strava status. %@";
 "strava.error.start" = "Unable to start Strava sign in. Please try again.";
 "strava.error.open %@" = "Failed to open Strava sign in. %@";

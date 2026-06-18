@@ -12,7 +12,8 @@ from .db_models import OAuthConnection, StravaRun, StravaWeeklyStat, User
 from .strava_oauth import StravaOAuthError, get_valid_access_token
 
 STRAVA_API_BASE_URL = "https://www.strava.com/api/v3"
-STRAVA_LOOKBACK_DAYS = 56
+STRAVA_LOOKBACK_WEEKS = 8
+STRAVA_LOOKBACK_DAYS = STRAVA_LOOKBACK_WEEKS * 7
 
 
 def _parse_datetime(value: str) -> datetime:
@@ -30,6 +31,14 @@ def _week_start(value: datetime) -> datetime:
 
 def _week_start_from_iso(value: datetime) -> datetime:
     return _week_start(value)
+
+
+def _week_starts_for_window(reference: datetime, week_count: int) -> list[datetime]:
+    current_week_start = _week_start(reference)
+    return [
+        current_week_start - timedelta(weeks=offset)
+        for offset in range(week_count - 1, -1, -1)
+    ]
 
 
 def _is_run_activity(activity: dict[str, Any]) -> bool:
@@ -111,6 +120,17 @@ def _weekly_summary_from_runs(runs: list[StravaRun]) -> list[dict[str, Any]]:
     return summaries
 
 
+def _empty_week_summary(week_start: datetime) -> dict[str, Any]:
+    return {
+        "week_start": week_start,
+        "total_distance_m": 0.0,
+        "run_count": 0,
+        "longest_run_m": 0.0,
+        "avg_pace_s_per_km": None,
+        "intensity_score": 0.0,
+    }
+
+
 async def _fetch_strava_athlete(access_token: str) -> dict[str, Any] | None:
     """Fetch the connected athlete's profile from Strava. Returns None on failure (non-fatal)."""
     try:
@@ -176,7 +196,7 @@ def _prefill_user_from_strava_athlete(user: User, athlete: dict[str, Any]) -> di
 
 async def _fetch_strava_activities(access_token: str, cutoff: datetime) -> list[dict[str, Any]]:
     activities: list[dict[str, Any]] = []
-    params = {"after": int(cutoff.timestamp()), "per_page": 200}
+    params = {"after": int(cutoff.timestamp()) - 1, "per_page": 200}
 
     async with httpx.AsyncClient(timeout=30) as client:
         page = 1
@@ -216,7 +236,10 @@ async def sync_strava_runs_for_user(session: Session, ios_user_id: str, lookback
         raise LookupError("Strava is not connected for this user.")
 
     access_token = await get_valid_access_token(session, connection)
-    cutoff = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    now = datetime.now(timezone.utc)
+    week_count = max(1, min(12, (lookback_days + 6) // 7))
+    week_starts = _week_starts_for_window(now, week_count)
+    cutoff = week_starts[0]
     activities = await _fetch_strava_activities(access_token, cutoff)
 
     # Best-effort: pull /athlete and fill empty profile fields. Failures are non-fatal.
@@ -234,16 +257,22 @@ async def sync_strava_runs_for_user(session: Session, ios_user_id: str, lookback
     touched_runs = session.scalars(
         select(StravaRun).where(StravaRun.user_id == user.id, StravaRun.start_date >= cutoff)
     ).all()
-    summaries = _weekly_summary_from_runs(touched_runs)
-    touched_week_starts = {week_start for item in summaries if (week_start := item["week_start"])}
+    summaries_by_week = {
+        item["week_start"]: item
+        for item in _weekly_summary_from_runs(touched_runs)
+        if item["week_start"] in week_starts
+    }
+    summaries = [
+        summaries_by_week.get(week_start, _empty_week_summary(week_start))
+        for week_start in week_starts
+    ]
 
-    if touched_week_starts:
-        session.execute(
-            delete(StravaWeeklyStat).where(
-                StravaWeeklyStat.user_id == user.id,
-                StravaWeeklyStat.week_start.in_(sorted(touched_week_starts)),
-            )
+    session.execute(
+        delete(StravaWeeklyStat).where(
+            StravaWeeklyStat.user_id == user.id,
+            StravaWeeklyStat.week_start.in_(week_starts),
         )
+    )
 
     weekly_rows: list[StravaWeeklyStat] = [
         StravaWeeklyStat(
@@ -257,8 +286,7 @@ async def sync_strava_runs_for_user(session: Session, ios_user_id: str, lookback
         )
         for item in summaries
     ]
-    if weekly_rows:
-        session.add_all(weekly_rows)
+    session.add_all(weekly_rows)
 
     session.flush()
 

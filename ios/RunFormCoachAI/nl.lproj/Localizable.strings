@@ -318,6 +318,7 @@
 "strava.status.connected" = "Strava verbonden.";
 "strava.status.cancelled" = "Strava-aanmelding geannuleerd.";
 "strava.sync.success %lld" = "%lld run(s) gesynchroniseerd vanuit Strava.";
+"strava.sync.success %lld %lld" = "%lld run(s) gesynchroniseerd en %lld weken Strava-status bijgewerkt.";
 "strava.error.status %@" = "Kan Strava-status niet controleren. %@";
 "strava.error.start" = "Kan Strava-aanmelding niet starten. Probeer opnieuw.";
 "strava.error.open %@" = "Kan Strava-aanmelding niet openen. %@";

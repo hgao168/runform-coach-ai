@@ -623,7 +623,11 @@ struct ProfileView: View {
             do {
                 let response = try await APIClient.shared.syncStravaActivities(iosUserID: appStore.appUserID)
                 lastSyncedAt = Date()
-                stravaMessage = String(format: String(localized: "strava.sync.success %lld"), response.syncedRunCount)
+                stravaMessage = String(
+                    format: String(localized: "strava.sync.success %lld %lld"),
+                    response.syncedRunCount,
+                    response.weekCount
+                )
                 applyStravaPrefill(response.prefilledProfile)
                 refreshStravaStatus()
             } catch {
