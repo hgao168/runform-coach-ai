@@ -534,39 +534,61 @@ struct ProfileView: View {
     }
 
     private func handleStravaAuthCallback(callbackURL: URL?, error: Error?) {
-        defer { stravaAuthSession = nil }
+        // Always dismiss the Strava authorize popup once the session ends, even
+        // if the in-app browser showed an "address is invalid" page.
+        stravaAuthSession?.cancel()
+        stravaAuthSession = nil
 
+        // The web view can surface a confusing error or be dismissed by the user
+        // even after Strava has already authorized and the backend stored the
+        // connection. Instead of trusting the browser's result, verify the real
+        // connection state with the backend and only report a failure when the
+        // account is genuinely not connected.
         if let error {
             if let authError = error as? ASWebAuthenticationSessionError,
                authError.code == .canceledLogin {
-                stravaMessage = "Checking Strava connection..."
-                refreshStravaStatus()
+                verifyStravaConnection(fallbackMessage: String(localized: "strava.status.cancelled"))
             } else {
-                stravaMessage = String(format: String(localized: "strava.error.signin %@"), error.localizedDescription)
+                verifyStravaConnection(
+                    fallbackMessage: String(format: String(localized: "strava.error.signin %@"), error.localizedDescription)
+                )
             }
             return
         }
 
-        guard let callbackURL else {
-            stravaMessage = String(localized: "strava.error.callback_missing")
-            return
-        }
-
-        let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)
-        let status = components?.queryItems?.first(where: { $0.name == "status" })?.value
+        let components = callbackURL.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }
         let oauthError = components?.queryItems?.first(where: { $0.name == "error" })?.value
 
         if let oauthError, !oauthError.isEmpty {
-            stravaMessage = String(format: String(localized: "strava.error.oauth %@"), oauthError)
+            verifyStravaConnection(
+                fallbackMessage: String(format: String(localized: "strava.error.oauth %@"), oauthError)
+            )
             return
         }
 
-        if status == "connected" {
-            stravaMessage = String(localized: "strava.status.connected")
-            refreshStravaStatus()
-        } else {
-            // Some backends may not include status; still attempt a status refresh.
-            refreshStravaStatus()
+        verifyStravaConnection(fallbackMessage: String(localized: "strava.status.connected"))
+    }
+
+    /// Re-checks the real Strava connection state with the backend. Shows a
+    /// success message when connected; otherwise falls back to `fallbackMessage`.
+    private func verifyStravaConnection(fallbackMessage: String) {
+        guard appStore.currentUser != nil else {
+            stravaMessage = fallbackMessage
+            return
+        }
+        Task {
+            isLoadingStravaStatus = true
+            defer { isLoadingStravaStatus = false }
+
+            do {
+                let status = try await APIClient.shared.fetchStravaStatus(iosUserID: appStore.appUserID)
+                appStore.updateStravaStatus(status)
+                stravaMessage = status.connected
+                    ? String(localized: "strava.status.connected")
+                    : fallbackMessage
+            } catch {
+                stravaMessage = fallbackMessage
+            }
         }
     }
 
