@@ -91,7 +91,7 @@ final class APIClient {
 
     func fetchStravaConnectResponse(iosUserID: String, appCallbackURL: String? = nil) async throws -> StravaConnectResponse {
         let queryItems = appCallbackURL.map { [URLQueryItem(name: "app_callback_url", value: $0)] } ?? []
-        try await requestStrava(
+        return try await requestStrava(
             path: "connect",
             method: "GET",
             iosUserID: iosUserID,
