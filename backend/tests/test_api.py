@@ -163,7 +163,20 @@ def test_strava_app_callback_url_normalizes_bare_scheme(monkeypatch):
     assert strava_oauth.app_callback_url() == "runformcoachai://strava/callback"
 
 
-def test_strava_app_callback_url_defaults_to_ios_scheme(monkeypatch):
+def test_strava_app_callback_url_defaults_to_none(monkeypatch):
     monkeypatch.delenv("STRAVA_APP_CALLBACK_URL", raising=False)
 
-    assert strava_oauth.app_callback_url() == "runformcoachai://strava/callback"
+    assert strava_oauth.app_callback_url() is None
+
+
+def test_strava_state_preserves_requested_app_callback(monkeypatch):
+    monkeypatch.setenv("STRAVA_CLIENT_SECRET", "test-strava-client-secret")
+
+    state = strava_oauth.make_state(
+        "test-user-001",
+        app_callback_url="runformcoachai://strava/callback",
+    )
+
+    payload = strava_oauth.verify_state_payload(state)
+    assert payload["uid"] == "test-user-001"
+    assert payload["cb"] == "runformcoachai://strava/callback"

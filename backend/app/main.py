@@ -101,14 +101,13 @@ from .strava_summary import build_strava_summary
 from .strava_oauth import (
     StravaOAuthConfigError,
     StravaOAuthError,
-    app_callback_url,
     build_authorize_url,
     decrypt_secret,
     deauthorize_access_token,
     exchange_code_for_token,
     get_strava_connection,
     upsert_strava_connection,
-    verify_state,
+    verify_state_payload,
 )
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
@@ -1480,9 +1479,12 @@ def weekly_insight(ios_user_id: str = Query(..., min_length=3), _api_key: str = 
 
 @app.get("/integrations/strava/connect", response_model=StravaConnectResponse)
 @_strava_endpoint("Failed to create Strava connect URL")
-def strava_connect(ios_user_id: str = Query(..., min_length=3)) -> StravaConnectResponse:
+def strava_connect(
+    ios_user_id: str = Query(..., min_length=3),
+    app_callback_url: str | None = Query(None, max_length=512),
+) -> StravaConnectResponse:
     """Build a Strava OAuth authorize URL for a specific iOS user identifier."""
-    payload = build_authorize_url(ios_user_id=ios_user_id)
+    payload = build_authorize_url(ios_user_id=ios_user_id, app_callback_url=app_callback_url)
     return StravaConnectResponse(**payload)
 
 
@@ -1495,7 +1497,9 @@ async def strava_callback(code: str | None = None, state: str | None = None, err
     if not code or not state:
         raise HTTPException(status_code=400, detail="Missing required callback parameters: code and state.")
 
-    ios_user_id = verify_state(state)
+    state_payload = verify_state_payload(state)
+    ios_user_id = state_payload["uid"]
+    callback_url = state_payload.get("cb")
     token_payload = await exchange_code_for_token(code)
     provider_athlete_id = None
     with get_db_session() as session:
@@ -1503,14 +1507,14 @@ async def strava_callback(code: str | None = None, state: str | None = None, err
         session.commit()
         provider_athlete_id = connection.provider_athlete_id
 
-    if app_url := app_callback_url():
+    if callback_url:
         query = urlencode({
             "status": "connected",
             "ios_user_id": ios_user_id,
             "provider": "strava",
             "provider_athlete_id": provider_athlete_id,
         })
-        return RedirectResponse(url=f"{app_url}?{query}")
+        return RedirectResponse(url=f"{callback_url}?{query}")
 
     escaped_athlete_id = html.escape(provider_athlete_id or "")
     return HTMLResponse(

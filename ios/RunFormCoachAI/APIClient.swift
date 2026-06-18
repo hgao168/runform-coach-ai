@@ -89,11 +89,13 @@ final class APIClient {
         }
     }
 
-    func fetchStravaConnectResponse(iosUserID: String) async throws -> StravaConnectResponse {
+    func fetchStravaConnectResponse(iosUserID: String, appCallbackURL: String? = nil) async throws -> StravaConnectResponse {
+        let queryItems = appCallbackURL.map { [URLQueryItem(name: "app_callback_url", value: $0)] } ?? []
         try await requestStrava(
             path: "connect",
             method: "GET",
             iosUserID: iosUserID,
+            queryItems: queryItems,
             notFoundMessage: "Strava connect route not found",
             exhaustedMessage: "Unable to load Strava connect URL from available backends."
         )
@@ -373,10 +375,15 @@ final class APIClient {
         return body
     }
 
-    private func stravaEndpoint(path: String, iosUserID: String, baseURL: URL? = nil) throws -> URL {
+    private func stravaEndpoint(
+        path: String,
+        iosUserID: String,
+        baseURL: URL? = nil,
+        queryItems: [URLQueryItem] = []
+    ) throws -> URL {
         let resolvedBaseURL = try baseURL ?? Self.resolvedStravaBaseURL()
         var components = URLComponents(url: resolvedBaseURL.appendingPathComponent("integrations/strava").appendingPathComponent(path), resolvingAgainstBaseURL: false)
-        components?.queryItems = [URLQueryItem(name: "ios_user_id", value: iosUserID)]
+        components?.queryItems = [URLQueryItem(name: "ios_user_id", value: iosUserID)] + queryItems
         guard let url = components?.url else {
             throw APIError.configuration("Failed to build Strava API URL for path: \(path)")
         }
@@ -426,6 +433,7 @@ final class APIClient {
         path: String,
         method: String,
         iosUserID: String,
+        queryItems: [URLQueryItem] = [],
         body: [String: Any]? = nil,
         timeout: TimeInterval = 20,
         notFoundMessage: String,
@@ -434,7 +442,12 @@ final class APIClient {
         var lastError: APIError?
         let candidates = try stravaBaseURLCandidates()
         for candidateBaseURL in candidates {
-            let endpoint = try stravaEndpoint(path: path, iosUserID: iosUserID, baseURL: candidateBaseURL)
+            let endpoint = try stravaEndpoint(
+                path: path,
+                iosUserID: iosUserID,
+                baseURL: candidateBaseURL,
+                queryItems: queryItems
+            )
             var request = URLRequest(url: endpoint)
             request.httpMethod = method
             request.timeoutInterval = timeout

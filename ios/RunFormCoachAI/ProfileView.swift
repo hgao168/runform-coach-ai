@@ -7,6 +7,7 @@ import UIKit
 
 struct ProfileView: View {
     private static let stravaCallbackScheme = "runformcoachai"
+    private static let stravaCallbackURL = "runformcoachai://strava/callback"
 
     @EnvironmentObject private var appStore: AppStore
     @State private var firstName = ""
@@ -504,7 +505,10 @@ struct ProfileView: View {
             defer { isConnectingStrava = false }
 
             do {
-                let payload = try await APIClient.shared.fetchStravaConnectResponse(iosUserID: appStore.appUserID)
+                let payload = try await APIClient.shared.fetchStravaConnectResponse(
+                    iosUserID: appStore.appUserID,
+                    appCallbackURL: Self.stravaCallbackURL
+                )
                 let callbackScheme = stravaCallbackURLScheme()
 
                 let session = ASWebAuthenticationSession(
@@ -535,7 +539,7 @@ struct ProfileView: View {
         if let error {
             if let authError = error as? ASWebAuthenticationSessionError,
                authError.code == .canceledLogin {
-                stravaMessage = String(localized: "strava.status.cancelled")
+                stravaMessage = "Checking Strava connection..."
                 refreshStravaStatus()
             } else {
                 stravaMessage = String(format: String(localized: "strava.error.signin %@"), error.localizedDescription)
