@@ -215,3 +215,18 @@ def test_strava_empty_week_summary_keeps_zero_week_in_status():
         "avg_pace_s_per_km": None,
         "intensity_score": 0.0,
     }
+
+
+def test_strava_run_filter_accepts_strava_run_variants():
+    base_activity = {"distance": 5000.0, "moving_time": 1500}
+
+    assert strava_sync._is_run_activity({**base_activity, "sport_type": "Run", "type": "Workout"})
+    assert strava_sync._is_run_activity({**base_activity, "sport_type": "TrailRun"})
+    assert strava_sync._is_run_activity({**base_activity, "sport_type": "VirtualRun"})
+    assert strava_sync._is_run_activity({**base_activity, "type": "Run"})
+
+
+def test_strava_run_filter_rejects_non_run_or_empty_activity():
+    assert not strava_sync._is_run_activity({"sport_type": "Ride", "distance": 5000.0, "moving_time": 1500})
+    assert not strava_sync._is_run_activity({"sport_type": "Run", "distance": 0.0, "moving_time": 1500})
+    assert not strava_sync._is_run_activity({"sport_type": "Run", "distance": 5000.0, "moving_time": 0})

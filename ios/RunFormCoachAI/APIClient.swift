@@ -24,13 +24,13 @@ final class APIClient {
            let url = URL(string: urlString) {
             return url
         }
-        if let defaultURL = URL(string: defaultStravaBackendBaseURL) {
-            return defaultURL
-        }
         if let fallback = Bundle.main.object(forInfoDictionaryKey: "BACKEND_BASE_URL") as? String,
            !fallback.isEmpty,
            let fallbackURL = URL(string: fallback) {
             return fallbackURL
+        }
+        if let defaultURL = URL(string: defaultStravaBackendBaseURL) {
+            return defaultURL
         }
         throw APIError.configuration("BACKEND_BASE_URL is not configured. Check project.yml build settings.")
     }
@@ -392,10 +392,10 @@ final class APIClient {
 
     private func stravaBaseURLCandidates() throws -> [URL] {
         var candidates: [URL] = [try Self.resolvedStravaBaseURL()]
+        candidates.append(try Self.resolvedBaseURL())
         if let productionURL = URL(string: Self.defaultStravaBackendBaseURL) {
             candidates.append(productionURL)
         }
-        candidates.append(try Self.resolvedBaseURL())
 
         var seen = Set<String>()
         return candidates.filter { candidate in

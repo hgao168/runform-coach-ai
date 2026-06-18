@@ -41,8 +41,20 @@ def _week_starts_for_window(reference: datetime, week_count: int) -> list[dateti
     ]
 
 
+def _activity_kind(activity: dict[str, Any]) -> str:
+    for key in ("sport_type", "type"):
+        value = activity.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
 def _is_run_activity(activity: dict[str, Any]) -> bool:
-    return activity.get("type") == "Run" and float(activity.get("distance") or 0.0) > 0 and int(activity.get("moving_time") or 0) > 0
+    return (
+        _activity_kind(activity) in {"Run", "TrailRun", "VirtualRun"}
+        and float(activity.get("distance") or 0.0) > 0
+        and int(activity.get("moving_time") or 0) > 0
+    )
 
 
 def _estimate_intensity_score(total_distance_km: float, run_count: int, longest_run_km: float, avg_pace_s_per_km: float | None) -> float:
