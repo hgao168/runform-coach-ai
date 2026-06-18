@@ -1561,20 +1561,40 @@ async def strava_callback(code: str | None = None, state: str | None = None, err
 
 @app.get("/integrations/strava/status", response_model=StravaStatusResponse)
 @_strava_endpoint("Failed to get Strava status")
-def strava_status(ios_user_id: str = Query(..., min_length=3)) -> StravaStatusResponse:
-    """Return Strava connection status for a given iOS user identifier."""
+async def strava_status(ios_user_id: str = Query(..., min_length=3)) -> StravaStatusResponse:
+    """Return Strava connection status for a given iOS user identifier.
+
+    Falls back to production backend when the local database does not have
+    a Strava connection — fixes the staging / production split-brain issue
+    where the callback lands on production but the status check hits staging.
+    """
     with get_db_session() as session:
         conn = get_strava_connection(session, ios_user_id=ios_user_id)
-        if conn is None:
-            return StravaStatusResponse(connected=False)
+        if conn is not None:
+            return StravaStatusResponse(
+                connected=True,
+                provider_athlete_id=conn.provider_athlete_id,
+                scope=conn.scope,
+                expires_at=conn.expires_at.isoformat() if conn.expires_at else None,
+                last_refresh_at=conn.last_refresh_at.isoformat() if conn.last_refresh_at else None,
+            )
 
-        return StravaStatusResponse(
-            connected=True,
-            provider_athlete_id=conn.provider_athlete_id,
-            scope=conn.scope,
-            expires_at=conn.expires_at.isoformat() if conn.expires_at else None,
-            last_refresh_at=conn.last_refresh_at.isoformat() if conn.last_refresh_at else None,
-        )
+    # Fallback: ask production — the OAuth callback may have landed there.
+    prod_base = os.getenv("STRAVA_PRODUCTION_BACKEND_URL",
+                          "https://runform-coach-ai-production.up.railway.app")
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{prod_base}/integrations/strava/status",
+                params={"ios_user_id": ios_user_id},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return StravaStatusResponse(**data)
+    except Exception:
+        pass
+
+    return StravaStatusResponse(connected=False)
 
 
 @app.post("/integrations/strava/sync", response_model=StravaSyncResponse)
