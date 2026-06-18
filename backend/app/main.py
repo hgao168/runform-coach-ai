@@ -1152,6 +1152,19 @@ def list_sessions(
         raise HTTPException(status_code=500, detail=f"Failed to list sessions: {exc}") from exc
 
 
+@app.get("/sessions", response_model=list[RunSessionResponse])
+def list_sessions_compat(
+    ios_user_id: str = Query(..., min_length=3),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    _api_key: str = Depends(verify_api_key),
+) -> list[RunSessionResponse]:
+    """向后兼容路由别名，转发到 GET /api/v1/sessions。"""
+    return list_sessions(
+        ios_user_id=ios_user_id, limit=limit, offset=offset, _api_key=_api_key
+    )
+
+
 @app.get("/api/v1/sessions/trends", response_model=SessionTrendsResponse)
 def session_trends(
     ios_user_id: str = Query(..., min_length=3),
