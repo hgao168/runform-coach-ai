@@ -168,7 +168,7 @@ def _strava_endpoint(action: str):
             for cls, status in _STRAVA_ERROR_MAP:
                 if isinstance(exc, cls):
                     return HTTPException(status_code=status, detail=str(exc))
-            return HTTPException(status_code=500, detail=f"{action}. Please try again.")
+            return HTTPException(status_code=500, detail=f"{action}: {type(exc).__name__}: {exc}")
 
         if asyncio.iscoroutinefunction(func):
             @wraps(func)
