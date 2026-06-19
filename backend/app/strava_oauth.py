@@ -3,6 +3,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import time
 from typing import Any
@@ -15,6 +16,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .db_models import OAuthConnection, User
+
+logger = logging.getLogger(__name__)
 
 STRAVA_AUTHORIZE_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
@@ -40,7 +43,7 @@ def _client_id() -> str:
 
 
 def _client_secret() -> str:
-    return _required_env("STRAVA_CLIENT_SECRET")
+    return _required_env("STRAVA_CLIENT_SECRET").strip()
 
 
 def _redirect_uri() -> str:
@@ -124,6 +127,10 @@ def verify_state_payload(state: str, max_age_seconds: int = 900) -> dict[str, An
     expected_sig = hmac.new(_state_secret().encode("utf-8"), payload_part.encode("utf-8"), hashlib.sha256).digest()
     actual_sig = _b64url_decode(sig_part)
     if not hmac.compare_digest(expected_sig, actual_sig):
+        logger.warning(
+            "State signature mismatch — state_secret first 4 chars: %s...",
+            _state_secret()[:4]
+        )
         raise StravaOAuthError("OAuth state signature mismatch.")
 
     payload = json.loads(_b64url_decode(payload_part).decode("utf-8"))
