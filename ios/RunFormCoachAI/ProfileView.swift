@@ -289,17 +289,45 @@ struct ProfileView: View {
     }
 
     private var stravaCard: some View {
-        ProfileStravaCard(
-            stravaMessage: $stravaMessage,
-            lastSyncedAt: $lastSyncedAt,
-            isLoadingStravaStatus: isLoadingStravaStatus,
-            isSyncingStravaRuns: isSyncingStravaRuns,
-            isConnectingStrava: isConnectingStrava,
-            onConnect: connectStrava,
-            onDisconnect: disconnectStrava,
-            onSync: syncStravaRuns
-        )
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionTitle(
+                    LocalizedStringKey("strava.card.title"),
+                    subtitle: LocalizedStringKey("strava.card.subtitle"),
+                    systemImage: "link.circle.fill"
+                )
+                HStack {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 32))
+                            .foregroundStyle(AppTheme.mint.opacity(0.6))
+                        Text("Coming Soon")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.mint)
+                        Text("Strava integration is being upgraded.\nCheck back shortly!")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .multilineTextAlignment(.center)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 16)
+            }
+        }
     }
+//    private var stravaCard: some View {
+//        ProfileStravaCard(
+//            stravaMessage: $stravaMessage,
+//            lastSyncedAt: $lastSyncedAt,
+//            isLoadingStravaStatus: isLoadingStravaStatus,
+//            isSyncingStravaRuns: isSyncingStravaRuns,
+//            isConnectingStrava: isConnectingStrava,
+//            onConnect: connectStrava,
+//            onDisconnect: disconnectStrava,
+//            onSync: syncStravaRuns
+//        )
+//    }
 
     private var authCard: some View {
         GlassCard {
