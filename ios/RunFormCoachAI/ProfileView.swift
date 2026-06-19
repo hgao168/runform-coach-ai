@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 #if canImport(UIKit)
 import UIKit
