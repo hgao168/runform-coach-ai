@@ -38,7 +38,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 3
-        versionName = "1.2"
+        versionName = "1.3"
 
         buildConfigField("String", "STAGING_URL", "\"https://runform-coach-ai-staging.up.railway.app/\"")
         buildConfigField("String", "PRODUCTION_URL", "\"https://api.runformcoach.com/\"")
