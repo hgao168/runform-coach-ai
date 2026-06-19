@@ -33,7 +33,9 @@ enum SignalProcessing {
     }
 
     /// Peak detection with relative prominence: adapts to actual signal amplitude.
-    static func countPeaksRobust(in values: [Double]) -> Int {
+    /// minInterval enforces a minimum sample spacing between consecutive peaks (default=3)
+    /// to prevent two adjacent noise spikes from being counted as separate steps.
+    static func countPeaksRobust(in values: [Double], minInterval: Int = 3) -> Int {
         guard values.count > 4 else { return 0 }
         let vMin = values.min() ?? 0
         let vMax = values.max() ?? 0
@@ -42,12 +44,17 @@ enum SignalProcessing {
         // Require peak to stand at least 10% of signal range above surrounding valley
         let prominence = max(0.010, range * 0.10)
         var count = 0
+        var lastPeakIndex = -minInterval - 1
         for i in 1..<(values.count - 1) {
             guard values[i] > values[i - 1] && values[i] > values[i + 1] else { continue }
+            guard i - lastPeakIndex > minInterval else { continue }
             // Compare against min in ±3-sample neighbourhood for broader context
             let lo = max(0, i - 3), hi = min(values.count - 1, i + 3)
             let localMin = values[lo...hi].min() ?? 0
-            if values[i] - localMin >= prominence { count += 1 }
+            if values[i] - localMin >= prominence {
+                count += 1
+                lastPeakIndex = i
+            }
         }
         return count
     }

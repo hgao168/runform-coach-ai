@@ -152,7 +152,16 @@ final class PoseExtractor {
             if kneePeaks > candidateSteps { candidateSteps = kneePeaks }
         }
 
-        let cadenceSPM = durationSeconds > 0 ? Double(candidateSteps) / durationSeconds * 60.0 : 0
+        // ISSUE-13: use actual pose frame time span (not full video duration) for SPM
+        // ISSUE-14: cap SPM at 250 to prevent unrealistic values
+        let effectiveDuration: Double
+        if let firstTime = usablePoses.first?.time, let lastTime = usablePoses.last?.time, lastTime > firstTime {
+            effectiveDuration = lastTime - firstTime
+        } else {
+            effectiveDuration = durationSeconds
+        }
+        let rawSPM = effectiveDuration > 0 ? Double(candidateSteps) / effectiveDuration * 60.0 : 0
+        let cadenceSPM = min(rawSPM, 250.0)
         if cadenceSPM < 50 {
             qualityNotes.append("Cadence could not be measured. Make sure feet are visible and the clip is 8+ seconds of steady running.")
         }
@@ -691,8 +700,8 @@ final class PoseExtractor {
         SignalProcessing.smoothWide(values, window: window)
     }
 
-    private func countPeaksRobust(in values: [Double]) -> Int {
-        SignalProcessing.countPeaksRobust(in: values)
+    private func countPeaksRobust(in values: [Double], minInterval: Int = 3) -> Int {
+        SignalProcessing.countPeaksRobust(in: values, minInterval: minInterval)
     }
 
     private func zeroCrossingSteps(in values: [Double]) -> Int {

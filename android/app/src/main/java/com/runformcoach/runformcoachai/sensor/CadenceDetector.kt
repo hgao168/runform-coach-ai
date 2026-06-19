@@ -38,7 +38,7 @@ data class CadenceSample(
  * 用法:
  * ```
  * val detector = CadenceDetector(alpha = 0.8)
- * detector.process(accelMagnitude)
+ * detector.process(sensorFrame)  // 传入 SensorFrame，自动提取 accelMag + timestampNanos
  * // 订阅:
  * detector.cadenceBpmFlow.collect { bpm -> ... }
  * ```
@@ -55,12 +55,14 @@ class CadenceDetector(
 ) {
     companion object {
         private const val TAG = "CadenceDetector"
-        /** 采样率假设 (Hz) —— 用于时间戳推算。 */
-        private const val ASSUMED_HZ = 60.0
         /** 两步之间最小间隔 (秒) ≈ 400 SPM 上限。 */
         private const val MIN_STEP_INTERVAL = 0.15
         /** 每次发射的最小间隔 (秒) —— 限流，避免 flooding。 */
         private const val EMIT_THROTTLE_SEC = 0.5
+        /** 历史缓冲区安全上界 (# 样本)，防止极端高频场景 OOM。 */
+        private const val MAX_BUFFER_SAMPLES = 600
+        /** 纳秒 → 秒换算常量。 */
+        private const val NANOS_TO_SECONDS = 1_000_000_000.0
     }
 
     // ── 公开状态 ──────────────────────────────────────────────────────────────
@@ -78,32 +80,42 @@ class CadenceDetector(
     private var filteredValue: Double = 0.0
     private val filteredHistory = ArrayDeque<Double>()
     private val rawHistory = ArrayDeque<Double>()
+    /** 与 filteredHistory/rawHistory 并行的纳秒时间戳 (SensorEvent.timestamp)。 */
+    private val timestamps = ArrayDeque<Long>()
     private var sampleCount: Int = 0
-    private var lastStepSampleIndex: Int? = null
+    /** 上一步检测时的时间戳纳秒 (替代旧 lastStepSampleIndex，用真实时间计算间隔)。 */
+    private var lastStepTimestampNanos: Long? = null
     private val stepIntervals = ArrayDeque<Double>()  // 最近步间间隔 (秒)
     private var lastEmitTimestamp: Long = 0L
-
-    /** 历史最大样本数: windowSeconds * 60 Hz，至少 90。 */
-    private val maxHistorySamples: Int
-        get() = maxOf((windowSeconds * ASSUMED_HZ).toInt(), 90)
 
     // ── 公开 API ──────────────────────────────────────────────────────────────
 
     /**
-     * 喂入单个加速度值 (magnitude 或单轴 g-force) 并可能产出一个步频更新。
+     * 喂入单帧传感器数据并可能产出一个步频更新。
      *
-     * 调用方应传入加速度向量模长 `sqrt(ax²+ay²+az²)` 或最接近垂直方向的单轴值。
+     * 内部自动计算加速度向量模长 `sqrt(ax²+ay²+az²)`，
+     * 并用 [SensorFrame.timestampNanos] 精确计算步间时间。
      */
-    fun process(value: Double) {
-        processSync(value)
+    fun process(frame: SensorFrame) {
+        val accelMag = sqrt(
+            (frame.accelX * frame.accelX +
+             frame.accelY * frame.accelY +
+             frame.accelZ * frame.accelZ).toDouble()
+        )
+        processSync(accelMag, frame.timestampNanos)
     }
 
     /**
-     * 批量处理 (例如环形缓冲区快照)。
+     * 批量处理多帧 (例如环形缓冲区快照)。
      */
-    fun processBatch(values: List<Double>) {
-        for (v in values) {
-            processSync(v)
+    fun processBatch(frames: List<SensorFrame>) {
+        for (f in frames) {
+            val accelMag = sqrt(
+                (f.accelX * f.accelX +
+                 f.accelY * f.accelY +
+                 f.accelZ * f.accelZ).toDouble()
+            )
+            processSync(accelMag, f.timestampNanos)
         }
     }
 
@@ -112,8 +124,9 @@ class CadenceDetector(
         filteredValue = 0.0
         filteredHistory.clear()
         rawHistory.clear()
+        timestamps.clear()
         sampleCount = 0
-        lastStepSampleIndex = null
+        lastStepTimestampNanos = null
         stepIntervals.clear()
         _currentCadence.value = null
         lastEmitTimestamp = 0L
@@ -121,17 +134,30 @@ class CadenceDetector(
 
     // ── 内部处理 ──────────────────────────────────────────────────────────────
 
-    private fun processSync(value: Double) {
+    /**
+     * @param value  加速度向量模长 (已由调用方计算)
+     * @param timestampNanos  [SensorFrame.timestampNanos] 精确时间戳
+     */
+    private fun processSync(value: Double, timestampNanos: Long) {
         // 1. 低通滤波: y[n] = α * y[n-1] + (1-α) * x[n]
         filteredValue = alpha * filteredValue + (1.0 - alpha) * value
         filteredHistory.addLast(filteredValue)
         rawHistory.addLast(value)
+        timestamps.addLast(timestampNanos)
         sampleCount++
 
-        // 强制历史窗口大小
-        while (filteredHistory.size > maxHistorySamples) {
+        // 时间窗口剔除 (过期数据按真实时间移除，替代旧 sampleCount/ASSUMED_HZ)
+        val cutoffNanos = timestampNanos - (windowSeconds * NANOS_TO_SECONDS).toLong()
+        while (timestamps.isNotEmpty() && timestamps.first() < cutoffNanos) {
             filteredHistory.removeFirst()
             rawHistory.removeFirst()
+            timestamps.removeFirst()
+        }
+        // 安全上界：防御极端高频/单例泄漏
+        while (filteredHistory.size > MAX_BUFFER_SAMPLES) {
+            filteredHistory.removeFirst()
+            rawHistory.removeFirst()
+            timestamps.removeFirst()
         }
 
         // 2. 均值中心化 + 零交叉检测
@@ -147,17 +173,17 @@ class CadenceDetector(
             val prev = filteredHistory[i - 1] - mean
             val curr = filteredHistory[i] - mean
             if (prev < 0 && curr >= 0) {
-                // 向上零交叉 = 检测到一步
-                val stepSampleIdx = sampleCount - (filteredHistory.size - i)
-                if (lastStepSampleIndex != null) {
-                    val rawInterval = (stepSampleIdx - lastStepSampleIndex!!) / ASSUMED_HZ
+                // 向上零交叉 = 检测到一步，用真实时间戳计算间隔
+                val stepTimestamp = timestamps[i]
+                if (lastStepTimestampNanos != null) {
+                    val rawInterval = (stepTimestamp - lastStepTimestampNanos!!) / NANOS_TO_SECONDS
                     val interval = maxOf(MIN_STEP_INTERVAL, rawInterval)
                     stepIntervals.addLast(interval)
                     while (stepIntervals.size > 60) {
                         stepIntervals.removeFirst()
                     }
                 }
-                lastStepSampleIndex = stepSampleIdx
+                lastStepTimestampNanos = stepTimestamp
             }
         }
 
@@ -174,10 +200,10 @@ class CadenceDetector(
             val consistencyScore = clamp(1.0 - cv, 0.0, 1.0)
             val sampleScore = minOf(1.0, stepIntervals.size.toDouble() / 8.0)
             confidence = 0.5 * consistencyScore + 0.5 * sampleScore
-        } else if (filteredHistory.size >= maxHistorySamples / 2) {
-            // 回退: 对整个窗口做零交叉计数
+        } else if (timestamps.size >= 2) {
+            // 回退: 对整个窗口做零交叉计数，用实际时间跨度替代 ASSUMED_HZ
             val zcCount = countZeroCrossings(filteredHistory)
-            val windowTime = filteredHistory.size / ASSUMED_HZ
+            val windowTime = (timestamps.last() - timestamps.first()) / NANOS_TO_SECONDS
             val rawSPM = if (windowTime > 0) zcCount / windowTime * 60.0 else 0.0
             cadenceSPM = clamp(rawSPM, minCadenceSPM, maxCadenceSPM)
             confidence = maxOf(0.1, minOf(0.6, zcCount / 15.0))

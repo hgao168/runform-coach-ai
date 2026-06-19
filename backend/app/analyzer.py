@@ -287,6 +287,18 @@ def analyze_from_metrics(pose_input: PoseMetricsInput) -> AnalysisResponse:
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
 
+    # Validate cadence_estimate_spm is within a reasonable range (50–300 spm).
+    # A malicious client could supply an extreme value (e.g. 9999) that would
+    # produce misleading explanations.  Clamp and warn rather than rejecting
+    # outright so legitimate users with edge-case devices still get a report.
+    if pose_input.cadence_estimate_spm < 50 or pose_input.cadence_estimate_spm > 300:
+        original = pose_input.cadence_estimate_spm
+        pose_input.cadence_estimate_spm = max(50.0, min(300.0, original))
+        logger.warning(
+            "cadence_estimate_spm %.1f is outside reasonable range [50, 300]; clamped to %.1f",
+            original, pose_input.cadence_estimate_spm,
+        )
+
     if pose_input.cadence_status == "Not measurable":
         cadence_explanation = "Cadence could not be measured from this clip. Ensure feet are visible and the video is 8+ seconds of steady running."
     else:
