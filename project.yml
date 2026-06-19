@@ -54,10 +54,12 @@ targets:
       configs:
         Debug:
           BACKEND_BASE_URL: https://runform-coach-ai-staging.up.railway.app
+          STRAVA_BACKEND_BASE_URL: https://runform-coach-ai-production.up.railway.app
           GOOGLE_IOS_CLIENT_ID: 800424302505-n39j4tt9fc72tutmecekqjvn2g2puhj5.apps.googleusercontent.com
           GOOGLE_REVERSED_CLIENT_ID: com.googleusercontent.apps.800424302505-n39j4tt9fc72tutmecekqjvn2g2puhj5
         Release:
           BACKEND_BASE_URL: https://runform-coach-ai-production.up.railway.app
+          STRAVA_BACKEND_BASE_URL: https://runform-coach-ai-production.up.railway.app
           GOOGLE_IOS_CLIENT_ID: 800424302505-n39j4tt9fc72tutmecekqjvn2g2puhj5.apps.googleusercontent.com
           GOOGLE_REVERSED_CLIENT_ID: com.googleusercontent.apps.800424302505-n39j4tt9fc72tutmecekqjvn2g2puhj5
     dependencies:
