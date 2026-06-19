@@ -175,7 +175,7 @@ public final class CadenceDetector: @unchecked Sendable {
             // Fallback: use zeroCrossingSteps from SignalProcessing on the window
             let smoothValues = SignalProcessing.smoothWide(filteredHistory)
             let zcCount = SignalProcessing.zeroCrossingSteps(in: smoothValues)
-            let windowTime = Double(filteredHistory.count) / 60.0
+            let windowTime = Double(filteredHistory.count) / samplingRate
             let rawSPM = windowTime > 0 ? Double(zcCount) / windowTime * 60.0 : 0
             cadenceSPM = SignalProcessing.clamp(rawSPM, minCadenceSPM, maxCadenceSPM)
             confidence = max(0.1, min(0.6, Double(zcCount) / 15.0))

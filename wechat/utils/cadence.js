@@ -34,6 +34,8 @@ let isRunning = false
 let callbackFn = null
 let durationMs = 0
 let timerId = null
+const MEAN_HISTORY_SIZE = 50     // 均值缓冲区大小
+let meanHistory = []
 
 // ── 工具函数 ──
 
@@ -121,10 +123,11 @@ function calcCadence() {
     totalInterval += (peakTimestamps[i] - peakTimestamps[i - 1])
   }
   const avgIntervalSec = totalInterval / (peakTimestamps.length - 1) / 1000
-  const spm = Math.round(60 / avgIntervalSec)
+  const spm = Math.max(50, Math.min(250, Math.round(60 / avgIntervalSec)))
 
   // 置信度：基于窗口内峰的数量和均匀性
-  const expectedPeaks = CADENCE_WINDOW_SEC * 3  // 假设步频 180 spm = 3 步/秒
+  // 用实际平均间隔估算期望峰数，避免硬编码 180 spm
+  const expectedPeaks = avgIntervalSec > 0 ? CADENCE_WINDOW_SEC / avgIntervalSec : CADENCE_WINDOW_SEC * 3
   const peakCountFactor = Math.min(peakTimestamps.length / expectedPeaks, 1.0)
 
   // 计算间隔均匀性
@@ -153,8 +156,13 @@ function onAccelerometerChange(res) {
   const { x, y, z } = res
   const mag = calcMagnitude(x, y, z)
 
-  // 去重力 + 低通滤波
-  const bodyAccel = Math.abs(mag - GRAVITY)
+  // 均值中心化去重力: 维护均值缓冲区，用 mag - mean(meanHistory) 替代固定重力常数
+  meanHistory.push(mag)
+  if (meanHistory.length > MEAN_HISTORY_SIZE) meanHistory.shift()
+  const meanMag = meanHistory.reduce((a, b) => a + b, 0) / meanHistory.length
+  const bodyAccel = Math.abs(mag - meanMag)
+
+  // 低通滤波
   const magFiltered = lowpass(bodyAccel, prevMagFiltered)
   prevMagFiltered = magFiltered
 
@@ -206,6 +214,7 @@ function startCadenceDetection(durationSeconds, callback) {
   stepCount = 0
   startTime = Date.now()
   prevMagFiltered = null
+  meanHistory = []
   isRunning = true
   callbackFn = callback
   durationMs = (durationSeconds || 0) * 1000

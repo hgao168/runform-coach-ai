@@ -190,13 +190,8 @@ class RunSessionManager @Inject constructor(
         sensorCollectJob?.cancel()
         sensorCollectJob = scope.launch {
             sensorCaptureManager.sensorFrames().collect { frame ->
-                // 计算加速度向量模长喂给步频检测器
-                val accelMag = kotlin.math.sqrt(
-                    (frame.accelX * frame.accelX +
-                     frame.accelY * frame.accelY +
-                     frame.accelZ * frame.accelZ).toDouble()
-                )
-                cadenceDetector.process(accelMag)
+                // 直接将完整帧喂给步频检测器 (含 timestampNanos 用于精确时间计算)
+                cadenceDetector.process(frame)
 
                 // 完整帧喂给步态分析器
                 gaitAnalyzer.process(frame)
