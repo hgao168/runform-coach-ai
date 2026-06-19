@@ -199,7 +199,7 @@ class StravaStatusResponse(BaseModel):
 
 class StravaDisconnectRequest(BaseModel):
     ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\-]+$'
     )
 
 
@@ -215,7 +215,7 @@ class StravaDisconnectResponse(BaseModel):
 
 class StravaSyncRequest(BaseModel):
     ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\-]+$'
     )
 
 
@@ -305,7 +305,7 @@ class ProfileSaveResponse(BaseModel):
 
 class FeedbackSubmitRequest(BaseModel):
     ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\-]+$'
     )
     analysis_id: str          # UUID of the AnalysisHistoryItem from iOS
     rating: str               # "Accurate" | "Partly accurate" | "Not accurate" | "Confusing"
@@ -369,7 +369,7 @@ class CompareResponse(BaseModel):
 
 class RunSessionCreate(BaseModel):
     ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\-]+$'
     )
     start_time: str  # ISO 8601
     end_time: Optional[str] = None  # ISO 8601
@@ -404,7 +404,7 @@ class SessionTrendsResponse(BaseModel):
 
 class SessionCompareRequest(BaseModel):
     ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\-]+$'
     )
     session_id_a: int
     session_id_b: int
@@ -462,10 +462,10 @@ class WeeklyInsightResponse(BaseModel):
 
 class InviteCodeGenerateRequest(BaseModel):
     user_id: Optional[str] = Field(
-        None, min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\\-]+$'
+        None, min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\\-]+$'
     )
     ios_user_id: Optional[str] = Field(
-        None, min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\\-]+$'
+        None, min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\\-]+$'
     )
 
 
@@ -477,7 +477,7 @@ class InviteCodeGenerateResponse(BaseModel):
 
 class InviteRedeemRequest(BaseModel):
     user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\-]+$'
     )
     code: str = Field(..., min_length=8, max_length=8)
 
@@ -523,7 +523,7 @@ class ChallengeInfo(BaseModel):
 
 class ChallengeJoinRequest(BaseModel):
     ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\-]+$'
     )
 
 
@@ -552,7 +552,7 @@ class ChallengeLeaderboardEntry(BaseModel):
 
 class ChallengeCheckInRequest(BaseModel):
     user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\\-]+$'
     )
 
 
@@ -587,7 +587,7 @@ class ClubLeaderboardResponse(BaseModel):
 
 class CoachCodeGenerateRequest(BaseModel):
     ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\-]+$'
     )
 
 
@@ -600,7 +600,7 @@ class CoachCodeResponse(BaseModel):
 
 class CoachJoinRequest(BaseModel):
     ios_user_id: str = Field(
-        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._\-]+$'
+        ..., min_length=3, max_length=128, pattern=r'^[a-zA-Z0-9._@\-]+$'
     )
     code: str = Field(..., min_length=8, max_length=8)
 
