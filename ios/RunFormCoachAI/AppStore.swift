@@ -16,6 +16,13 @@ final class AppStore: ObservableObject {
     @Published private(set) var nextWeekPlan: SavedPlan?
     @Published private(set) var manualNextWeekPlan: ManualNextWeekPlan?
 
+    @Published private(set) var challenges: [ChallengeInfo] = []
+    @Published private(set) var selectedChallenge: ChallengeInfo?
+    @Published private(set) var leaderboard: [ChallengeLeaderboardEntry] = []
+    @Published private(set) var isFetchingChallenges = false
+    @Published private(set) var isJoiningChallenge = false
+    @Published private(set) var challengeError: String?
+
     
     var latestCoachingIssues: [FormIssueContext] {
         guard let latest = history.first else { return [] }
@@ -224,6 +231,58 @@ final class AppStore: ObservableObject {
         if let idx = savedPlans.firstIndex(where: { $0.id == planID }) {
             savedPlans[idx].workoutLogs.removeValue(forKey: workoutID)
             saveSavedPlans()
+        }
+    }
+
+    // MARK: - Challenges
+
+    func fetchChallenges() async {
+        isFetchingChallenges = true
+        challengeError = nil
+        do {
+            challenges = try await APIClient.shared.fetchChallenges(iosUserID: appUserID)
+        } catch {
+            challengeError = error.localizedDescription
+        }
+        isFetchingChallenges = false
+    }
+
+    func joinChallenge(challengeID: String) async {
+        isJoiningChallenge = true
+        challengeError = nil
+        do {
+            let response = try await APIClient.shared.joinChallenge(challengeID: challengeID, iosUserID: appUserID)
+            // Refresh challenge list to pick up joined state
+            challenges = try await APIClient.shared.fetchChallenges(iosUserID: appUserID)
+            if let updated = challenges.first(where: { $0.id == challengeID }) {
+                selectedChallenge = updated
+            }
+        } catch {
+            challengeError = error.localizedDescription
+        }
+        isJoiningChallenge = false
+    }
+
+    func fetchLeaderboard(for challengeID: String) async {
+        challengeError = nil
+        do {
+            leaderboard = try await APIClient.shared.fetchLeaderboard(challengeID: challengeID, iosUserID: appUserID)
+        } catch {
+            challengeError = error.localizedDescription
+        }
+    }
+
+    func checkIn(for challengeID: String) async {
+        challengeError = nil
+        do {
+            let response = try await APIClient.shared.checkIn(challengeID: challengeID, userID: appUserID)
+            // Refresh challenge list to update completed_days / today_completed
+            challenges = try await APIClient.shared.fetchChallenges(iosUserID: appUserID)
+            if let updated = challenges.first(where: { $0.id == challengeID }) {
+                selectedChallenge = updated
+            }
+        } catch {
+            challengeError = error.localizedDescription
         }
     }
 

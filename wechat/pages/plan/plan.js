@@ -104,6 +104,16 @@ Page({
       marathonRaceWeek: t('marathonRaceWeek'),
       marathonPlanTitle: t('marathonPlanTitle'),
       racePlanTitle: t('racePlanTitle'),
+      // RF-613: Recheck
+      recheckTitle: t('recheckTitle'),
+      recheckSubtitle: t('recheckSubtitle'),
+      recheckCta: t('recheckCta'),
+      recheckNoData: t('recheckNoData'),
+      recheckLastScore: t('recheckLastScore'),
+      recheckThisScore: t('recheckThisScore'),
+      recheckImproved: t('recheckImproved'),
+      recheckDeclined: t('recheckDeclined'),
+      recheckScore: t('recheckScore'),
     },
 
     weeklyKm: 30,
@@ -140,6 +150,17 @@ Page({
     plan: null,          // weekly plan
     marathonPlan: null,  // marathon block result
     racePlan: null,      // race block result
+
+    // RF-613: Weekly recheck card
+    showRecheck: true,
+    recheck: {
+      hasCompare: false,
+      hasSingleScore: false,
+      lastScore: 0,
+      thisScore: 0,
+      diff: 0,
+      absDiff: 0,
+    },
   },
 
   onLoad() {
@@ -161,6 +182,13 @@ Page({
       else updates.planMode = 'weekly'
       this.setData(updates)
     }
+    // RF-613: Build recheck data
+    this._buildRecheckData()
+  },
+
+  onShow() {
+    // RF-613: Refresh recheck data when page becomes visible
+    this._buildRecheckData()
   },
 
   onKmChange(e) {
@@ -378,5 +406,86 @@ Page({
       workouts,
       isRaceWeek: isLastWeek,
     }
+  },
+
+  // RF-613: Build weekly recheck data from history
+  _buildRecheckData() {
+    try {
+      const lastResult = wx.getStorageSync('lastAnalysisResult')
+      const history = wx.getStorageSync('rf_history') || []
+
+      if (!lastResult && history.length === 0) {
+        this.setData({
+          showRecheck: true,
+          recheck: { hasCompare: false, hasSingleScore: false, lastScore: 0, thisScore: 0, diff: 0, absDiff: 0 },
+        })
+        return
+      }
+
+      // Collect all confidence scores from history (newest first)
+      const allScores = []
+      if (lastResult) {
+        const conf = lastResult.confidence ?? lastResult.confidence_score ?? lastResult.overall_score ?? 0
+        allScores.push({ score: Math.round(conf * 100), ts: Date.now() })
+      }
+      for (const h of history) {
+        const conf = h.confidence ?? h.confidence_score ?? h.overall_score ?? 0
+        allScores.push({ score: Math.round(conf * 100), ts: h.createdAt || h.created_at || 0 })
+      }
+
+      // Sort by timestamp descending (newest first)
+      allScores.sort((a, b) => b.ts - a.ts)
+
+      if (allScores.length === 0) {
+        this.setData({
+          showRecheck: true,
+          recheck: { hasCompare: false, hasSingleScore: false, lastScore: 0, thisScore: 0, diff: 0, absDiff: 0 },
+        })
+        return
+      }
+
+      const thisScore = allScores[0].score
+      if (allScores.length === 1) {
+        // Only one analysis: show single score, no comparison
+        this.setData({
+          showRecheck: true,
+          recheck: {
+            hasCompare: false,
+            hasSingleScore: true,
+            lastScore: 0,
+            thisScore,
+            diff: 0,
+            absDiff: 0,
+          },
+        })
+        return
+      }
+
+      // Two or more: compare latest vs previous
+      const lastScore = allScores[1].score
+      const diff = thisScore - lastScore
+      this.setData({
+        showRecheck: true,
+        recheck: {
+          hasCompare: true,
+          hasSingleScore: false,
+          lastScore,
+          thisScore,
+          diff,
+          absDiff: Math.abs(diff),
+        },
+      })
+    } catch (e) {
+      console.error('[plan] _buildRecheckData error:', e)
+      this.setData({
+        showRecheck: true,
+        recheck: { hasCompare: false, hasSingleScore: false, lastScore: 0, thisScore: 0, diff: 0, absDiff: 0 },
+      })
+    }
+  },
+
+  // RF-613: Handle recheck tap — navigate to analyze page
+  onRecheck() {
+    wx.switchTab({ url: '/pages/analyze/analyze' })
   },
 })

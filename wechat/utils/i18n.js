@@ -62,6 +62,17 @@ const strings = {
     runningDays: '跑步天数',
     nextWeekPlan: '下周计划',
 
+    // RF-613: Weekly recheck card
+    recheckTitle: '本周跑姿复检',
+    recheckSubtitle: '检查一下你的跑姿有没有变形',
+    recheckCta: '复检跑姿',
+    recheckNoData: '暂无最近分析——点击开始',
+    recheckLastScore: '上周',
+    recheckThisScore: '本周',
+    recheckImproved: '↑ 提升了',
+    recheckDeclined: '↓ 下降了',
+    recheckScore: '分',
+
     // Goals
     goal5K: '5公里',
     goal10K: '10公里',
@@ -462,6 +473,18 @@ const strings = {
     totalKm: 'Total km',
     runningDays: 'Running days',
     nextWeekPlan: 'Next Week Plan',
+
+    // RF-613: Weekly recheck card
+    recheckTitle: 'Weekly Form Recheck',
+    recheckSubtitle: 'Check if your form has drifted',
+    recheckCta: 'Recheck My Form',
+    recheckNoData: 'No recent analysis — tap to start',
+    recheckLastScore: 'Last Week',
+    recheckThisScore: 'This Week',
+    recheckImproved: '↑ Improved by',
+    recheckDeclined: '↓ Declined by',
+    recheckScore: '%',
+
     goal5K: '5K',
     goal10K: '10K',
     goalHalf: 'Half Marathon',

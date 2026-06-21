@@ -12,6 +12,47 @@
     </view>
   </view>
 
+  <!-- RF-613: Weekly Form Recheck card -->
+  <view wx:if="{{showRecheck}}" class="recheck-card" bindtap="onRecheck">
+    <view class="recheck-header">
+      <view class="recheck-header-left">
+        <text class="recheck-icon">🔍</text>
+        <view class="recheck-header-text">
+          <text class="recheck-title">{{i.recheckTitle}}</text>
+          <text class="recheck-subtitle">{{i.recheckSubtitle}}</text>
+        </view>
+      </view>
+      <view class="recheck-arrow">→</view>
+    </view>
+
+    <!-- Score comparison row -->
+    <view wx:if="{{recheck.hasCompare}}" class="recheck-compare">
+      <view class="recheck-score-item">
+        <text class="recheck-score-label">{{i.recheckLastScore}}</text>
+        <text class="recheck-score-value">{{recheck.lastScore}}{{i.recheckScore}}</text>
+      </view>
+      <view class="recheck-score-arrow">
+        <text wx:if="{{recheck.diff >= 0}}" class="recheck-diff-pos">{{i.recheckImproved}} {{recheck.diff}}{{i.recheckScore}}</text>
+        <text wx:else class="recheck-diff-neg">{{i.recheckDeclined}} {{recheck.absDiff}}{{i.recheckScore}}</text>
+      </view>
+      <view class="recheck-score-item">
+        <text class="recheck-score-label">{{i.recheckThisScore}}</text>
+        <text class="recheck-score-value recheck-score-current">{{recheck.thisScore}}{{i.recheckScore}}</text>
+      </view>
+    </view>
+
+    <!-- Single score (no comparison) -->
+    <view wx:elif="{{recheck.hasSingleScore}}" class="recheck-single">
+      <text class="recheck-single-label">{{i.recheckThisScore}}</text>
+      <text class="recheck-single-value">{{recheck.thisScore}}{{i.recheckScore}}</text>
+    </view>
+
+    <!-- No data state -->
+    <view wx:else class="recheck-cta">
+      <text class="recheck-cta-text">{{i.recheckNoData}}</text>
+    </view>
+  </view>
+
   <!-- Form card -->
   <view class="card">
 

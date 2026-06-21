@@ -1,6 +1,6 @@
 // pages/challenge/challenge.js
 // C2: 接通真实后端挑战赛 API
-const { t } = require('../../utils/i18n')
+const { t, isZh } = require('../../utils/i18n')
 const {
   getChallenges,
   joinChallenge: apiJoinChallenge,
@@ -54,6 +54,10 @@ Page({
         rank: t('rank'),
         noRank: t('noRank'),
         loading: t('loading'),
+        // Pre-computed challenges task strings for WXML (can't call t() in mustache)
+        taskRunDrills: isZh ? '完成5分钟跑姿基础训练' : 'Complete 5-minute form drills',
+        taskRecordVideo: isZh ? '录制并分析一段跑步视频' : 'Record and analyze a running video',
+        taskComplete: isZh ? '🎉 挑战完成！' : '🎉 Challenge complete!',
       },
     })
     this._loadChallengeData()
@@ -113,9 +117,10 @@ Page({
         if (lb && Array.isArray(lb)) {
           leaderboardData = lb.map((item, idx) => ({
             ...item,
-            // Backend ChallengeLeaderboardEntry fields: display_name, completed_days, is_me, rank
+            // Backend ChallengeLeaderboardEntry fields: display_name, completed_days, is_me, rank, days
+            // Use ?? to avoid falsy-0 fallthrough (completed_days===0 should NOT fallback to days)
             name: item.display_name || item.name || item.nickname || `User ${idx + 1}`,
-            days: item.completed_days || item.days || 0,
+            days: item.completed_days ?? item.days ?? 0,
             avatarText: (item.display_name || item.name || item.nickname || '?')[0].toUpperCase(),
             isMe: item.is_me || item.isMe || false,
           }))
@@ -125,7 +130,7 @@ Page({
           leaderboardData = lb.entries.map((item, idx) => ({
             ...item,
             name: item.display_name || item.name || item.nickname || `User ${idx + 1}`,
-            days: item.completed_days || item.days || 0,
+            days: item.completed_days ?? item.days ?? 0,
             avatarText: (item.display_name || item.name || item.nickname || '?')[0].toUpperCase(),
             isMe: item.is_me || item.isMe || false,
           }))
@@ -194,7 +199,7 @@ Page({
       } catch (err) {
         console.warn('[Challenge] Join API failed, using local state:', err.message)
         // C2: 降级到本地状态
-        wx.showToast({ title: t('isZh') ? '加入失败，使用本地模式' : 'Join failed, using local mode', icon: 'none' })
+        wx.showToast({ title: isZh ? '加入失败，使用本地模式' : 'Join failed, using local mode', icon: 'none' })
       }
     }
 
@@ -282,7 +287,7 @@ Page({
     if (allDone) {
       wx.showModal({
         title: '🎉',
-        content: t('isZh') ? '恭喜完成14天跑姿改善挑战！' : 'Congratulations! You completed the 14-day challenge!',
+        content: isZh ? '恭喜完成14天跑姿改善挑战！' : 'Congratulations! You completed the 14-day challenge!',
         showCancel: false,
       })
     } else {
@@ -386,7 +391,7 @@ Page({
   onShareAppMessage() {
     const { completedDays, challengeDays } = this.data
     return {
-      title: t('isZh')
+      title: isZh
         ? `我已坚持 ${completedDays}/${challengeDays} 天跑姿改善挑战！`
         : `I've completed ${completedDays}/${challengeDays} days of the running form challenge!`,
       path: '/pages/challenge/challenge',

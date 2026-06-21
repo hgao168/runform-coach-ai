@@ -460,4 +460,39 @@
     <string name="replay_timeline_chart">Timeline</string>
     <string name="replay_coach_prompts">Coach Prompts</string>
     <string name="replay_time_min_sec">%1$d:%2$02d</string>
+
+    <!-- ── Challenge Screen (RF-601) ──────────────────────────────────────── -->
+    <string name="challenge_title">Challenge</string>
+    <string name="challenge_tab_progress">Progress</string>
+    <string name="challenge_tab_leaderboard">Leaderboard</string>
+    <string name="challenge_participants_count">%1$d participants</string>
+    <string name="challenge_status_active">Active</string>
+    <string name="challenge_status_ended">Ended</string>
+    <string name="challenge_duration">Duration</string>
+    <string name="challenge_dates">Dates</string>
+    <string name="challenge_days_count">%1$d days</string>
+    <string name="challenge_of_days">/ %1$d</string>
+    <string name="challenge_days_completed">days completed</string>
+    <string name="challenge_not_joined">Join the Challenge</string>
+    <string name="challenge_join_prompt">Compete with other runners and improve your running form together!</string>
+    <string name="challenge_join_button">Join Challenge</string>
+    <string name="challenge_joining">Joining…</string>
+    <string name="challenge_check_in">Check In Today</string>
+    <string name="challenge_checking_in">Checking in…</string>
+    <string name="challenge_checked_in_today">Checked In Today</string>
+    <string name="challenge_check_in_success">Check-in successful! %1$d-day streak 🔥</string>
+    <string name="challenge_tasks_title">Challenge Tasks</string>
+    <string name="challenge_task_drills">Complete 5-minute form drills</string>
+    <string name="challenge_task_video">Record and analyze a running video</string>
+    <string name="challenge_task_complete">🎉 Challenge complete!</string>
+    <string name="challenge_leaderboard_empty">No participants yet. Be the first!</string>
+    <string name="challenge_my_rank">My Rank: #%1$d</string>
+    <string name="challenge_my_days">%1$d/%2$d days</string>
+    <string name="challenge_you">YOU</string>
+    <string name="challenge_completed_days_short">%1$d days</string>
+    <string name="challenge_cadence_pct">+%1$.1f%%</string>
+    <string name="challenge_no_challenges">No Active Challenges</string>
+    <string name="challenge_coming_soon">New challenges coming soon!</string>
+    <string name="challenge_tap_to_retry">Tap to retry</string>
+    <string name="ok">OK</string>
 </resources>

@@ -450,4 +450,39 @@
     <string name="replay_timeline_chart">时间线</string>
     <string name="replay_coach_prompts">教练提示</string>
     <string name="replay_time_min_sec">%1$d:%2$02d</string>
+
+    <!-- ── Challenge Screen (RF-601) ──────────────────────────────────────── -->
+    <string name="challenge_title">挑战赛</string>
+    <string name="challenge_tab_progress">进度</string>
+    <string name="challenge_tab_leaderboard">排行</string>
+    <string name="challenge_participants_count">%1$d 人参与</string>
+    <string name="challenge_status_active">进行中</string>
+    <string name="challenge_status_ended">已结束</string>
+    <string name="challenge_duration">时长</string>
+    <string name="challenge_dates">日期</string>
+    <string name="challenge_days_count">%1$d 天</string>
+    <string name="challenge_of_days">/ %1$d</string>
+    <string name="challenge_days_completed">天已完成</string>
+    <string name="challenge_not_joined">加入挑战赛</string>
+    <string name="challenge_join_prompt">与其他跑者一起竞技，共同改善跑姿！</string>
+    <string name="challenge_join_button">加入挑战</string>
+    <string name="challenge_joining">加入中…</string>
+    <string name="challenge_check_in">今日打卡</string>
+    <string name="challenge_checking_in">打卡中…</string>
+    <string name="challenge_checked_in_today">今日已打卡</string>
+    <string name="challenge_check_in_success">打卡成功！连续 %1$d 天 🔥</string>
+    <string name="challenge_tasks_title">挑战任务</string>
+    <string name="challenge_task_drills">完成5分钟跑姿基础训练</string>
+    <string name="challenge_task_video">录制并分析一段跑步视频</string>
+    <string name="challenge_task_complete">🎉 挑战完成！</string>
+    <string name="challenge_leaderboard_empty">暂无参与者，成为第一个吧！</string>
+    <string name="challenge_my_rank">我的排名：#%1$d</string>
+    <string name="challenge_my_days">%1$d/%2$d 天</string>
+    <string name="challenge_you">我</string>
+    <string name="challenge_completed_days_short">%1$d 天</string>
+    <string name="challenge_cadence_pct">+%1$.1f%%</string>
+    <string name="challenge_no_challenges">暂无活跃挑战</string>
+    <string name="challenge_coming_soon">新挑战即将上线！</string>
+    <string name="challenge_tap_to_retry">点击重试</string>
+    <string name="ok">确定</string>
 </resources>

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QueryStats
@@ -38,6 +39,7 @@ private val TABS = listOf(
     TabItem("Analyze", Icons.Default.DirectionsRun),
     TabItem("History", Icons.Default.History),
     TabItem("Plan", Icons.Default.QueryStats),
+    TabItem("Challenge", Icons.Default.EmojiEvents),
     TabItem("Profile", Icons.Default.Person)
 )
 
@@ -102,7 +104,8 @@ fun AppRoot(vm: AppViewModel = hiltViewModel()) {
                     0 -> AnalyzeScreen(vm)
                     1 -> HistoryScreen(vm)
                     2 -> PlanScreen(vm)
-                    3 -> ProfileScreen(vm)
+                    3 -> ChallengeScreen()
+                    4 -> ProfileScreen(vm)
                 }
             }
         }

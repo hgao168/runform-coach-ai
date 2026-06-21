@@ -25,13 +25,17 @@ struct ContentView: View {
                 .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
                 .tag(1)
 
+            ChallengeListView()
+                .tabItem { Label("Challenges", systemImage: "trophy.fill") }
+                .tag(2)
+
             PlanBuilderView(selectedTab: $selectedTab)
                 .tabItem { Label("Plan", systemImage: "calendar.badge.plus") }
-                .tag(2)
+                .tag(3)
 
             ProfileView()
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }
-                .tag(3)
+                .tag(4)
         }
         .tint(AppTheme.mint)
         .preferredColorScheme(.dark)

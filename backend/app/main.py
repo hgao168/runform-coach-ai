@@ -2163,7 +2163,16 @@ def challenge_check_in(challenge_id: str, payload: ChallengeCheckInRequest, _api
             # Prevent duplicate check-in on the same UTC day
             now = datetime.now(timezone.utc)
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            if participant.last_check_in is not None and participant.last_check_in >= today_start:
+
+            def _ensure_aware(dt: datetime | None) -> datetime | None:
+                """Return UTC-aware datetime; coerce naive datetimes (SQLite quirk)."""
+                if dt is None:
+                    return None
+                if dt.tzinfo is None:
+                    return dt.replace(tzinfo=timezone.utc)
+                return dt
+
+            if participant.last_check_in is not None and _ensure_aware(participant.last_check_in) >= today_start:
                 raise HTTPException(status_code=409, detail="You have already checked in today.")
 
             # Get today's latest run session metrics
@@ -2175,7 +2184,7 @@ def challenge_check_in(challenge_id: str, payload: ChallengeCheckInRequest, _api
 
             today_metrics: dict = {}
             has_today_run = False
-            if latest_session is not None and latest_session.start_time >= today_start:
+            if latest_session is not None and _ensure_aware(latest_session.start_time) >= today_start:
                 has_today_run = True
                 today_metrics = {
                     "cadence": latest_session.avg_cadence,

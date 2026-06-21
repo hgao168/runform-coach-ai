@@ -55,4 +55,33 @@ interface RunFormApi {
     suspend fun fetchSessionDetail(
         @retrofit2.http.Path("sessionId") sessionId: String
     ): RunSessionDetail
+
+    // ── Challenge (RF-601) ────────────────────────────────────────────────────
+
+    /** List all challenges with optional personal participation state. */
+    @GET("api/v1/challenges")
+    suspend fun listChallenges(
+        @retrofit2.http.Query("ios_user_id") iosUserId: String
+    ): List<ChallengeInfo>
+
+    /** Join an active challenge. */
+    @POST("api/v1/challenges/{challengeId}/join")
+    suspend fun joinChallenge(
+        @retrofit2.http.Path("challengeId") challengeId: String,
+        @Body request: ChallengeJoinRequest
+    ): ChallengeJoinResponse
+
+    /** Get the leaderboard for a challenge. */
+    @GET("api/v1/challenges/{challengeId}/leaderboard")
+    suspend fun getChallengeLeaderboard(
+        @retrofit2.http.Path("challengeId") challengeId: String,
+        @retrofit2.http.Query("ios_user_id") iosUserId: String
+    ): List<ChallengeLeaderboardEntry>
+
+    /** Daily check-in for an active challenge (C5). */
+    @POST("api/v1/challenges/{challengeId}/check-in")
+    suspend fun checkInChallenge(
+        @retrofit2.http.Path("challengeId") challengeId: String,
+        @Body request: ChallengeCheckInRequest
+    ): ChallengeCheckInResponse
 }

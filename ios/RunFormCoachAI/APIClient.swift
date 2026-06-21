@@ -357,6 +357,96 @@ final class APIClient {
         )
     }
 
+    // MARK: - Challenges
+
+    func fetchChallenges(iosUserID: String) async throws -> [ChallengeInfo] {
+        let baseURL = try Self.resolvedBaseURL()
+        var components = URLComponents(url: baseURL.appendingPathComponent("api/v1/challenges"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "ios_user_id", value: iosUserID)
+        ]
+        guard let endpoint = components?.url else {
+            throw APIError.configuration("Failed to build challenges URL.")
+        }
+
+        return try await Self.withRetry { [self] in
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 20
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode([ChallengeInfo].self, from: data)
+        }
+    }
+
+    func joinChallenge(challengeID: String, iosUserID: String) async throws -> ChallengeJoinResponse {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("api/v1/challenges/\(challengeID)/join")
+        return try await Self.withRetry { [self] in
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("runform-coach-ai-2025-secure-key", forHTTPHeaderField: "X-API-Key")
+            request.timeoutInterval = 20
+            request.httpBody = try JSONEncoder().encode(["ios_user_id": iosUserID])
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(ChallengeJoinResponse.self, from: data)
+        }
+    }
+
+    func fetchLeaderboard(challengeID: String, iosUserID: String) async throws -> [ChallengeLeaderboardEntry] {
+        let baseURL = try Self.resolvedBaseURL()
+        var components = URLComponents(url: baseURL.appendingPathComponent("api/v1/challenges/\(challengeID)/leaderboard"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "ios_user_id", value: iosUserID)
+        ]
+        guard let endpoint = components?.url else {
+            throw APIError.configuration("Failed to build leaderboard URL.")
+        }
+
+        return try await Self.withRetry { [self] in
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 20
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode([ChallengeLeaderboardEntry].self, from: data)
+        }
+    }
+
+    func checkIn(challengeID: String, userID: String) async throws -> ChallengeCheckInResponse {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("api/v1/challenges/\(challengeID)/check-in")
+        return try await Self.withRetry { [self] in
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("runform-coach-ai-2025-secure-key", forHTTPHeaderField: "X-API-Key")
+            request.timeoutInterval = 20
+            request.httpBody = try JSONEncoder().encode(["user_id": userID])
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message)
+            }
+            return try JSONDecoder().decode(ChallengeCheckInResponse.self, from: data)
+        }
+    }
+
     // MARK: - Private helpers
 
     private func makeMultipartBody(

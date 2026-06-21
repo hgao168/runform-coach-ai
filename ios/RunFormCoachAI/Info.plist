@@ -34,9 +34,9 @@
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>CFBundleShortVersionString</key>
-    <string>1.3</string>
+    <string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key>
-    <string>3</string>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
     <key>NSMotionUsageDescription</key>
     <string>Collect motion data (accelerometer, gyroscope) in real time during your run to analyze cadence, stride, and running form.</string>
     <key>NSHealthShareUsageDescription</key>

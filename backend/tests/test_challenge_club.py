@@ -9,7 +9,11 @@ from datetime import datetime, timezone, timedelta
 from httpx import AsyncClient
 
 from app.db_models import ChallengeParticipant, CoachCode, CoachStudent, RunSession, User
-from tests.conftest import _test_session_factory
+
+
+def _get_session_factory():
+    import tests.conftest as cf
+    return cf._test_session_factory
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -23,7 +27,8 @@ JOIN_URL = f"/api/v1/challenges/{CHALLENGE_ID}/join"
 
 def _add_run_session(user_ios_id: str, days_ago: int = 0, cadence: float = 170.0, osc: float = 0.08, gct: float = 0.22):
     """Insert a RunSession for the given user, offset by days_ago from now."""
-    with _test_session_factory() as sess:
+    import tests.conftest as cf
+    with cf._test_session_factory() as sess:
         user = sess.query(User).filter(User.ios_user_id == user_ios_id).first()
         if not user:
             raise ValueError(f"User {user_ios_id} not found")
@@ -118,7 +123,7 @@ async def test_checkin_updates_participant_fields(client: AsyncClient, test_user
     assert resp.status_code == 200
 
     # Verify DB fields
-    with _test_session_factory() as sess:
+    with _get_session_factory()() as sess:
         user = sess.query(User).filter(User.ios_user_id == test_user).first()
         p = sess.query(ChallengeParticipant).filter(
             ChallengeParticipant.challenge_id == CHALLENGE_ID,
@@ -141,7 +146,7 @@ async def test_checkin_updates_participant_fields(client: AsyncClient, test_user
 @pytest.fixture
 def club_setup(_db_setup):
     """Create a coach with a code and two students, returning (coach_ios_id, coach_code, student1_ios_id, student2_ios_id)."""
-    with _test_session_factory() as sess:
+    with _get_session_factory()() as sess:
         # Coach user
         coach = User(ios_user_id="coach-club-001", nickname="Coach Alice")
         sess.add(coach)
@@ -182,7 +187,7 @@ async def test_club_leaderboard_unknown_code_returns_coming_soon(client: AsyncCl
 @pytest.mark.anyio
 async def test_club_leaderboard_empty_students(client: AsyncClient):
     """Club with coach but no students returns coming_soon=true."""
-    with _test_session_factory() as sess:
+    with _get_session_factory()() as sess:
         coach = User(ios_user_id="solo-coach", nickname="Solo Coach")
         sess.add(coach)
         sess.flush()
@@ -287,7 +292,7 @@ async def test_club_leaderboard_case_insensitive_code(client: AsyncClient, club_
 @pytest.mark.anyio
 async def test_club_leaderboard_by_ios_user_id(client: AsyncClient):
     """Club lookup also works by coach's ios_user_id as a fallback."""
-    with _test_session_factory() as sess:
+    with _get_session_factory()() as sess:
         coach = User(ios_user_id="coach-by-id", nickname="Coach ID")
         sess.add(coach)
         sess.flush()

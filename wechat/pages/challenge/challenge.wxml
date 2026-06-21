@@ -59,10 +59,10 @@
         </view>
         <text class="checkin-task">
           {{completedDays < 7
-            ? (t('isZh') ? '完成5分钟跑姿基础训练' : 'Complete 5-minute form drills')
+            ? i.taskRunDrills
             : completedDays < 14
-              ? (t('isZh') ? '录制并分析一段跑步视频' : 'Record and analyze a running video')
-              : (t('isZh') ? '🎉 挑战完成！' : '🎉 Challenge complete!')
+              ? i.taskRecordVideo
+              : i.taskComplete
           }}
         </text>
         <button

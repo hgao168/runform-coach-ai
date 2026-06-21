@@ -15,14 +15,24 @@ from app.db_models import Base, User
 _test_engine = None
 _test_session_factory: sessionmaker[Session] | None = None
 
+_TEST_DB_PATH = "/tmp/runform_test.db"
+
 
 def _setup_test_db():
-    """Create SQLite in-memory database with all tables for testing."""
+    """Create SQLite file-based database with all tables for testing."""
     global _test_engine, _test_session_factory
-    if _test_engine is not None:
-        return
+
+    # Remove stale test DB for a clean slate
+    import os as _os
+    try:
+        _os.remove(_TEST_DB_PATH)
+    except FileNotFoundError:
+        pass
+
     _test_engine = create_engine(
-        "sqlite://", echo=False, connect_args={"check_same_thread": False}
+        f"sqlite:///{_TEST_DB_PATH}",
+        echo=False,
+        connect_args={"check_same_thread": False},
     )
     _test_session_factory = sessionmaker(bind=_test_engine, class_=Session, autocommit=False, autoflush=False)
     Base.metadata.create_all(_test_engine)
@@ -30,7 +40,7 @@ def _setup_test_db():
     db_mod._engine = _test_engine
     db_mod._session_factory = _test_session_factory
     # Set DATABASE_URL env so checks pass
-    os.environ.setdefault("DATABASE_URL", "sqlite://")
+    os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB_PATH}")
 
 
 @pytest.fixture
