@@ -58,6 +58,16 @@ data class ChallengeLeaderboardEntry(
 )
 
 /**
+ * Typed today-metrics sub-object returned by the check-in endpoint.
+ */
+data class ChallengeTodayMetrics(
+    @SerializedName("cadence") val cadence: Double? = null,
+    @SerializedName("vertical_oscillation") val verticalOscillation: Double? = null,
+    @SerializedName("ground_contact_time") val gct: Double? = null,
+    @SerializedName("score") val score: Double? = null
+)
+
+/**
  * Request body for POST /api/v1/challenges/{id}/check-in (C5).
  */
 data class ChallengeCheckInRequest(
@@ -71,7 +81,7 @@ data class ChallengeCheckInResponse(
     @SerializedName("status") val status: String,
     @SerializedName("check_in_count") val checkInCount: Int,
     @SerializedName("streak_days") val streakDays: Int,
-    @SerializedName("today_metrics") val todayMetrics: Map<String, Any> = emptyMap()
+    @SerializedName("today_metrics") val todayMetrics: ChallengeTodayMetrics? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════

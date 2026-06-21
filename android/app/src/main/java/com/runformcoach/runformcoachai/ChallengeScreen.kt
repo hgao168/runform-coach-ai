@@ -174,6 +174,7 @@ fun ChallengeScreen(viewModel: ChallengeViewModel = hiltViewModel()) {
                 viewModel.resetCheckInState()
             }
             is ChallengeCheckInState.AlreadyCheckedIn -> {
+                kotlinx.coroutines.delay(2500L)
                 viewModel.resetCheckInState()
             }
             else -> {}

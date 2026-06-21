@@ -241,6 +241,9 @@ final class AppStore: ObservableObject {
         challengeError = nil
         do {
             challenges = try await APIClient.shared.fetchChallenges(iosUserID: appUserID)
+            if let firstActive = challenges.first(where: { $0.status == "active" }) {
+                selectedChallenge = firstActive
+            }
         } catch {
             challengeError = error.localizedDescription
         }

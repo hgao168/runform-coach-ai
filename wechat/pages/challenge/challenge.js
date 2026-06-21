@@ -89,8 +89,8 @@ Page({
         challengeDays = first.days || first.total_days || 14
         // Backend returns: joined, completed_days, today_completed (when ios_user_id provided)
         joined = first.joined || false
-        completedDays = first.completed_days || first.completedDays || 0
-        todayCompleted = first.today_completed || first.todayCompleted || false
+        completedDays = first.completed_days || 0
+        todayCompleted = first.today_completed || false
 
         // Persist to globalData for fallback
         app.globalData.challenge = { joined, completedDays, todayCompleted, challengeId, challengeDays }

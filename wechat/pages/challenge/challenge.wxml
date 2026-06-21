@@ -100,7 +100,7 @@
         <view
           class="lb-item {{item.isMe ? 'is-me' : ''}}"
           wx:for="{{leaderboard}}"
-          wx:key="index"
+          wx:key="name"
         >
           <view class="lb-rank">
             <text wx:if="{{index === 0}}">🥇</text>

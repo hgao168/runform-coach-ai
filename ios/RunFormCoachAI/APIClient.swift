@@ -59,6 +59,11 @@ final class APIClient {
                 if error is CancellationError || error is APIError.ConfigurationError {
                     throw error
                 }
+                // Do not retry on HTTP 4xx client errors — they won't resolve on retry
+                if let apiError = error as? APIError, case .server(_, let code) = apiError,
+                   let statusCode = code, (400..<500).contains(statusCode) {
+                    throw error
+                }
                 if attempt < maxRetries {
                     let delay = baseRetryDelay * pow(2.0, Double(attempt))
                     try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
@@ -83,7 +88,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode(AnalysisResponse.self, from: data)
         }
@@ -153,7 +158,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode(StravaSummaryResponse.self, from: data)
         }
@@ -186,7 +191,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode(AnalysisResponse.self, from: data)
         }
@@ -205,7 +210,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             let decoder = JSONDecoder()
             return try decoder.decode(TrainingPlanResponse.self, from: data)
@@ -223,7 +228,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode([AthleteListItem].self, from: data)
         }
@@ -245,7 +250,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode(CompareResponse.self, from: data)
         }
@@ -262,7 +267,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
@@ -307,7 +312,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode(ProfileSaveResponse.self, from: data)
         }
@@ -377,7 +382,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode([ChallengeInfo].self, from: data)
         }
@@ -397,7 +402,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode(ChallengeJoinResponse.self, from: data)
         }
@@ -421,7 +426,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode([ChallengeLeaderboardEntry].self, from: data)
         }
@@ -441,7 +446,7 @@ final class APIClient {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             return try JSONDecoder().decode(ChallengeCheckInResponse.self, from: data)
         }
@@ -555,9 +560,9 @@ final class APIClient {
             }
             if http.statusCode != 404 {
                 let message = String(data: data, encoding: .utf8) ?? "Bad server response"
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
-            lastError = .server(String(data: data, encoding: .utf8) ?? notFoundMessage)
+            lastError = .server(String(data: data, encoding: .utf8) ?? notFoundMessage, statusCode: http.statusCode)
         }
         throw lastError ?? APIError.server(exhaustedMessage)
     }
@@ -592,12 +597,12 @@ final class APIClient {
             // For auth, user/action errors should surface immediately. Route-not-found
             // and backend outages should fall through to the next candidate backend.
             if http.statusCode == 400 || http.statusCode == 401 || http.statusCode == 403 || http.statusCode == 409 {
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
             if http.statusCode != 404 && !(500...599).contains(http.statusCode) {
-                throw APIError.server(message)
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
             }
-            lastError = .server(message.isEmpty ? notFoundMessage : message)
+            lastError = .server(message.isEmpty ? notFoundMessage : message, statusCode: http.statusCode)
         }
         throw lastError ?? APIError.server(exhaustedMessage)
     }
@@ -632,12 +637,12 @@ final class APIClient {
 }
 
 enum APIError: LocalizedError {
-    case server(String)
+    case server(String, statusCode: Int? = nil)
     case configuration(String)
 
     var errorDescription: String? {
         switch self {
-        case .server(let message): return message
+        case .server(let message, _): return message
         case .configuration(let message): return message
         }
     }
