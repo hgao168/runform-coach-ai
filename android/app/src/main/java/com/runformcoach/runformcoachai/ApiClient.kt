@@ -17,6 +17,19 @@ interface RunFormApi {
         @Part mode: MultipartBody.Part
     ): AnalysisResponse
 
+    // ── Auth ───────────────────────────────────────────────────────────────────
+
+    @POST("api/v1/auth/login")
+    suspend fun login(@Body request: LoginRequest): AuthResponse
+
+    /** Register a new user with email + password. POST /api/v1/auth/register */
+    @POST("api/v1/auth/register")
+    suspend fun register(@Body request: RegisterRequest): AuthResponse
+
+    /** Request a password reset email. POST /api/v1/auth/reset-password */
+    @POST("api/v1/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): ResetPasswordResponse
+
     // ── Training Plan ──────────────────────────────────────────────────────────
 
     @POST("training-plan")

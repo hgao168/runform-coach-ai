@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -30,6 +31,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +65,7 @@ fun ProfileScreen(vm: AppViewModel) {
     var exerciseHours by rememberSaveable { mutableStateOf(profile.weeklyExerciseHours.toFloat()) }
     var injuryNote by rememberSaveable { mutableStateOf(profile.injuryNote) }
     var saved by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     // ── RF-208: Gear & Fit fields ─────────────────────────────────────────
     var shoeSizeEU by rememberSaveable { mutableStateOf(profile.shoeSizeEU) }
@@ -286,6 +289,49 @@ fun ProfileScreen(vm: AppViewModel) {
             }
             Spacer(Modifier.height(32.dp))
         }
+
+        // ── Logout ────────────────────────────────────────────────────────────
+        item {
+            Button(
+                onClick = { showLogoutDialog = true },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.Red,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("登出", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+
+    // ── Logout confirmation dialog ──────────────────────────────────────────
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            containerColor = AppColors.Ink,
+            title = {
+                Text("退出登录", color = Color.White, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text("确定要退出登录吗？", color = AppColors.TextSecondary)
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    vm.logout()
+                }) {
+                    Text("确定", color = AppColors.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("取消", color = AppColors.TextSecondary)
+                }
+            }
+        )
     }
 }
 

@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -41,6 +42,9 @@ private val TABS = listOf(
     TabItem("Profile", Icons.Default.Person)
 )
 
+/** Auth sub-screens available before login. */
+enum class AuthScreen { LOGIN, REGISTER, FORGOT_PASSWORD }
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,6 +60,37 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppRoot(vm: AppViewModel = hiltViewModel()) {
+    // ── Auth gate: show auth screens if not authenticated ──
+    if (!vm.isAuthenticated) {
+        var currentAuthScreen by remember { mutableStateOf(AuthScreen.LOGIN) }
+
+        AppBackground {
+            when (currentAuthScreen) {
+                AuthScreen.LOGIN -> {
+                    LoginScreen(
+                        vm = vm,
+                        onNavigateToForgotPassword = { currentAuthScreen = AuthScreen.FORGOT_PASSWORD },
+                        onNavigateToRegister = { currentAuthScreen = AuthScreen.REGISTER }
+                    )
+                }
+                AuthScreen.REGISTER -> {
+                    RegisterScreen(
+                        vm = vm,
+                        onRegisterSuccess = { /* isAuthenticated flips → AppRoot re-renders to main */ },
+                        onNavigateToLogin = { currentAuthScreen = AuthScreen.LOGIN }
+                    )
+                }
+                AuthScreen.FORGOT_PASSWORD -> {
+                    ForgotPasswordScreen(
+                        vm = vm,
+                        onNavigateToLogin = { currentAuthScreen = AuthScreen.LOGIN }
+                    )
+                }
+            }
+        }
+        return
+    }
+
     var selectedTab by remember { mutableIntStateOf(0) }
 
     AppBackground {

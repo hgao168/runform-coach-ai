@@ -246,6 +246,46 @@ data class FeedbackResponse(
     @SerializedName("message") val message: String = ""
 )
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+/** Request body for POST /api/v1/auth/register */
+data class RegisterRequest(
+    val email: String,
+    val password: String,
+    val name: String? = null
+)
+
+/** Request body for POST /api/v1/auth/login */
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+/** User info returned in auth responses */
+data class UserResponse(
+    val id: String,
+    val email: String? = null,
+    val name: String? = null,
+    @SerializedName("google_sub") val googleSub: String? = null,
+    @SerializedName("email_verified") val emailVerified: Boolean = false
+)
+
+/** Response from POST /api/v1/auth/register and /auth/login */
+data class AuthResponse(
+    @SerializedName("access_token") val accessToken: String,
+    val user: UserResponse
+)
+
+/** Request body for POST /api/v1/auth/reset-password */
+data class ResetPasswordRequest(
+    val email: String
+)
+
+/** Response from POST /api/v1/auth/reset-password */
+data class ResetPasswordResponse(
+    val message: String
+)
+
 // ── RunSession History & Replay (RF-1000) ─────────────────────────────────────
 
 /**

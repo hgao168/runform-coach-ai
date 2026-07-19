@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.runformcoach.runformcoachai.auth.TokenManager
 import com.runformcoach.runformcoachai.data.AnalysisDao
 import com.runformcoach.runformcoachai.data.AnalysisHistoryEntity
 import com.runformcoach.runformcoachai.data.MigrationHelper
@@ -16,6 +17,7 @@ import com.runformcoach.runformcoachai.data.ProfileDao
 import com.runformcoach.runformcoachai.data.RunFormDatabase
 import com.runformcoach.runformcoachai.data.RunnerProfileEntity
 import com.runformcoach.runformcoachai.data.SavedPlanEntity
+import com.runformcoach.runformcoachai.auth.TokenManager
 import com.runformcoach.runformcoachai.di.VideoPartFactory
 import com.runformcoach.runformcoachai.utils.VideoCompressor
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,10 +44,25 @@ sealed class PlanState {
     data class Error(val message: String) : PlanState()
 }
 
+sealed class LoginState {
+    object Idle : LoginState()
+    object Loading : LoginState()
+    object Success : LoginState()
+    data class Error(val message: String) : LoginState()
+}
+
+sealed class ForgotPasswordState {
+    object Idle : ForgotPasswordState()
+    object Loading : ForgotPasswordState()
+    object Success : ForgotPasswordState()
+    data class Error(val message: String) : ForgotPasswordState()
+}
+
 @HiltViewModel
 class AppViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val api: RunFormApi,
+    private val tokenManager: TokenManager,
     private val database: RunFormDatabase,
     private val analysisDao: AnalysisDao,
     private val profileDao: ProfileDao,
@@ -120,6 +137,20 @@ class AppViewModel @Inject constructor(
     /** Currently editing day index within the week for EditPlanScreen */
     var editingDayIndex by mutableStateOf(0)
 
+    // ── Auth ───────────────────────────────────────────────────────────────────
+
+    /** Whether the user is currently authenticated (has a valid token). */
+    var isAuthenticated by mutableStateOf(false)
+        private set
+
+    /** Login UI state. */
+    var loginState by mutableStateOf<LoginState>(LoginState.Idle)
+        private set
+
+    /** Forgot-password UI state. */
+    var forgotPasswordState by mutableStateOf<ForgotPasswordState>(ForgotPasswordState.Idle)
+        private set
+
     init {
         // One-shot SharedPreferences → Room migration, then load from Room
         viewModelScope.launch {
@@ -128,6 +159,8 @@ class AppViewModel @Inject constructor(
             observeHistory()
             observeSavedPlans()
         }
+        // Check for existing token at startup (auto-login)
+        isAuthenticated = tokenManager.isAuthenticated
     }
 
     // ── Analyze ───────────────────────────────────────────────────────────────
@@ -455,6 +488,104 @@ class AppViewModel @Inject constructor(
             runCatching {
                 gson.fromJson(it.profileJson, TesterProfile::class.java)
             }.onSuccess { profile = it }
+        }
+    }
+
+    // ── Auth ───────────────────────────────────────────────────────────────────
+
+    /** Attempt login with email + password. On success, stores token and signals Success. */
+    fun login(email: String, password: String) {
+        loginState = LoginState.Loading
+        viewModelScope.launch {
+            try {
+                val response = api.login(LoginRequest(email = email, password = password))
+                tokenManager.accessToken = response.accessToken
+                isAuthenticated = true
+                loginState = LoginState.Success
+            } catch (e: Exception) {
+                loginState = LoginState.Error(friendlyAuthError(e))
+            }
+        }
+    }
+
+    /** Register a new account with email + password + optional nickname. */
+    fun register(email: String, password: String, nickname: String?) {
+        loginState = LoginState.Loading
+        viewModelScope.launch {
+            try {
+                val response = api.register(
+                    RegisterRequest(
+                        email = email,
+                        password = password,
+                        name = nickname?.trim()?.takeIf { it.isNotEmpty() }
+                    )
+                )
+                tokenManager.accessToken = response.accessToken
+                isAuthenticated = true
+                loginState = LoginState.Success
+            } catch (e: Exception) {
+                loginState = LoginState.Error(friendlyAuthError(e))
+            }
+        }
+    }
+
+    /** Clear token and return to login screen. */
+    fun logout() {
+        tokenManager.clear()
+        isAuthenticated = false
+        loginState = LoginState.Idle
+    }
+
+    /** Reset login state to idle (e.g. after navigating away from error). */
+    fun resetLoginState() {
+        loginState = LoginState.Idle
+    }
+
+    /** Request a password reset email. POST /api/v1/auth/reset-password */
+    fun resetPassword(email: String) {
+        forgotPasswordState = ForgotPasswordState.Loading
+        viewModelScope.launch {
+            try {
+                api.resetPassword(ResetPasswordRequest(email = email))
+                forgotPasswordState = ForgotPasswordState.Success
+            } catch (e: Exception) {
+                forgotPasswordState = ForgotPasswordState.Error(friendlyResetPasswordError(e))
+            }
+        }
+    }
+
+    /** Reset forgot-password state to idle (e.g. when navigating away). */
+    fun resetForgotPasswordState() {
+        forgotPasswordState = ForgotPasswordState.Idle
+    }
+
+    /** Map API exceptions to user-friendly Chinese/English messages. */
+    private fun friendlyAuthError(e: Exception): String {
+        val msg = (e.message ?: "").lowercase()
+        return when {
+            msg.contains("already registered") || msg.contains("already exists") || msg.contains("409") ->
+                "该邮箱已注册，请直接登录"
+            msg.contains("invalid email or password") || msg.contains("401") ->
+                "邮箱或密码错误，请重试"
+            msg.contains("network") || msg.contains("timeout") || msg.contains("unable to resolve") ->
+                "网络错误，请检查网络连接后重试"
+            msg.contains("not found") || msg.contains("404") ->
+                "服务暂不可用，请稍后重试"
+            else -> "操作失败：${e.message ?: "未知错误"}"
+        }
+    }
+
+    /** Map reset-password API exceptions to user-friendly messages. */
+    private fun friendlyResetPasswordError(e: Exception): String {
+        val msg = (e.message ?: "").lowercase()
+        return when {
+            msg.contains("not found") || msg.contains("404") ->
+                "该邮箱未注册，请先创建账号"
+            msg.contains("network") || msg.contains("timeout") || msg.contains("unable to resolve") ->
+                "网络错误，请检查网络连接后重试"
+            msg.contains("429") || msg.contains("too many") ->
+                "请求过于频繁，请稍后再试"
+            else -> "发送失败：${e.message ?: "未知错误"}"
         }
     }
 
