@@ -1,0 +1,21 @@
+{
+  "name": "runform-android-ui-acceptance",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Black-box Android acceptance tests using Playwright's experimental Android/ADB API",
+  "scripts": {
+    "preflight": "node scripts/preflight.mjs",
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:acceptance": "playwright test --grep @acceptance",
+    "test:headed": "playwright test --workers=1",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.0",
+    "playwright": "^1.54.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
