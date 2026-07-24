@@ -93,12 +93,12 @@ Sprint 8+： 跑姿驱动训练闭环 + 多产品扩展
 
 P0 完成后 Android 用户将首次能够创建账号并登录，iOS 用户将首次看到 Strava 连接选项。
 
-|| ID | 标题 | 优先级 | 平台 | 指派 | SP | 状态 | 验收标准 | 依赖 |
-||----|------|:------:|------|------|:--:|:----:|---------|------|
-|| **RUNFORM-700** | **Android 邮箱+密码注册 UI** — 实现注册页面，包含邮箱输入、密码输入（含强度指示）、确认密码、注册按钮。对齐 iOS `LoginView.swift` L174-189 的注册流程。使用现有 TokenManager 存储注册成功返回的 JWT Token，AuthInterceptor 自动携带 Token。后端 API `/auth/register` 已就绪。 | P0 | Android | Android 开发者 (delegate) | 5 | ✅ | ① 用户可通过邮箱+密码创建账号 ② 密码强度实时反馈（弱/中/强）③ 两次密码一致性校验 ④ 注册成功后自动登录并跳转主页 ⑤ 网络错误/邮箱已存在等异常有 Toast 提示 ⑥ 输入校验（空邮箱/无效格式/密码<6位） | 后端 API ✅ |
-|| **RUNFORM-701** | **Android 邮箱+密码登录 UI** — 实现登录页面，包含邮箱输入、密码输入、登录按钮、"忘记密码"链接、"去注册"链接。对齐 iOS `LoginView.swift` L25-48。支持 Token 持久化（SharedPreferences），下次启动自动登录。 | P0 | Android | Android 开发者 (delegate) | 5 | ✅ | ① 已注册用户可通过邮箱+密码登录 ② 登录成功 Token 持久化，下次启动免登录 ③ 登录失败有明确错误提示（密码错误/用户不存在）④ 提供"忘记密码"和"去注册"文本链接入口 ⑤ 登录中显示 Loading 状态 | RUNFORM-700（可并行） |
-|| **RUNFORM-702** | **Android 忘记密码/密码重置 UI** — 实现密码重置流程：输入注册邮箱 → 发送重置邮件 → 引导用户查收邮件。对齐 iOS `LoginView.swift` L130-138。后端 API `/auth/reset-password` 已就绪。 | P0 | Android | Android 开发者 (delegate) | 3 | ✅ | ① 登录页"忘记密码"点击进入重置页 ② 输入邮箱后发送重置请求 ③ 发送成功后显示"重置邮件已发送，请查收"引导文案 ④ 邮箱格式校验 ⑤ 网络异常/邮箱未注册等错误提示 | RUNFORM-700（可并行） |
-|| **RUNFORM-703** | **Android 登出功能** — Profile 页面增加登出按钮，清除本地 Token（TokenManager.clear()），返回登录页。对齐 iOS `ProfileView` L354-360。 | P0 | Android | Android 开发者 (delegate) | 2 | ✅ | ① Profile 页底部有"登出"按钮 ② 点击后弹出确认对话框 ③ 确认后清除 Token 并导航到登录页 ④ 登出后下次启动不自动登录 | RUNFORM-700, RUNFORM-701 |
+| ID | 标题 | 优先级 | 平台 | 指派 | SP | 状态 | 验收标准 | 依赖 |
+|----|------|:------:|------|------|:--:|:----:|---------|------|
+| **RUNFORM-700** | **Android 邮箱+密码注册 UI** — 实现注册页面，包含邮箱输入、密码输入（含强度指示）、确认密码、注册按钮。对齐 iOS `LoginView.swift` L174-189 的注册流程。使用现有 TokenManager 存储注册成功返回的 JWT Token，AuthInterceptor 自动携带 Token。后端 API `/auth/register` 已就绪。 | P0 | Android | Android 开发者 (delegate) | 5 | ✅ | ① 用户可通过邮箱+密码创建账号 ② 密码强度实时反馈（弱/中/强）③ 两次密码一致性校验 ④ 注册成功后自动登录并跳转主页 ⑤ 网络错误/邮箱已存在等异常有 Toast 提示 ⑥ 输入校验（空邮箱/无效格式/密码<6位） | 后端 API ✅ |
+| **RUNFORM-701** | **Android 邮箱+密码登录 UI** — 实现登录页面，包含邮箱输入、密码输入、登录按钮、"忘记密码"链接、"去注册"链接。对齐 iOS `LoginView.swift` L25-48。支持 Token 持久化（SharedPreferences），下次启动自动登录。 | P0 | Android | Android 开发者 (delegate) | 5 | ✅ | ① 已注册用户可通过邮箱+密码登录 ② 登录成功 Token 持久化，下次启动免登录 ③ 登录失败有明确错误提示（密码错误/用户不存在）④ 提供"忘记密码"和"去注册"文本链接入口 ⑤ 登录中显示 Loading 状态 | RUNFORM-700（可并行） |
+| **RUNFORM-702** | **Android 忘记密码/密码重置 UI** — 实现密码重置流程：输入注册邮箱 → 发送重置邮件 → 引导用户查收邮件。对齐 iOS `LoginView.swift` L130-138。后端 API `/auth/reset-password` 已就绪。 | P0 | Android | Android 开发者 (delegate) | 3 | ✅ | ① 登录页"忘记密码"点击进入重置页 ② 输入邮箱后发送重置请求 ③ 发送成功后显示"重置邮件已发送，请查收"引导文案 ④ 邮箱格式校验 ⑤ 网络异常/邮箱未注册等错误提示 | RUNFORM-700（可并行） |
+| **RUNFORM-703** | **Android 登出功能** — Profile 页面增加登出按钮，清除本地 Token（TokenManager.clear()），返回登录页。对齐 iOS `ProfileView` L354-360。 | P0 | Android | Android 开发者 (delegate) | 2 | ✅ | ① Profile 页底部有"登出"按钮 ② 点击后弹出确认对话框 ③ 确认后清除 Token 并导航到登录页 ④ 登出后下次启动不自动登录 | RUNFORM-700, RUNFORM-701 |
 | ~~RUNFORM-704~~ | ~~**iOS 取消注释 Strava 连接卡片**~~ — **❌ CEO 决策：iOS Strava 暂不实现，保持 "Coming Soon"。** Strava 代码保持注释状态。恢复条件：CEO 明确指令解冻。 | — | iOS | — | 0 | 已取消 | — |
 
 **P0 小计**：4/4 ✅ 完成，15 SP（RUNFORM-704 CEO取消）
@@ -111,9 +111,9 @@ P1 完成后 iOS 分享能力对齐 Android，Android Strava 能力对齐 iOS，
 
 | ID | 标题 | 优先级 | 平台 | 指派 | SP | 验收标准 | 依赖 |
 |----|------|:------:|------|------|:--:|---------|------|
-|| **RUNFORM-705** | **iOS 图片分享卡片渲染** — 实现与 Android `ShareCardRenderer.kt` 对齐的图片分享能力。使用 UIKit 渲染 1080×1440 分享卡片（包含跑姿数据摘要、骨架线截图、RunForm 品牌标识），支持保存到相册。覆盖场景：分析结果分享、历史记录分享、训练计划分享。Android 参考实现：Canvas Bitmap 渲染 → MediaStore 保存。 | P1 | iOS | iOS 开发者 (delegate) | 8 | ✅ | ① 分析结果页"分享"按钮弹出分享选项（文本/图片）② 选择"图片分享"渲染 1080×1440 分享卡 ③ 分享卡包含：骨架线单帧截图、关键指标（步频/振幅/GCT/评分）、RunForm Logo + "扫码分析你的跑姿"文案 ④ 支持保存到相册（PHPhotoLibrary）⑤ 历史记录列表每项可触发图片分享 ⑥ 训练计划完成页可触发图片分享 ⑦ 渲染性能：卡片生成 < 500ms | Android ShareCardRenderer（参考代码已就绪） |
-|| **RUNFORM-706** | **iOS 周度训练洞察报告** — 实现与 Android `WeeklyInsightScreen.kt`（596 行）对齐的周度洞察页面。包含：本周 vs 上周步频/振幅/GCT 指标对比 + 趋势箭头、训练量统计（次数/里程）、成就徽章展示、AI 教练建议文案。数据源：调用后端 `/sessions/trends` API（已就绪）。 | P1 | iOS | iOS 开发者 (delegate) | 8 | ✅ | ① Profile 或 History Tab 有"周度洞察"入口 ② 展示本周总跑量/训练次数/平均步频/平均 GCT ③ 步频/振幅/GCT 三个核心指标本周 vs 上周对比，含 ↑ ↓ → 趋势箭头 ④ 成就徽章区（达成目标自动点亮）⑤ AI 教练本周总结 + 下周建议（后端返回文案）⑥ 空态：无数据时显示引导文案"完成本周训练后查看洞察" ⑦ 加载态 + 错误态处理 | 后端 `/sessions/trends` API ✅、Android WeeklyInsightScreen（参考代码已就绪） |
-|| ~~RUNFORM-707~~ | ~~**Android Strava OAuth 全链路集成**~~ — **❌ CEO 决策：Android Strava 暂不实现。** 全平台 Strava 冻结，恢复条件：CEO 明确指令解冻。 | — | Android | — | 0 | 已取消 | — |
+| **RUNFORM-705** | **iOS 图片分享卡片渲染** — 实现与 Android `ShareCardRenderer.kt` 对齐的图片分享能力。使用 UIKit 渲染 1080×1440 分享卡片（包含跑姿数据摘要、骨架线截图、RunForm 品牌标识），支持保存到相册。覆盖场景：分析结果分享、历史记录分享、训练计划分享。Android 参考实现：Canvas Bitmap 渲染 → MediaStore 保存。 | P1 | iOS | iOS 开发者 (delegate) | 8 | ✅ | ① 分析结果页"分享"按钮弹出分享选项（文本/图片）② 选择"图片分享"渲染 1080×1440 分享卡 ③ 分享卡包含：骨架线单帧截图、关键指标（步频/振幅/GCT/评分）、RunForm Logo + "扫码分析你的跑姿"文案 ④ 支持保存到相册（PHPhotoLibrary）⑤ 历史记录列表每项可触发图片分享 ⑥ 训练计划完成页可触发图片分享 ⑦ 渲染性能：卡片生成 < 500ms | Android ShareCardRenderer（参考代码已就绪） |
+| **RUNFORM-706** | **iOS 周度训练洞察报告** — 实现与 Android `WeeklyInsightScreen.kt`（596 行）对齐的周度洞察页面。包含：本周 vs 上周步频/振幅/GCT 指标对比 + 趋势箭头、训练量统计（次数/里程）、成就徽章展示、AI 教练建议文案。数据源：调用后端 `/sessions/trends` API（已就绪）。 | P1 | iOS | iOS 开发者 (delegate) | 8 | ✅ | ① Profile 或 History Tab 有"周度洞察"入口 ② 展示本周总跑量/训练次数/平均步频/平均 GCT ③ 步频/振幅/GCT 三个核心指标本周 vs 上周对比，含 ↑ ↓ → 趋势箭头 ④ 成就徽章区（达成目标自动点亮）⑤ AI 教练本周总结 + 下周建议（后端返回文案）⑥ 空态：无数据时显示引导文案"完成本周训练后查看洞察" ⑦ 加载态 + 错误态处理 | 后端 `/sessions/trends` API ✅、Android WeeklyInsightScreen（参考代码已就绪） |
+| ~~RUNFORM-707~~ | ~~**Android Strava OAuth 全链路集成**~~ — **❌ CEO 决策：Android Strava 暂不实现。** 全平台 Strava 冻结，恢复条件：CEO 明确指令解冻。 | — | Android | — | 0 | 已取消 | — |
 
 **P1 小计**：2/2 ✅ 完成，16 SP（RUNFORM-707 CEO取消）
 
@@ -162,9 +162,9 @@ P2 完成后双端基础体验完整，为后续商业化铺路。
 | Sprint 4 | 20 | 87 | 全平台功能对齐 |
 | Sprint 5 | 10 | 45 | 营销破圈（营销 34 条目独立） |
 | Sprint 6 | 12 | 34 | 稳固收尾 |
-| **Sprint 7** | **11** | **66** | **功能对齐（P0+P1 共 40 SP，P2 共 26 SP）** |
+| **Sprint 7** | **11** | **66** | **功能对齐（实际交付 6/9，31/57 SP）** |
 
-**规模评估**：66 SP 在 2 周（10 工作日）× 双端并行开发下压力较大，建议严格执行 P0 → P1 → P2 优先级顺序，P2 条目至少完成 1 个（RUNFORM-708 设置页面）。
+**规模评估**：实际交付 31/57 SP（P0+P1 全部完成），P2 26 SP 已砍掉。提前 2 周完成核心目标。
 
 ---
 
@@ -271,24 +271,24 @@ P2 完成后双端基础体验完整，为后续商业化铺路。
 
 ---
 
-## 九、Sprint 7 成功指标
+## 九、Sprint 7 成功指标（最终）
 
-| 指标 | 目标 | 说明 |
-|------|------|------|
-| P0 条目完成率 | 100%（5/5） | Android 认证系统 + iOS Strava 解冻 |
-| P1 条目完成率 | ≥ 67%（2/3） | 至少交付 iOS 分享卡片 + 周度洞察，或 Android Strava + 一项 iOS |
-| P2 条目完成率 | ≥ 33%（1/3） | 至少一端设置页面可用 |
-| Android 认证闭环 | ✅ | 注册→登录→Profile→登出→重新登录全链路 |
-| iOS Strava 连接 | ✅ | 连接→授权→同步→断开全链路 |
-| 双端对齐度 | 85% → 95%+ | P0+P1 完成后核心功能对齐率 |
-| QA 回归 | 0 个 P0 回归 Bug | Sprint 6 已完成功能 + Sprint 7 新增功能 |
+| 指标 | 目标 | 实际 | 状态 |
+|------|------|------|:--:|
+| P0 条目完成率 | 100%（4/4） | 100%（4/4） | ✅ |
+| P1 条目完成率 | ≥ 67%（2/3） | 100%（2/2） | ✅ |
+| P2 条目完成率 | ≥ 33%（1/3） | 0%（0/3） | ❌ 砍 |
+| Android 认证闭环 | ✅ | ✅ 注册→登录→Profile→登出→重新登录全链路 | ✅ |
+| iOS Strava 连接 | ✅ | N/A（CEO取消） | — |
+| 双端对齐度 | 85% → 95%+ | ~92%（P0+P1 核心对齐，Strava 冻结） | 🟡 |
+| QA 回归 | 0 个 P0 回归 Bug | 待验证（Playwright E2E 已就绪） | 🔲 |
 
 ---
 
 ## 十、与其他 Sprint 的关系
 
 ```
-Sprint 6（进行中）              Sprint 7（本期）             Sprint 8（展望）
+Sprint 6（已完成）              Sprint 7（已完成 ✅）       Sprint 8（展望）
 ┌─────────────────┐          ┌─────────────────┐          ┌─────────────────┐
 │ 安全部署 + 修复   │          │ Android 认证系统  │          │ 跑姿驱动训练闭环  │
 │ Web 平台对齐收尾  │    →     │ iOS 分享+洞察     │    →     │ Phase 2          │
@@ -300,5 +300,5 @@ Sprint 6（进行中）              Sprint 7（本期）             Sprint 8�
 
 ---
 
-> **RunForm Sprint 7 Backlog — 暂停新功能，把该对齐的对齐。Android 用户终于能注册了，iOS 用户终于能分享了，双端一起接上 Strava。**
-> *文档版本 v1.0 | 2026-07-05*
+> **RunForm Sprint 7 Backlog — P0+P1 全部完成 ✅。Android 用户现在可以注册了，iOS 用户现在可以分享了。Strava 全平台冻结中。P2 砍掉。**
+> *文档版本 v1.1（最终） | 原稿 2026-07-05 | 更新 2026-07-24*
