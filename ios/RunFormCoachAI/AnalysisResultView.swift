@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AnalysisResultView: View {
     let result: AnalysisResponse
@@ -6,6 +7,12 @@ struct AnalysisResultView: View {
 
     @State private var showCompare = false
     @State private var showShareSheet = false
+    @State private var showShareOptions = false
+    @State private var isRenderingImage = false
+    @State private var renderedImage: UIImage?
+    @State private var showSaveAlert = false
+    @State private var saveAlertTitle = ""
+    @State private var saveAlertMessage = ""
 
     private static let normalGreen = Color(red: 0.00, green: 0.96, blue: 0.63)  // #00f5a0
     private static let abnormalRed = Color(red: 1.00, green: 0.27, blue: 0.27) // #ff4444
@@ -39,6 +46,27 @@ struct AnalysisResultView: View {
                 ShareSheet(items: shareItems)
             }
         }
+        .confirmationDialog("Share Options", isPresented: $showShareOptions, titleVisibility: .visible) {
+            Button("Share as Text") {
+                showShareSheet = true
+            }
+            Button("Share as Image Card") {
+                renderAndShareImage()
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert(saveAlertTitle, isPresented: $showSaveAlert) {
+            Button("OK", role: .cancel) {}
+            if saveAlertTitle.contains("saved") {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            }
+        } message: {
+            Text(saveAlertMessage)
+        }
     }
 
     // MARK: - Adjustment 1: Metric status coloring based on biomechanical thresholds
@@ -50,8 +78,16 @@ struct AnalysisResultView: View {
         }
     }
 
-    // MARK: - Adjustment 2: Share card "旧片考古" template (full report)
+    // MARK: - Adjustment 2: Share items (text + optional image card)
     private func buildShareItems() -> [Any]? {
+        var items: [Any] = []
+
+        // Include rendered image if available (from Share as Image Card flow)
+        if let image = renderedImage {
+            items.append(image)
+        }
+
+        // Text report
         let issueCount = result.issues.count
         let raceName: String? = nil
         let title: String
@@ -103,7 +139,11 @@ struct AnalysisResultView: View {
         shareText += "https://apps.apple.com/au/app/runformai/id6765745720\n"
 
         shareText += "\n— RunForm AI"
-        return [shareText]
+
+        // Include text always
+        items.append(shareText)
+
+        return items.isEmpty ? nil : items
     }
 
     // MARK: - Adjustment 3: Injury-prevention narrative helper
@@ -143,7 +183,7 @@ struct AnalysisResultView: View {
 
     private var shareButton: some View {
         Button {
-            showShareSheet = true
+            showShareOptions = true
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "square.and.arrow.up")
@@ -163,6 +203,31 @@ struct AnalysisResultView: View {
             .shadow(color: AppTheme.orange.opacity(0.25), radius: 12, x: 0, y: 6)
         }
         .buttonStyle(.plain)
+        .overlay {
+            if isRenderingImage {
+                ZStack {
+                    Color.black.opacity(0.5)
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    ProgressView("Rendering...")
+                        .tint(.white)
+                }
+            }
+        }
+    }
+
+    // MARK: - Image sharing
+
+    private func renderAndShareImage() {
+        isRenderingImage = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            let image = ShareCardRenderer.renderAnalysisCard(result: result, dateLabel: nil)
+            DispatchQueue.main.async {
+                isRenderingImage = false
+                renderedImage = image
+                // Present ShareSheet with the image
+                showShareSheet = true
+            }
+        }
     }
 
     private var compareButton: some View {

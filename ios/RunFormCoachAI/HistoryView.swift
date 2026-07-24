@@ -76,6 +76,35 @@ struct HistoryView: View {
                 subtitle: "\(appStore.history.count) sessions",
                 systemImage: "chart.line.uptrend.xyaxis"
             )
+
+            NavigationLink {
+                WeeklyInsightView()
+            } label: {
+                HStack(spacing: 12) {
+                    IconBubble(systemImage: "calendar.badge.clock", gradient: AppTheme.purpleGradient, size: 36)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Weekly Insights")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text("This week vs last week trends")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.52))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.42))
+                }
+                .padding(14)
+                .background(AppTheme.card)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(.white.opacity(0.11), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 TrendCard(title: "Form score", values: formScores, color: AppTheme.mint)
                 TrendCard(title: "Cadence", values: cadenceScores, color: AppTheme.cyan)

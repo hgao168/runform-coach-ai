@@ -275,6 +275,23 @@ final class APIClient {
         }
     }
 
+    func fetchWeeklyTrends() async throws -> WeeklyTrendsResponse {
+        let baseURL = try Self.resolvedBaseURL()
+        let endpoint = baseURL.appendingPathComponent("api/v1/sessions/trends")
+        return try await Self.withRetry { [self] in
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "GET"
+            request.timeoutInterval = 20
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "Bad server response"
+                throw APIError.server(message, statusCode: (response as? HTTPURLResponse)?.statusCode)
+            }
+            return try JSONDecoder().decode(WeeklyTrendsResponse.self, from: data)
+        }
+    }
+
     func saveProfile(iosUserID: String, profile: TesterProfile) async throws -> ProfileSaveResponse {
         let baseURL = try Self.resolvedBaseURL()
         let endpoint = baseURL.appendingPathComponent("profile")
