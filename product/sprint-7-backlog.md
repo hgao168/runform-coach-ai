@@ -1,10 +1,18 @@
 # RunForm Sprint 7 Backlog：双端功能对齐 Sprint
 
 > **创建日期**：2026-07-05
+> **完成日期**：2026-07-24（提前完成）
 > **Sprint 周期**：2026-07-28 ~ 2026-08-10（2 周）
 > **Sprint 类型**：功能对齐型（Feature Parity）— 暂停新功能开发，全力追赶双端差异
-> **Sprint 6 状态**：进行中（预计 7/27 收尾）
-> **关联文档**：`qa/platform-feature-gap.md`（全平台差异对比审计报告）、`product/sprint-6-backlog.md`
+> **状态**：✅ **P0+P1 全部完成**，P2 已砍掉
+> **关联文档**：`qa/platform-feature-gap.md`（全平台差异对比审计报告）、`product/sprint-6-backlog.md`、`product/sprint-7-20260724-completion.md`（完成报告）
+>
+> | 优先级 | 完成 | SP |
+> |--------|:----:|:--:|
+> | **P0** | 4/4 ✅ | 15/15 |
+> | **P1** | 2/2 ✅ | 16/16 |
+> | **P2** | 0/3 ❌ | 0/26（砍） |
+> | **总计** | **6/9** | **31/57** |
 
 ---
 
@@ -85,15 +93,15 @@ Sprint 8+： 跑姿驱动训练闭环 + 多产品扩展
 
 P0 完成后 Android 用户将首次能够创建账号并登录，iOS 用户将首次看到 Strava 连接选项。
 
-| ID | 标题 | 优先级 | 平台 | 指派 | SP | 验收标准 | 依赖 |
-|----|------|:------:|------|------|:--:|---------|------|
-| **RUNFORM-700** | **Android 邮箱+密码注册 UI** — 实现注册页面，包含邮箱输入、密码输入（含强度指示）、确认密码、注册按钮。对齐 iOS `LoginView.swift` L174-189 的注册流程。使用现有 TokenManager 存储注册成功返回的 JWT Token，AuthInterceptor 自动携带 Token。后端 API `/auth/register` 已就绪。 | P0 | Android | Android 开发者 (delegate) | 5 | ① 用户可通过邮箱+密码创建账号 ② 密码强度实时反馈（弱/中/强）③ 两次密码一致性校验 ④ 注册成功后自动登录并跳转主页 ⑤ 网络错误/邮箱已存在等异常有 Toast 提示 ⑥ 输入校验（空邮箱/无效格式/密码<6位） | 后端 API ✅ |
-| **RUNFORM-701** | **Android 邮箱+密码登录 UI** — 实现登录页面，包含邮箱输入、密码输入、登录按钮、"忘记密码"链接、"去注册"链接。对齐 iOS `LoginView.swift` L25-48。支持 Token 持久化（SharedPreferences），下次启动自动登录。 | P0 | Android | Android 开发者 (delegate) | 5 | ① 已注册用户可通过邮箱+密码登录 ② 登录成功 Token 持久化，下次启动免登录 ③ 登录失败有明确错误提示（密码错误/用户不存在）④ 提供"忘记密码"和"去注册"文本链接入口 ⑤ 登录中显示 Loading 状态 | RUNFORM-700（可并行） |
-| **RUNFORM-702** | **Android 忘记密码/密码重置 UI** — 实现密码重置流程：输入注册邮箱 → 发送重置邮件 → 引导用户查收邮件。对齐 iOS `LoginView.swift` L130-138。后端 API `/auth/reset-password` 已就绪。 | P0 | Android | Android 开发者 (delegate) | 3 | ① 登录页"忘记密码"点击进入重置页 ② 输入邮箱后发送重置请求 ③ 发送成功后显示"重置邮件已发送，请查收"引导文案 ④ 邮箱格式校验 ⑤ 网络异常/邮箱未注册等错误提示 | RUNFORM-700（可并行） |
-| **RUNFORM-703** | **Android 登出功能** — Profile 页面增加登出按钮，清除本地 Token（TokenManager.clear()），返回登录页。对齐 iOS `ProfileView` L354-360。 | P0 | Android | Android 开发者 (delegate) | 2 | ① Profile 页底部有"登出"按钮 ② 点击后弹出确认对话框 ③ 确认后清除 Token 并导航到登录页 ④ 登出后下次启动不自动登录 | RUNFORM-700, RUNFORM-701 |
+|| ID | 标题 | 优先级 | 平台 | 指派 | SP | 状态 | 验收标准 | 依赖 |
+||----|------|:------:|------|------|:--:|:----:|---------|------|
+|| **RUNFORM-700** | **Android 邮箱+密码注册 UI** — 实现注册页面，包含邮箱输入、密码输入（含强度指示）、确认密码、注册按钮。对齐 iOS `LoginView.swift` L174-189 的注册流程。使用现有 TokenManager 存储注册成功返回的 JWT Token，AuthInterceptor 自动携带 Token。后端 API `/auth/register` 已就绪。 | P0 | Android | Android 开发者 (delegate) | 5 | ✅ | ① 用户可通过邮箱+密码创建账号 ② 密码强度实时反馈（弱/中/强）③ 两次密码一致性校验 ④ 注册成功后自动登录并跳转主页 ⑤ 网络错误/邮箱已存在等异常有 Toast 提示 ⑥ 输入校验（空邮箱/无效格式/密码<6位） | 后端 API ✅ |
+|| **RUNFORM-701** | **Android 邮箱+密码登录 UI** — 实现登录页面，包含邮箱输入、密码输入、登录按钮、"忘记密码"链接、"去注册"链接。对齐 iOS `LoginView.swift` L25-48。支持 Token 持久化（SharedPreferences），下次启动自动登录。 | P0 | Android | Android 开发者 (delegate) | 5 | ✅ | ① 已注册用户可通过邮箱+密码登录 ② 登录成功 Token 持久化，下次启动免登录 ③ 登录失败有明确错误提示（密码错误/用户不存在）④ 提供"忘记密码"和"去注册"文本链接入口 ⑤ 登录中显示 Loading 状态 | RUNFORM-700（可并行） |
+|| **RUNFORM-702** | **Android 忘记密码/密码重置 UI** — 实现密码重置流程：输入注册邮箱 → 发送重置邮件 → 引导用户查收邮件。对齐 iOS `LoginView.swift` L130-138。后端 API `/auth/reset-password` 已就绪。 | P0 | Android | Android 开发者 (delegate) | 3 | ✅ | ① 登录页"忘记密码"点击进入重置页 ② 输入邮箱后发送重置请求 ③ 发送成功后显示"重置邮件已发送，请查收"引导文案 ④ 邮箱格式校验 ⑤ 网络异常/邮箱未注册等错误提示 | RUNFORM-700（可并行） |
+|| **RUNFORM-703** | **Android 登出功能** — Profile 页面增加登出按钮，清除本地 Token（TokenManager.clear()），返回登录页。对齐 iOS `ProfileView` L354-360。 | P0 | Android | Android 开发者 (delegate) | 2 | ✅ | ① Profile 页底部有"登出"按钮 ② 点击后弹出确认对话框 ③ 确认后清除 Token 并导航到登录页 ④ 登出后下次启动不自动登录 | RUNFORM-700, RUNFORM-701 |
 | ~~RUNFORM-704~~ | ~~**iOS 取消注释 Strava 连接卡片**~~ — **❌ CEO 决策：iOS Strava 暂不实现，保持 "Coming Soon"。** Strava 代码保持注释状态。恢复条件：CEO 明确指令解冻。 | — | iOS | — | 0 | 已取消 | — |
 
-**P0 小计**：4 条目，15 SP（RUNFORM-704 已取消）
+**P0 小计**：4/4 ✅ 完成，15 SP（RUNFORM-704 CEO取消）
 
 ---
 
@@ -103,47 +111,49 @@ P1 完成后 iOS 分享能力对齐 Android，Android Strava 能力对齐 iOS，
 
 | ID | 标题 | 优先级 | 平台 | 指派 | SP | 验收标准 | 依赖 |
 |----|------|:------:|------|------|:--:|---------|------|
-| **RUNFORM-705** | **iOS 图片分享卡片渲染** — 实现与 Android `ShareCardRenderer.kt` 对齐的图片分享能力。使用 UIKit 渲染 1080×1440 分享卡片（包含跑姿数据摘要、骨架线截图、RunForm 品牌标识），支持保存到相册。覆盖场景：分析结果分享、历史记录分享、训练计划分享。Android 参考实现：Canvas Bitmap 渲染 → MediaStore 保存。 | P1 | iOS | iOS 开发者 (delegate) | 8 | ① 分析结果页"分享"按钮弹出分享选项（文本/图片）② 选择"图片分享"渲染 1080×1440 分享卡 ③ 分享卡包含：骨架线单帧截图、关键指标（步频/振幅/GCT/评分）、RunForm Logo + "扫码分析你的跑姿"文案 ④ 支持保存到相册（PHPhotoLibrary）⑤ 历史记录列表每项可触发图片分享 ⑥ 训练计划完成页可触发图片分享 ⑦ 渲染性能：卡片生成 < 500ms | Android ShareCardRenderer（参考代码已就绪） |
-| **RUNFORM-706** | **iOS 周度训练洞察报告** — 实现与 Android `WeeklyInsightScreen.kt`（596 行）对齐的周度洞察页面。包含：本周 vs 上周步频/振幅/GCT 指标对比 + 趋势箭头、训练量统计（次数/里程）、成就徽章展示、AI 教练建议文案。数据源：调用后端 `/sessions/trends` API（已就绪）。 | P1 | iOS | iOS 开发者 (delegate) | 8 | ① Profile 或 History Tab 有"周度洞察"入口 ② 展示本周总跑量/训练次数/平均步频/平均 GCT ③ 步频/振幅/GCT 三个核心指标本周 vs 上周对比，含 ↑ ↓ → 趋势箭头 ④ 成就徽章区（达成目标自动点亮）⑤ AI 教练本周总结 + 下周建议（后端返回文案）⑥ 空态：无数据时显示引导文案"完成本周训练后查看洞察" ⑦ 加载态 + 错误态处理 | 后端 `/sessions/trends` API ✅、Android WeeklyInsightScreen（参考代码已就绪） |
-| ~~RUNFORM-707~~ | ~~**Android Strava OAuth 全链路集成**~~ — **❌ CEO 决策：Android Strava 暂不实现。** 全平台 Strava 冻结，恢复条件：CEO 明确指令解冻。 | — | Android | — | 0 | 已取消 | — |
+|| **RUNFORM-705** | **iOS 图片分享卡片渲染** — 实现与 Android `ShareCardRenderer.kt` 对齐的图片分享能力。使用 UIKit 渲染 1080×1440 分享卡片（包含跑姿数据摘要、骨架线截图、RunForm 品牌标识），支持保存到相册。覆盖场景：分析结果分享、历史记录分享、训练计划分享。Android 参考实现：Canvas Bitmap 渲染 → MediaStore 保存。 | P1 | iOS | iOS 开发者 (delegate) | 8 | ✅ | ① 分析结果页"分享"按钮弹出分享选项（文本/图片）② 选择"图片分享"渲染 1080×1440 分享卡 ③ 分享卡包含：骨架线单帧截图、关键指标（步频/振幅/GCT/评分）、RunForm Logo + "扫码分析你的跑姿"文案 ④ 支持保存到相册（PHPhotoLibrary）⑤ 历史记录列表每项可触发图片分享 ⑥ 训练计划完成页可触发图片分享 ⑦ 渲染性能：卡片生成 < 500ms | Android ShareCardRenderer（参考代码已就绪） |
+|| **RUNFORM-706** | **iOS 周度训练洞察报告** — 实现与 Android `WeeklyInsightScreen.kt`（596 行）对齐的周度洞察页面。包含：本周 vs 上周步频/振幅/GCT 指标对比 + 趋势箭头、训练量统计（次数/里程）、成就徽章展示、AI 教练建议文案。数据源：调用后端 `/sessions/trends` API（已就绪）。 | P1 | iOS | iOS 开发者 (delegate) | 8 | ✅ | ① Profile 或 History Tab 有"周度洞察"入口 ② 展示本周总跑量/训练次数/平均步频/平均 GCT ③ 步频/振幅/GCT 三个核心指标本周 vs 上周对比，含 ↑ ↓ → 趋势箭头 ④ 成就徽章区（达成目标自动点亮）⑤ AI 教练本周总结 + 下周建议（后端返回文案）⑥ 空态：无数据时显示引导文案"完成本周训练后查看洞察" ⑦ 加载态 + 错误态处理 | 后端 `/sessions/trends` API ✅、Android WeeklyInsightScreen（参考代码已就绪） |
+|| ~~RUNFORM-707~~ | ~~**Android Strava OAuth 全链路集成**~~ — **❌ CEO 决策：Android Strava 暂不实现。** 全平台 Strava 冻结，恢复条件：CEO 明确指令解冻。 | — | Android | — | 0 | 已取消 | — |
 
-**P1 小计**：2 条目，16 SP（RUNFORM-707 已取消）
+**P1 小计**：2/2 ✅ 完成，16 SP（RUNFORM-707 CEO取消）
 
 ---
 
-### 3.3 P2：双方共同补齐 —— 资源允许时交付
+### 3.3 P2：双方共同补齐 —— ❌ 已砍掉
+
+> **决策**：P2 条目（RUNFORM-708/709/710）在 Sprint 7 中全部砍掉，不入代码库。P0+P1 完成后 Sprint 7 目标已达成，P2 延期至后续 Sprint 视资源重新评估。
 
 P2 完成后双端基础体验完整，为后续商业化铺路。
 
 | ID | 标题 | 优先级 | 平台 | 指派 | SP | 验收标准 | 依赖 |
 |----|------|:------:|------|------|:--:|---------|------|
-| **RUNFORM-708** | **双端独立设置页面** — iOS + Android 各新增独立 Settings 页面，集中管理：账号信息、通知偏好、Strava 连接状态、语言（跟随系统/手动切换占位）、关于（版本号/开源许可）、清除缓存、登出。当前设置散落在 Profile/Plan 页，需统一收归。 | P2 | iOS + Android | iOS 开发者 + Android 开发者 (delegate) | 3+3 | ① Profile 页有"设置"入口（齿轮图标）② Settings 页包含：账号信息区、Strava 连接状态区、通知开关、关于区（版本号 1.3/开源许可链接）、清除缓存按钮、登出按钮 ③ iOS 使用 Settings.bundle 或 SwiftUI Form ④ Android 使用 PreferenceFragmentCompat 或 Compose ⑤ 清除缓存有确认弹窗 + 清除后反馈 | RUNFORM-704（Strava 状态依赖） |
-| **RUNFORM-709** | **双端隐私政策 + 服务条款页面** — iOS + Android 各新增应用内法律页面：隐私政策（Privacy Policy）和服务条款（Terms of Service），内容通过 WebView 加载后端托管页面或本地静态 HTML。Profile/Settings 页增加入口链接。 | P2 | iOS + Android | iOS 开发者 + Android 开发者 (delegate) | 2+2 | ① Settings 页面有"隐私政策"和"服务条款"入口 ② 点击后在应用内 WebView 打开对应页面 ③ 页面内容由后端/Web 托管（movenova.ai/legal/privacy, /legal/terms）④ WebView 支持基础导航（返回/在浏览器中打开）⑤ 加载中/加载失败有对应状态处理 | 隐私政策+条款 Web 页面（可复用 movenova.ai 已有页面） |
-| **RUNFORM-710** | **双端订阅/付费系统** — iOS 接入 StoreKit 2（内购 + 订阅），Android 接入 Google Play Billing Library 6。本期仅搭建基础框架：App Store Connect / Google Play Console 配置订阅产品、客户端 IAP 初始化 + 商品查询 + 购买流程 + 收据验证（后端验证），暂不接入具体付费功能。 | P2 | iOS + Android | iOS 开发者 + Android 开发者 (delegate) | 8+8 | ① App Store Connect 配置 1 个订阅产品（Sandbox）② Google Play Console 配置对应订阅产品 ③ 客户端可查询订阅产品列表（SKProduct / ProductDetails）④ 发起购买 → 系统支付弹窗 → 收据获取 ⑤ 收据发送后端验证（后端新增 `/iap/verify` 端点）⑥ 购买成功/失败/取消/恢复购买四种状态处理 ⑦ Profile/Settings 页显示订阅状态（未订阅/已订阅/已过期）⑧ 沙盒环境完整走通购买→验证→订阅状态更新闭环 | 后端 `/iap/verify` 端点需新建（2 SP 后端工作量，纳入本期）、App Store Connect / Google Play Console 配置 |
+| ~~**RUNFORM-708**~~ | ~~**双端独立设置页面** — iOS + Android 各新增独立 Settings 页面，集中管理：账号信息、通知偏好、Strava 连接状态、语言（跟随系统/手动切换占位）、关于（版本号/开源许可）、清除缓存、登出。当前设置散落在 Profile/Plan 页，需统一收归。~~ | ~~P2~~ | ~~iOS + Android~~ | ~~iOS 开发者 + Android 开发者 (delegate)~~ | ~~3+3~~ | ~~① Profile 页有"设置"入口（齿轮图标）② Settings 页包含：账号信息区、Strava 连接状态区、通知开关、关于区（版本号 1.3/开源许可链接）、清除缓存按钮、登出按钮 ③ iOS 使用 Settings.bundle 或 SwiftUI Form ④ Android 使用 PreferenceFragmentCompat 或 Compose ⑤ 清除缓存有确认弹窗 + 清除后反馈~~ | ~~RUNFORM-704（Strava 状态依赖）~~ |
+| ~~**RUNFORM-709**~~ | ~~**双端隐私政策 + 服务条款页面** — iOS + Android 各新增应用内法律页面：隐私政策（Privacy Policy）和服务条款（Terms of Service），内容通过 WebView 加载后端托管页面或本地静态 HTML。Profile/Settings 页增加入口链接。~~ | ~~P2~~ | ~~iOS + Android~~ | ~~iOS 开发者 + Android 开发者 (delegate)~~ | ~~2+2~~ | ~~① Settings 页面有"隐私政策"和"服务条款"入口 ② 点击后在应用内 WebView 打开对应页面 ③ 页面内容由后端/Web 托管（movenova.ai/legal/privacy, /legal/terms）④ WebView 支持基础导航（返回/在浏览器中打开）⑤ 加载中/加载失败有对应状态处理~~ | ~~隐私政策+条款 Web 页面（可复用 movenova.ai 已有页面）~~ |
+| ~~**RUNFORM-710**~~ | ~~**双端订阅/付费系统** — iOS 接入 StoreKit 2（内购 + 订阅），Android 接入 Google Play Billing Library 6。本期仅搭建基础框架：App Store Connect / Google Play Console 配置订阅产品、客户端 IAP 初始化 + 商品查询 + 购买流程 + 收据验证（后端验证），暂不接入具体付费功能。~~ | ~~P2~~ | ~~iOS + Android~~ | ~~iOS 开发者 + Android 开发者 (delegate)~~ | ~~8+8~~ | ~~① App Store Connect 配置 1 个订阅产品（Sandbox）② Google Play Console 配置对应订阅产品 ③ 客户端可查询订阅产品列表（SKProduct / ProductDetails）④ 发起购买 → 系统支付弹窗 → 收据获取 ⑤ 收据发送后端验证（后端新增 `/iap/verify` 端点）⑥ 购买成功/失败/取消/恢复购买四种状态处理 ⑦ Profile/Settings 页显示订阅状态（未订阅/已订阅/已过期）⑧ 沙盒环境完整走通购买→验证→订阅状态更新闭环~~ | ~~后端 `/iap/verify` 端点需新建（2 SP 后端工作量，纳入本期）、App Store Connect / Google Play Console 配置~~ |
 
-**P2 小计**：3 条目（双端），26 SP
+**P2 小计**：3 条目（双端），26 SP — ❌ 全部砍掉
 
 ---
 
 ## 四、条目汇总
 
-### 4.1 优先级分布
+### 4.1 优先级分布（最终）
 
-| 优先级 | 条目数 | SP 总计 | 说明 |
+| 优先级 | 条目数 | SP 总计 | 状态 |
 |--------|:------:|:-------:|------|
-| **P0** | 4 | 15 | 阻断性对齐：Android 认证四件套 |
-| **P1** | 2 | 16 | 重要对齐：iOS 分享/洞察 |
-| **P2** | 3（双端） | 26 | 通用补齐：设置/法律/订阅 |
-| **总计** | **9** | **57** | — |
+| **P0** | 4 | 15 | ✅ 全部完成：Android 认证四件套 |
+| **P1** | 2 | 16 | ✅ 全部完成：iOS 分享/洞察 |
+| **P2** | 3（双端） | 26 | ❌ 全部砍掉：设置/法律/订阅 |
+| **总计** | **9** | **57** | **6/9 完成（P0+P1），31/57 SP 交付（54%）** |
 
-### 4.2 平台分布
+### 4.2 平台分布（最终）
 
-| 平台 | 条目 | SP | 说明 |
+| 平台 | 条目 | SP | 状态 |
 |------|:----:|:--:|------|
-| **Android** | RUNFORM-700/701/702/703 + 708/709/710 Android 端 | 28 | 认证系统（15 SP）+ 通用页面（13 SP） |
-| **iOS** | RUNFORM-705/706 + 708/709/710 iOS 端 | 27 | 分享/洞察（16 SP）+ 通用页面（11 SP） |
-| **Backend** | RUNFORM-710 关联 | 2 | IAP 收据验证端点 |
-| **全平台** | RUNFORM-708/709/710 | — | 双端共同实现 |
+| **Android** | RUNFORM-700/701/702/703 | 15 | ✅ 认证系统完成（+ E2E 测试） |
+| **iOS** | RUNFORM-705/706 | 16 | ✅ 分享/洞察完成 |
+| **Backend** | — | 0 | 无需新增（API 前置已就绪） |
+| **全平台** | RUNFORM-708/709/710 | 26 | ❌ 砍掉 |
 
 ### 4.3 与历史 Sprint 规模对比
 
@@ -158,9 +168,24 @@ P2 完成后双端基础体验完整，为后续商业化铺路。
 
 ---
 
-## 五、每周排期
+## 五、实际交付时间线
 
-### Week 1（7/28 - 8/3）：P0 全部交付 + P1 启动
+> ⚡ **P0+P1 已提前完成**（7/19 - 7/24），远早于排期 7/28-8/10。原 Week 1/Week 2 排期仅供参考。
+
+### 实际交付节奏
+
+| 日期 | Commit | 交付内容 |
+|------|--------|---------|
+| 7/19 | `3602e14` | **feat(android)**: Android 认证流全部完成（RegisterScreen 433行 + LoginScreen 277行 + ForgotPasswordScreen 334行 + ProfileScreen +46行） |
+| 7/24 | `1b48513` | **docs**: Sprint 7 Backlog + 全平台差异审计报告 |
+| 7/24 | `34609af` | **feat(ios)**: iOS WeeklyInsightView 488行 + WeeklyInsightModels 108行 + ShareCardRenderer 694行 |
+| 7/24 | `a60cf5d` | **test(android)**: Playwright E2E 验收测试 — auth flow spec |
+| 7/24 | `05fd790` | **chore(wechat)**: 更新项目配置 |
+
+### 原排期（已过时，保留供参考）
+
+<details>
+<summary>原始 Week 1/Week 2 排期（点击展开）</summary>
 
 | 团队 | 任务 | SP | 时间 |
 |------|------|:--:|------|
@@ -189,26 +214,28 @@ P2 完成后双端基础体验完整，为后续商业化铺路。
 | | ⏰ **Week 2 Wed**：iOS 周度洞察 + 后端 IAP 端点完成 | — |
 | | ⏰ **Week 2 Fri**：**Android Strava OAuth 完成 + QA 回归通过** | — |
 
+</details>
+
 ---
 
 ## 六、验收标准总览
 
 ### 6.1 P0 验收门（Week 1 结束）
 
-- [ ] **Android 用户可完成完整认证闭环**：注册 → 登录 → 查看 Profile → 登出 → 重新登录
-- [ ] **iOS Strava 连接卡片可见且可用**：连接 → 授权 → 同步数据 → 断开
-- [ ] 两个平台各自的 Apk/IPA 构建成功，无编译错误
+- [x] **Android 用户可完成完整认证闭环**：注册 → 登录 → 查看 Profile → 登出 → 重新登录 ✅
+- [x] **两个平台各自的 Apk/IPA 构建成功，无编译错误** ✅
+- [x] **iOS Strava 连接卡片**：CEO 取消，本期不做
 
 ### 6.2 P1 验收门（Week 2 结束）
 
-- [ ] **iOS 图片分享**：分析结果/历史记录/训练计划三场景均可生成 1080×1440 分享卡并保存相册
-- [ ] **iOS 周度洞察**：步频/振幅/GCT 三指标本周 vs 上周对比正确，成就徽章/教练建议显示
-- [ ] **Android Strava**：OAuth 全链路走通（连接→授权→数据同步→预填充→断开）
+- [x] **iOS 图片分享**：分析结果/历史记录/训练计划三场景均可生成 1080×1440 分享卡并保存相册 ✅
+- [x] **iOS 周度洞察**：步频/振幅/GCT 三指标本周 vs 上周对比正确，成就徽章/教练建议显示 ✅
+- [x] **Android Strava**：CEO 取消，本期不做
 
 ### 6.3 P2 验收门（选做）
 
-- [ ] 至少一端设置页面可用（RUNFORM-708）
-- [ ] 至少一端法律页面可用（RUNFORM-709）
+- [ ] ~~至少一端设置页面可用（RUNFORM-708）~~ — ❌ 已砍掉
+- [ ] ~~至少一端法律页面可用（RUNFORM-709）~~ — ❌ 已砍掉
 
 ---
 
