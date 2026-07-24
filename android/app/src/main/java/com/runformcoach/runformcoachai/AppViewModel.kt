@@ -17,7 +17,6 @@ import com.runformcoach.runformcoachai.data.ProfileDao
 import com.runformcoach.runformcoachai.data.RunFormDatabase
 import com.runformcoach.runformcoachai.data.RunnerProfileEntity
 import com.runformcoach.runformcoachai.data.SavedPlanEntity
-import com.runformcoach.runformcoachai.auth.TokenManager
 import com.runformcoach.runformcoachai.di.VideoPartFactory
 import com.runformcoach.runformcoachai.utils.VideoCompressor
 import dagger.hilt.android.lifecycle.HiltViewModel
