@@ -24,9 +24,11 @@ def _setup_test_db():
 
     # Remove stale test DB for a clean slate
     import os as _os
+    if _test_engine is not None:
+        _test_engine.dispose()
     try:
         _os.remove(_TEST_DB_PATH)
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         pass
 
     _test_engine = create_engine(
