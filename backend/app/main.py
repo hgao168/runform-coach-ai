@@ -74,6 +74,7 @@ from .schemas import (
     InviteStatusResponse,
     NotificationItem,
     PoseMetricsInput,
+    ProfileResponse,
     ProfileSaveRequest,
     ProfileSaveResponse,
     RunSessionCreate,
@@ -243,6 +244,46 @@ def health() -> dict:
         "environment": ENVIRONMENT,
         "db": db_status,
     }
+
+
+def _ios_user_id_from_bearer(access_token: str | None) -> str:
+    """Resolve the ios_user_id carried by a `movenova_<ios_user_id>` bearer token.
+
+    Mirrors the parsing used by /api/v1/auth/me so both endpoints accept the
+    same credentials issued by /api/v1/auth/login.
+    """
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Authorization header required.")
+    prefix = "Bearer "
+    token = access_token[len(prefix):] if access_token.startswith(prefix) else access_token
+    if not token.startswith("movenova_"):
+        raise HTTPException(status_code=401, detail="Invalid access token format.")
+    ios_user_id = token[len("movenova_"):]
+    if not ios_user_id:
+        raise HTTPException(status_code=401, detail="Empty user ID in token.")
+    return ios_user_id
+
+
+@app.get("/profile", response_model=ProfileResponse)
+def get_profile(
+    access_token: str | None = Header(None, alias="Authorization"),
+    _api_key: str = Depends(verify_api_key),
+) -> ProfileResponse:
+    """Return the authenticated user's saved profile fields."""
+    ios_user_id = _ios_user_id_from_bearer(access_token)
+    try:
+        with get_db_session() as session:
+            user = session.scalar(select(User).where(User.ios_user_id == ios_user_id))
+            if user is None:
+                raise HTTPException(status_code=404, detail="User not found.")
+            return ProfileResponse(
+                ios_user_id=user.ios_user_id,
+                **{field: getattr(user, field, None) for field in _PROFILE_FIELDS},
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load profile: {exc}") from exc
 
 
 @app.put("/profile", response_model=ProfileSaveResponse)

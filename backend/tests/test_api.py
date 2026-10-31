@@ -230,3 +230,51 @@ def test_strava_run_filter_rejects_non_run_or_empty_activity():
     assert not strava_sync._is_run_activity({"sport_type": "Ride", "distance": 5000.0, "moving_time": 1500})
     assert not strava_sync._is_run_activity({"sport_type": "Run", "distance": 0.0, "moving_time": 1500})
     assert not strava_sync._is_run_activity({"sport_type": "Run", "distance": 5000.0, "moving_time": 0})
+
+
+# ── GET /profile (web client) ───────────────────────────────────────────────
+
+
+@pytest.mark.anyio
+async def test_get_profile_requires_movenova_bearer_token(client, test_user):
+    assert (await client.get("/profile")).status_code == 401
+    assert (
+        await client.get("/profile", headers={"Authorization": "Bearer not-a-movenova-token"})
+    ).status_code == 401
+    assert (
+        await client.get("/profile", headers={"Authorization": "Bearer movenova_"})
+    ).status_code == 401
+    assert (
+        await client.get("/profile", headers={"Authorization": "Bearer movenova_does-not-exist"})
+    ).status_code == 404
+
+
+@pytest.mark.anyio
+async def test_get_profile_round_trips_saved_fields(client, test_user):
+    token = main_mod._make_access_token(test_user)
+    saved = await client.put(
+        "/profile",
+        json={
+            "ios_user_id": test_user,
+            "height_cm": 180.5,
+            "weekly_mileage_km": 42,
+            "target": "Half Marathon",
+            "date_of_birth": "1990-05-01",
+        },
+    )
+    assert saved.status_code == 200, saved.text
+
+    response = await client.get("/profile", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["ios_user_id"] == test_user
+    assert body["height_cm"] == 180.5
+    assert body["weekly_mileage_km"] == 42
+    assert body["target"] == "Half Marathon"
+    assert body["date_of_birth"] == "1990-05-01"
+    assert body["nickname"] is None
+    assert "password_hash" not in body
+
+    # Bare token (no "Bearer " prefix) is accepted, matching /api/v1/auth/me.
+    bare = await client.get("/profile", headers={"Authorization": token})
+    assert bare.status_code == 200
